@@ -3,6 +3,7 @@ import { makeToken } from "../utils/tokens";
 import { addDoc, collection, serverTimestamp } from "../firebase";
 import { db } from "../firebase";
 
+
 export default function QrGenerator({ area }) {
   const [loading, setLoading] = useState(false);
   const [qrLink, setQrLink] = useState(null);
