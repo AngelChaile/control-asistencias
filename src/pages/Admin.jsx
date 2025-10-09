@@ -26,7 +26,7 @@ export default function Admin() {
       if (!snap.empty) {
         const data = snap.docs[0].data();
         setUser(data);
-        setArea(data.secretaria || ""); // área del admin
+        setArea(data.lugarTrabajo || ""); // área del admin
       }
     } catch (err) {
       alert("Error de login: " + err.message);
@@ -82,7 +82,7 @@ export default function Admin() {
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2>Panel Admin - {user.secretaria}</h2>
+      <h2>Panel Admin - {user.lugarTrabajo}</h2>
 
       {/* Generador de QR */}
       <QrGenerator area={area} />
