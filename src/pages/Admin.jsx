@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
-import QrGenerator from "./QrGenerator";
+import QrGenerator from "../components/QrGenerator";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 
