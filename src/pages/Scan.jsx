@@ -1,99 +1,62 @@
-import React, { useEffect, useState } from "react";
-import { db, collection, getDocs, query, where, addDoc, updateDoc, doc } from "../firebase";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { validarToken, registrarAsistencia } from "../utils/asistencia";
 
 export default function Scan() {
-  const [status, setStatus] = useState("Verificando token...");
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get("token");
-  const area = params.get("area") || params.get("place") || "Desconocido";
+  const [searchParams] = useSearchParams();
+  const [legajo, setLegajo] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const tokenParam = searchParams.get("token");
+  const area = searchParams.get("area");
 
   useEffect(() => {
-    async function validateAndRegister() {
-      try {
-        if (!token) { setStatus("Token no válido"); return; }
-
-        // Buscar token en Firestore tokens collection
-        const q = query(collection(db, "tokens"), where("token", "==", token));
-        const snap = await getDocs(q);
-        if (snap.empty) { setStatus("Token inválido o expirado"); return; }
-        const docu = snap.docs[0];
-        const tdata = docu.data();
-
-        // check expiry and used
-        const expires = new Date(tdata.expiresAt);
-        if (tdata.used || expires < new Date()) {
-          setStatus("Token expirado o ya usado");
-          return;
-        }
-
-        // Ask user for legajo or check localStorage
-        const stored = localStorage.getItem("empleado");
-        let legajo;
-        if (stored) {
-          const obj = JSON.parse(stored);
-          legajo = obj.legajo;
-        } else {
-          legajo = prompt("Ingresá tu legajo (si es tu primer registro se guardará)");
-          if (!legajo) { setStatus("Legajo requerido"); return; }
-        }
-
-        // Find employee
-        const q2 = query(collection(db, "empleados"), where("legajo", "==", legajo));
-        const eSnap = await getDocs(q2);
-
-        let empleado;
-        if (eSnap.empty) {
-          // primer registro: ask basic data
-          const nombre = prompt("Nombre");
-          const apellido = prompt("Apellido");
-          if (!nombre) { setStatus("Registro cancelado"); return; }
-          const empDoc = await addDoc(collection(db, "empleados"), {
-            legajo, nombre, apellido, area, horario: ""
-          });
-          empleado = { legajo, nombre, apellido, id: empDoc.id, area };
-          localStorage.setItem("empleado", JSON.stringify(empleado));
-        } else {
-          empleado = { id: eSnap.docs[0].id, ...eSnap.docs[0].data() };
-        }
-
-        // Decide ENTRADA/SALIDA by counting today's records
-        const today = new Date().toISOString().slice(0,10);
-        const attQ = query(collection(db, "asistencias"),
-                          where("legajo", "==", legajo),
-                          where("fecha", "==", today));
-        const attSnap = await getDocs(attQ);
-        const count = attSnap.size;
-        const tipo = (count % 2 === 0) ? "ENTRADA" : "SALIDA";
-
-        // append attendance
-        await addDoc(collection(db, "asistencias"), {
-          legajo,
-          nombre: empleado.nombre,
-          apellido: empleado.apellido,
-          area,
-          tipo,
-          fecha: today,
-          hora: new Date().toLocaleTimeString(),
-          createdAt: new Date().toISOString()
-        });
-
-        // mark token used
-        await updateDoc(doc(db, "tokens", docu.id), { used: true });
-
-        setStatus(`Registro OK: ${tipo} - ${empleado.nombre} ${empleado.apellido}`);
-      } catch (err) {
-        console.error(err);
-        setStatus("Error procesando fichada");
-      }
+    if (!tokenParam || !area) {
+      setMessage("Token o área inválida.");
     }
+  }, [tokenParam, area]);
 
-    validateAndRegister();
-  }, [token, area]);
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setMessage("");
+    setLoading(true);
+    try {
+      // 1) validar token
+      const tokenData = await validarToken(tokenParam, area);
+
+      // 2) registrar asistencia
+      const res = await registrarAsistencia(legajo, tokenData.id, area);
+
+      setMessage(
+        `Registro aprobado: Legajo ${res.asistencia.legajo} - ${res.asistencia.apellido}, ${res.asistencia.nombre} - ${res.asistencia.tipo}`
+      );
+    } catch (err) {
+      setMessage(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <div style={{ padding: 20, textAlign: "center" }}>
+    <div style={{ padding: "20px" }}>
       <h2>Registro de Asistencia</h2>
-      <p>{status}</p>
+      {message && <p>{message}</p>}
+      <form onSubmit={handleSubmit}>
+        <label>
+          Ingresá tu Legajo:
+          <input
+            type="text"
+            value={legajo}
+            onChange={(e) => setLegajo(e.target.value)}
+            required
+          />
+        </label>
+        <br />
+        <button type="submit" disabled={loading}>
+          {loading ? "Registrando..." : "Fichar"}
+        </button>
+      </form>
     </div>
   );
 }

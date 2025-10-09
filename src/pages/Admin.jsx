@@ -1,81 +1,120 @@
-import React, { useEffect, useState } from "react";
-import QrGenerator from "../components/QrGenerator";
-import EmployeeList from "../components/EmployeeList";
-import { db, collection, addDoc, getDocs, query, where, setDoc, doc, deleteDoc } from "../firebase";
-import { exportToCsv } from "../components/ExportCSV";
+import React, { useState, useEffect } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../firebase";
+import QrGenerator from "./QrGenerator";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase";
 
-export default function Admin({ user }) {
-  const [area, setArea] = useState(user?.area || "RRHH");
-  const [empleados, setEmpleados] = useState([]);
+export default function Admin() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [user, setUser] = useState(null);
+  const [asistencias, setAsistencias] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [area, setArea] = useState("");
 
-  async function fetchEmpleados() {
+  async function handleLogin(e) {
+    e.preventDefault();
     setLoading(true);
     try {
-      const q = query(collection(db, "empleados"), where("area", "==", area));
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const uid = cred.user.uid;
+
+      // Obtener datos del admin desde Firestore
+      const q = query(collection(db, "users"), where("__name__", "==", uid));
       const snap = await getDocs(q);
-      const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setEmpleados(arr);
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        setUser(data);
+        setArea(data.secretaria || ""); // área del admin
+      }
     } catch (err) {
-      console.error(err);
+      alert("Error de login: " + err.message);
     } finally {
       setLoading(false);
     }
   }
 
+  async function loadAsistencias() {
+    if (!area) return;
+    const q = query(collection(db, "asistencias"), where("areaQR", "==", area));
+    const snap = await getDocs(q);
+    const lista = snap.docs.map((d) => d.data());
+    setAsistencias(lista);
+  }
+
   useEffect(() => {
-    if (area) fetchEmpleados();
-  }, [area]);
+    if (user) {
+      loadAsistencias();
+    }
+  }, [user]);
 
-  async function addEmpleado() {
-    const legajo = prompt("Legajo");
-    const nombre = prompt("Nombre");
-    const apellido = prompt("Apellido");
-    if (!legajo || !nombre) return alert("Datos incompletos");
-
-    await addDoc(collection(db, "empleados"), { legajo, nombre, apellido, area, horario: "" });
-    fetchEmpleados();
-  }
-
-  async function onDelete(e) {
-    if (!confirm("Eliminar empleado?")) return;
-    await deleteDoc(doc(db, "empleados", e.id));
-    fetchEmpleados();
-  }
-
-  function exportDay() {
-    const rows = empleados.map(emp => ({
-      legajo: emp.legajo,
-      nombre: emp.nombre,
-      apellido: emp.apellido
-    }));
-    exportToCsv(`empleados_${area}.csv`, rows);
+  if (!user) {
+    return (
+      <div style={{ padding: "20px" }}>
+        <h2>Login Admin / RRHH</h2>
+        <form onSubmit={handleLogin}>
+          <label>
+            Email:
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+          <br />
+          <label>
+            Password:
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </label>
+          <br />
+          <button type="submit">{loading ? "Ingresando..." : "Ingresar"}</button>
+        </form>
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Panel Admin - Área: {area}</h2>
-      <div>
-        <label>Área: </label>
-        <select value={area} onChange={e => setArea(e.target.value)}>
-          <option>RRHH</option>
-          <option>Sistemas</option>
-          <option>Edilicio</option>
-          <option>Administración</option>
-        </select>
-      </div>
+    <div style={{ padding: "20px" }}>
+      <h2>Panel Admin - {user.secretaria}</h2>
 
+      {/* Generador de QR */}
       <QrGenerator area={area} />
 
-      <div style={{ marginTop: 20 }}>
-        <button onClick={addEmpleado}>Agregar empleado</button>
-        <button onClick={fetchEmpleados} disabled={loading}>{loading ? "Cargando..." : "Refrescar"}</button>
-        <button onClick={exportDay}>Exportar lista empleados</button>
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <EmployeeList empleados={empleados} onEdit={() => {}} onDelete={onDelete} />
-      </div>
+      {/* Listado asistencias */}
+      <h3>Asistencias registradas</h3>
+      <table border="1" cellPadding="5">
+        <thead>
+          <tr>
+            <th>Legajo</th>
+            <th>Nombre</th>
+            <th>Apellido</th>
+            <th>Tipo</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Área QR</th>
+          </tr>
+        </thead>
+        <tbody>
+          {asistencias.map((a, idx) => (
+            <tr key={idx}>
+              <td>{a.legajo}</td>
+              <td>{a.nombre}</td>
+              <td>{a.apellido}</td>
+              <td>{a.tipo}</td>
+              <td>{a.fecha}</td>
+              <td>{a.hora}</td>
+              <td>{a.areaQR}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
