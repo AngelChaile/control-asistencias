@@ -1,62 +1,103 @@
-import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { validarToken, registrarAsistencia } from "../utils/asistencia";
+// src/pages/Scan.jsx
+import React, { useState } from "react";
+import {
+  buscarEmpleadoPorLegajo,
+  registrarAsistencia,
+  registrarNuevoEmpleado,
+} from "../utils/asistencia";
 
 export default function Scan() {
-  const [searchParams] = useSearchParams();
   const [legajo, setLegajo] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [empleado, setEmpleado] = useState(null);
+  const [mensaje, setMensaje] = useState("");
+  const [nuevoEmpleado, setNuevoEmpleado] = useState({
+    nombre: "",
+    apellido: "",
+    area: "",
+    dni: "",
+  });
 
-  const tokenParam = searchParams.get("token");
-  const area = searchParams.get("area");
-
-  useEffect(() => {
-    if (!tokenParam || !area) {
-      setMessage("Token o área inválida.");
+  const handleBuscar = async () => {
+    if (!legajo) {
+      setMensaje("Por favor ingrese su legajo.");
+      return;
     }
-  }, [tokenParam, area]);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setMessage("");
-    setLoading(true);
     try {
-      // 1) validar token
-      const tokenData = await validarToken(tokenParam, area);
-
-      // 2) registrar asistencia
-      const res = await registrarAsistencia(legajo, tokenData.id, area);
-
-      setMessage(
-        `Registro aprobado: Legajo ${res.asistencia.legajo} - ${res.asistencia.apellido}, ${res.asistencia.nombre} - ${res.asistencia.tipo}`
-      );
+      const emp = await buscarEmpleadoPorLegajo(legajo);
+      if (emp) {
+        await registrarAsistencia(emp);
+        setMensaje(`✅ Asistencia registrada para ${emp.nombre} ${emp.apellido}`);
+      } else {
+        setMensaje("⚠️ Empleado no encontrado. Complete sus datos para registrarse:");
+        setEmpleado(null);
+      }
     } catch (err) {
-      setMessage(err.message);
-    } finally {
-      setLoading(false);
+      console.error(err);
+      setMensaje("❌ Error al registrar la asistencia.");
     }
-  }
+  };
+
+  const handleGuardarNuevo = async () => {
+    if (!nuevoEmpleado.nombre || !nuevoEmpleado.apellido || !nuevoEmpleado.area || !nuevoEmpleado.dni) {
+      setMensaje("Por favor complete todos los campos.");
+      return;
+    }
+
+    try {
+      const nuevo = { ...nuevoEmpleado, legajo };
+      await registrarNuevoEmpleado(nuevo);
+      await registrarAsistencia(nuevo);
+      setMensaje(`✅ Empleado registrado y asistencia guardada para ${nuevo.nombre} ${nuevo.apellido}.`);
+      setNuevoEmpleado({ nombre: "", apellido: "", area: "", dni: "" });
+    } catch (err) {
+      console.error(err);
+      setMensaje("❌ Error al guardar el nuevo empleado.");
+    }
+  };
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div style={{ padding: 20, maxWidth: 400, margin: "auto" }}>
       <h2>Registro de Asistencia</h2>
-      {message && <p>{message}</p>}
-      <form onSubmit={handleSubmit}>
-        <label>
-          Ingresá tu Legajo:
+      <input
+        type="text"
+        placeholder="Ingrese su legajo"
+        value={legajo}
+        onChange={(e) => setLegajo(e.target.value)}
+      />
+      <button onClick={handleBuscar}>Buscar / Registrar</button>
+
+      <p>{mensaje}</p>
+
+      {mensaje.includes("Complete sus datos") && (
+        <div style={{ marginTop: 20 }}>
           <input
             type="text"
-            value={legajo}
-            onChange={(e) => setLegajo(e.target.value)}
-            required
+            placeholder="Nombre"
+            value={nuevoEmpleado.nombre}
+            onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })}
           />
-        </label>
-        <br />
-        <button type="submit" disabled={loading}>
-          {loading ? "Registrando..." : "Fichar"}
-        </button>
-      </form>
+          <input
+            type="text"
+            placeholder="Apellido"
+            value={nuevoEmpleado.apellido}
+            onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, apellido: e.target.value })}
+          />
+          <input
+            type="text"
+            placeholder="Área"
+            value={nuevoEmpleado.area}
+            onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, area: e.target.value })}
+          />
+          <input
+            type="text"
+            placeholder="DNI"
+            value={nuevoEmpleado.dni}
+            onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, dni: e.target.value })}
+          />
+          <button onClick={handleGuardarNuevo}>Guardar Empleado</button>
+        </div>
+      )}
     </div>
   );
 }
