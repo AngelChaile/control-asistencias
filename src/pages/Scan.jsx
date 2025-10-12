@@ -1,185 +1,132 @@
-// src/pages/Scan.jsx
 import React, { useState } from "react";
+import { db } from "../firebase";
 import {
-  buscarEmpleadoPorLegajo,
-  registrarAsistencia,
-  registrarNuevoEmpleado,
-} from "../utils/asistencia";
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  serverTimestamp,
+} from "firebase/firestore";
 import Swal from "sweetalert2";
 
 export default function Scan() {
   const [legajo, setLegajo] = useState("");
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [areaQR, setAreaQR] = useState("");
+  const [empleado, setEmpleado] = useState(null);
+  const [showForm, setShowForm] = useState(false);
   const [nuevoEmpleado, setNuevoEmpleado] = useState({
     nombre: "",
     apellido: "",
-    email: "",
-    horario: "",
+    legajo: "",
     lugarTrabajo: "",
-    secretaria: "",
   });
 
-  const handleBuscar = async () => {
-    if (!legajo.trim()) {
-      Swal.fire("Atención", "Por favor ingrese su legajo.", "warning");
-      return;
-    }
-
+  async function handleBuscarEmpleado() {
     try {
-      const empleado = await buscarEmpleadoPorLegajo(legajo);
+      const q = query(collection(db, "users"), where("legajo", "==", legajo));
+      const snap = await getDocs(q);
 
-      if (empleado) {
-        const result = await registrarAsistencia(empleado);
-
-        if (result.success) {
-          Swal.fire(
-            "✅ Asistencia registrada",
-            `Bienvenido/a ${empleado.nombre} ${empleado.apellido}`,
-            "success"
-          );
-          setLegajo("");
-        } else {
-          Swal.fire("Error", result.message, "error");
-        }
+      if (snap.empty) {
+        setShowForm(true);
+        setNuevoEmpleado((prev) => ({ ...prev, legajo, lugarTrabajo: areaQR }));
+        Swal.fire("Empleado no encontrado", "Por favor complete sus datos.", "info");
       } else {
-        Swal.fire(
-          "Empleado no encontrado",
-          "Complete sus datos para registrarse.",
-          "info"
-        );
-        setMostrarFormulario(true);
+        const data = snap.docs[0].data();
+        setEmpleado(data);
+        registrarAsistencia(data);
       }
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error("Error buscando empleado:", err);
+      Swal.fire("Error", "Ocurrió un error al buscar el empleado.", "error");
+    }
+  }
+
+  async function registrarAsistencia(empData) {
+    try {
+      const fecha = new Date();
+      const asistencia = {
+        legajo: empData.legajo,
+        nombre: empData.nombre,
+        apellido: empData.apellido,
+        tipo: "Entrada",
+        fecha: fecha.toLocaleDateString(),
+        hora: fecha.toLocaleTimeString(),
+        lugarTrabajo: empData.lugarTrabajo,
+        areaQR,
+        createdAt: serverTimestamp(),
+      };
+
+      await addDoc(collection(db, "asistencias"), asistencia);
+
+      Swal.fire("Éxito", "Asistencia registrada correctamente.", "success");
+      setLegajo("");
+    } catch (err) {
+      console.error("Error registrando asistencia:", err);
       Swal.fire("Error", "No se pudo registrar la asistencia.", "error");
     }
-  };
+  }
 
-  const handleGuardarNuevo = async () => {
-    const { nombre, apellido, email, horario, lugarTrabajo, secretaria } = nuevoEmpleado;
-
-    if (!nombre || !apellido || !email || !horario || !lugarTrabajo || !secretaria) {
-      Swal.fire("Atención", "Complete todos los campos.", "warning");
-      return;
-    }
-
+  async function handleGuardarEmpleado() {
     try {
-      const nuevo = { ...nuevoEmpleado, legajo, rol: "empleado" };
-      const regEmp = await registrarNuevoEmpleado(nuevo);
-
-      if (regEmp.success) {
-        await registrarAsistencia(nuevo);
-        Swal.fire(
-          "✅ Registrado",
-          `Empleado ${nuevo.nombre} ${nuevo.apellido} agregado y asistencia guardada.`,
-          "success"
-        );
-        setNuevoEmpleado({
-          nombre: "",
-          apellido: "",
-          email: "",
-          horario: "",
-          lugarTrabajo: "",
-          secretaria: "",
-        });
-        setLegajo("");
-        setMostrarFormulario(false);
-      } else {
-        Swal.fire("Error", regEmp.message, "error");
-      }
-    } catch (error) {
-      console.error(error);
+      await addDoc(collection(db, "users"), nuevoEmpleado);
+      Swal.fire("Empleado agregado", "Ahora se registrará la asistencia.", "success");
+      registrarAsistencia(nuevoEmpleado);
+      setShowForm(false);
+      setNuevoEmpleado({ nombre: "", apellido: "", legajo: "", lugarTrabajo: "" });
+    } catch (err) {
+      console.error("Error guardando empleado:", err);
       Swal.fire("Error", "No se pudo guardar el empleado.", "error");
     }
-  };
+  }
 
   return (
-    <div
-      style={{
-        maxWidth: 500,
-        margin: "60px auto",
-        padding: 30,
-        background: "#fff",
-        borderRadius: 12,
-        boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-        textAlign: "center",
-      }}
-    >
-      <h2 style={{ marginBottom: 20, color: "#333" }}>Registro de Asistencia</h2>
-      <input
-        type="text"
-        placeholder="Ingrese su legajo"
-        value={legajo}
-        onChange={(e) => setLegajo(e.target.value)}
-        style={{
-          padding: 10,
-          width: "100%",
-          marginBottom: 10,
-          borderRadius: 8,
-          border: "1px solid #ccc",
-          outline: "none",
-        }}
-      />
-      <button
-        onClick={handleBuscar}
-        style={{
-          backgroundColor: "#1976d2",
-          color: "white",
-          border: "none",
-          padding: "10px 20px",
-          borderRadius: 8,
-          cursor: "pointer",
-          width: "100%",
-        }}
-      >
-        Buscar / Registrar
-      </button>
+    <div style={{ padding: 20 }}>
+      <h2>Registro de Asistencia</h2>
+      <label>
+        Área del QR:
+        <input
+          value={areaQR}
+          onChange={(e) => setAreaQR(e.target.value)}
+          placeholder="Ej: Recursos Humanos"
+        />
+      </label>
+      <br />
+      <label>
+        Legajo:
+        <input
+          value={legajo}
+          onChange={(e) => setLegajo(e.target.value)}
+          placeholder="Ej: 1234"
+        />
+      </label>
+      <br />
+      <button onClick={handleBuscarEmpleado}>Registrar asistencia</button>
 
-      {mostrarFormulario && (
-        <div style={{ marginTop: 30, textAlign: "left" }}>
-          <h3 style={{ textAlign: "center" }}>Nuevo Empleado</h3>
-
-          {[
-            { name: "nombre", placeholder: "Nombre" },
-            { name: "apellido", placeholder: "Apellido" },
-            { name: "email", placeholder: "Email" },
-            { name: "horario", placeholder: "Horario (ej: 07:00 - 15:00)" },
-            { name: "lugarTrabajo", placeholder: "Lugar de trabajo" },
-            { name: "secretaria", placeholder: "Secretaría" },
-          ].map((field) => (
-            <input
-              key={field.name}
-              type="text"
-              placeholder={field.placeholder}
-              value={nuevoEmpleado[field.name]}
-              onChange={(e) =>
-                setNuevoEmpleado({ ...nuevoEmpleado, [field.name]: e.target.value })
-              }
-              style={{
-                padding: 10,
-                width: "100%",
-                marginBottom: 10,
-                borderRadius: 8,
-                border: "1px solid #ccc",
-                outline: "none",
-              }}
-            />
-          ))}
-
-          <button
-            onClick={handleGuardarNuevo}
-            style={{
-              backgroundColor: "#2e7d32",
-              color: "white",
-              border: "none",
-              padding: "10px 20px",
-              borderRadius: 8,
-              cursor: "pointer",
-              width: "100%",
-            }}
-          >
-            Guardar Empleado
-          </button>
+      {showForm && (
+        <div style={{ marginTop: 20 }}>
+          <h3>Agregar nuevo empleado</h3>
+          <input
+            placeholder="Nombre"
+            value={nuevoEmpleado.nombre}
+            onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })}
+          />
+          <input
+            placeholder="Apellido"
+            value={nuevoEmpleado.apellido}
+            onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, apellido: e.target.value })}
+          />
+          <input
+            placeholder="Legajo"
+            value={nuevoEmpleado.legajo}
+            onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, legajo: e.target.value })}
+          />
+          <input
+            placeholder="Lugar de trabajo"
+            value={nuevoEmpleado.lugarTrabajo}
+            onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, lugarTrabajo: e.target.value })}
+          />
+          <button onClick={handleGuardarEmpleado}>Guardar empleado</button>
         </div>
       )}
     </div>

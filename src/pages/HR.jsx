@@ -26,12 +26,12 @@ export default function HR() {
       <button onClick={exportAll}>Exportar CSV</button>
       <table style={{ width: "100%", marginTop: 12 }}>
         <thead>
-          <tr><th>Fecha</th><th>Hora</th><th>Legajo</th><th>Nombre</th><th>Tipo</th><th>Area</th></tr>
+          <tr><th>Fecha</th><th>Hora</th><th>Legajo</th><th>Nombre</th><th>Tipo</th><th>Lugar de Trabajo</th></tr>
         </thead>
         <tbody>
           {asistencias.map(a => (
             <tr key={a.id}>
-              <td>{a.fecha}</td><td>{a.hora}</td><td>{a.legajo}</td><td>{a.nombre} {a.apellido}</td><td>{a.tipo}</td><td>{a.area}</td>
+              <td>{a.fecha}</td><td>{a.hora}</td><td>{a.legajo}</td><td>{a.nombre} {a.apellido}</td><td>{a.tipo}</td><td>{a.lugarTrabajo}</td>
             </tr>
           ))}
         </tbody>

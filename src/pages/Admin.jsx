@@ -35,13 +35,17 @@ export default function Admin() {
     }
   }
 
-  async function loadAsistencias() {
-    if (!area) return;
-    const q = query(collection(db, "asistencias"), where("areaQR", "==", area));
-    const snap = await getDocs(q);
-    const lista = snap.docs.map((d) => d.data());
-    setAsistencias(lista);
-  }
+async function loadAsistencias() {
+  if (!area) return;
+  const q = query(
+    collection(db, "asistencias"),
+    where("lugarTrabajo", "==", area)
+  );
+  const snap = await getDocs(q);
+  const lista = snap.docs.map((d) => d.data());
+  setAsistencias(lista);
+}
+
 
   useEffect(() => {
     if (user) {
@@ -98,7 +102,7 @@ export default function Admin() {
             <th>Tipo</th>
             <th>Fecha</th>
             <th>Hora</th>
-            <th>Área QR</th>
+            <th>Lugar de Trabajo</th>
           </tr>
         </thead>
         <tbody>
@@ -110,7 +114,7 @@ export default function Admin() {
               <td>{a.tipo}</td>
               <td>{a.fecha}</td>
               <td>{a.hora}</td>
-              <td>{a.areaQR}</td>
+              <td>{a.lugarTrabajo}</td>
             </tr>
           ))}
         </tbody>
