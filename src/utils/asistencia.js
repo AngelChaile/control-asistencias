@@ -13,57 +13,49 @@ import {
 } from "firebase/firestore";
 
 /**
- * Valida que el token exista y no haya expirado
+ * Buscar empleado por legajo
  */
-export async function validarToken(token) {
-  const tokenRef = doc(db, "tokens", token);
-  const tokenSnap = await getDoc(tokenRef);
+export async function buscarEmpleadoPorLegajo(legajo) {
+  const q = query(collection(db, "users"), where("legajo", "==", legajo));
+  const querySnapshot = await getDocs(q);
 
-  if (!tokenSnap.exists()) return false;
+  if (querySnapshot.empty) {
+    return null;
+  }
 
-  const data = tokenSnap.data();
-  const now = new Date();
-  const expiresAt = new Date(data.expiresAt);
-
-  if (data.used || now > expiresAt) return false;
-
-  return true;
+  const empleado = querySnapshot.docs[0].data();
+  return { id: querySnapshot.docs[0].id, ...empleado };
 }
 
 /**
- * Registra asistencia validando que el empleado exista.
- * Si no existe, retorna un mensaje indicando que debe registrarse.
+ * Registrar asistencia del empleado
  */
-export async function registrarAsistencia({ legajo, tipo }) {
+export async function registrarAsistencia(empleado) {
   try {
-    // 1️⃣ Buscar el usuario por su legajo en la colección "users"
-    const q = query(collection(db, "users"), where("legajo", "==", legajo));
-    const querySnapshot = await getDocs(q);
+    const {
+      legajo,
+      nombre,
+      apellido,
+      email,
+      horario,
+      lugarTrabajo,
+      secretaria,
+      rol,
+    } = empleado;
 
-    if (querySnapshot.empty) {
-      // No existe el empleado
-      return { success: false, message: "Empleado no encontrado" };
+    if (!legajo || !nombre || !apellido) {
+      throw new Error("Datos incompletos del empleado.");
     }
 
-    // 2️⃣ Tomar los datos del primer usuario encontrado
-    const userData = querySnapshot.docs[0].data();
-
-    const nombre = userData.nombre || "";
-    const apellido = userData.apellido || "";
-    const area = userData.area || "";
-
-    // Validación extra: evitar registrar si algo viene undefined
-    if (!nombre || !apellido || !area) {
-      return { success: false, message: "Datos del empleado incompletos" };
-    }
-
-    // 3️⃣ Registrar la asistencia en la colección "asistencias"
     await addDoc(collection(db, "asistencias"), {
       legajo,
       nombre,
       apellido,
-      area,
-      tipo, // entrada o salida
+      email: email || "",
+      horario: horario || "",
+      lugarTrabajo: lugarTrabajo || "",
+      secretaria: secretaria || "",
+      rol: rol || "",
       fecha: serverTimestamp(),
     });
 
@@ -71,5 +63,22 @@ export async function registrarAsistencia({ legajo, tipo }) {
   } catch (error) {
     console.error("❌ Error en registrarAsistencia:", error);
     return { success: false, message: "Error al registrar la asistencia" };
+  }
+}
+
+/**
+ * Registrar nuevo empleado
+ */
+export async function registrarNuevoEmpleado(nuevoEmpleado) {
+  try {
+    const docRef = doc(collection(db, "users"));
+    await setDoc(docRef, {
+      ...nuevoEmpleado,
+      rol: "empleado",
+    });
+    return { success: true, message: "Empleado registrado correctamente" };
+  } catch (error) {
+    console.error("❌ Error en registrarNuevoEmpleado:", error);
+    return { success: false, message: "Error al registrar el empleado" };
   }
 }
