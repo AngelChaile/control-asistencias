@@ -26,7 +26,7 @@ export default function Admin() {
       if (!snap.empty) {
         const data = snap.docs[0].data();
         setUser(data);
-        setArea(data.lugarTrabajo || ""); // área del admin
+        setArea(data.lugarTrabajo || "");
       }
     } catch (err) {
       alert("Error de login: " + err.message);
@@ -35,50 +35,52 @@ export default function Admin() {
     }
   }
 
-async function loadAsistencias() {
-  if (!area) return;
-  const q = query(
-    collection(db, "asistencias"),
-    where("lugarTrabajo", "==", area)
-  );
-  const snap = await getDocs(q);
-  const lista = snap.docs.map((d) => d.data());
-  setAsistencias(lista);
-}
+  async function loadAsistencias() {
+    if (!area) return;
+    const q = query(collection(db, "asistencias"), where("lugarTrabajo", "==", area));
+    const snap = await getDocs(q);
+    const lista = snap.docs.map((d) => {
+      const data = d.data();
 
+      // Convertir timestamps si existen
+      if (data.createdAt?.seconds) {
+        const date = new Date(data.createdAt.seconds * 1000);
+        data.createdAtStr = date.toLocaleString("es-AR");
+      }
+
+      return data;
+    });
+    setAsistencias(lista);
+  }
 
   useEffect(() => {
-    if (user) {
-      loadAsistencias();
-    }
+    if (user) loadAsistencias();
   }, [user]);
 
   if (!user) {
     return (
-      <div style={{ padding: "20px" }}>
+      <div style={{ padding: "20px", textAlign: "center" }}>
         <h2>Login Admin / RRHH</h2>
         <form onSubmit={handleLogin}>
-          <label>
-            Email:
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </label>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
           <br />
-          <label>
-            Password:
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
+          <input
+            type="password"
+            placeholder="Contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
           <br />
-          <button type="submit">{loading ? "Ingresando..." : "Ingresar"}</button>
+          <button type="submit" disabled={loading}>
+            {loading ? "Ingresando..." : "Ingresar"}
+          </button>
         </form>
       </div>
     );
@@ -91,10 +93,14 @@ async function loadAsistencias() {
       {/* Generador de QR */}
       <QrGenerator area={area} />
 
-      {/* Listado asistencias */}
+      {/* Listado de asistencias */}
       <h3>Asistencias registradas</h3>
-      <table border="1" cellPadding="5">
-        <thead>
+      <button onClick={loadAsistencias} style={{ marginBottom: "10px" }}>
+        🔄 Actualizar
+      </button>
+
+      <table border="1" cellPadding="5" style={{ width: "100%", textAlign: "center" }}>
+        <thead style={{ background: "#f2f2f2" }}>
           <tr>
             <th>Legajo</th>
             <th>Nombre</th>
@@ -103,6 +109,7 @@ async function loadAsistencias() {
             <th>Fecha</th>
             <th>Hora</th>
             <th>Lugar de Trabajo</th>
+            <th>Registrado</th>
           </tr>
         </thead>
         <tbody>
@@ -115,6 +122,7 @@ async function loadAsistencias() {
               <td>{a.fecha}</td>
               <td>{a.hora}</td>
               <td>{a.lugarTrabajo}</td>
+              <td>{a.createdAtStr || ""}</td>
             </tr>
           ))}
         </tbody>
