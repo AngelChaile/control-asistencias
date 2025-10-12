@@ -1,18 +1,20 @@
 // src/utils/asistencia.js
+import { db } from "../firebase";
 import {
-  db,
   collection,
   doc,
   getDoc,
   getDocs,
-  setDoc,
-  addDoc,
   query,
   where,
-  serverTimestamp
-} from "../firebase";
+  addDoc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 
-// 🔹 Verifica si el token del QR es válido (por ahora no cambia)
+/**
+ * Valida que el token exista y no haya expirado
+ */
 export async function validarToken(token) {
   const tokenRef = doc(db, "tokens", token);
   const tokenSnap = await getDoc(tokenRef);
@@ -28,44 +30,46 @@ export async function validarToken(token) {
   return true;
 }
 
-// 🔹 Busca un empleado por legajo
-export async function buscarEmpleadoPorLegajo(legajo) {
-  const usersRef = collection(db, "users");
-  const q = query(usersRef, where("legajo", "==", legajo));
-  const snapshot = await getDocs(q);
+/**
+ * Registra asistencia validando que el empleado exista.
+ * Si no existe, retorna un mensaje indicando que debe registrarse.
+ */
+export async function registrarAsistencia({ legajo, tipo }) {
+  try {
+    // 1️⃣ Buscar el usuario por su legajo en la colección "users"
+    const q = query(collection(db, "users"), where("legajo", "==", legajo));
+    const querySnapshot = await getDocs(q);
 
-  if (snapshot.empty) return null;
+    if (querySnapshot.empty) {
+      // No existe el empleado
+      return { success: false, message: "Empleado no encontrado" };
+    }
 
-  const empleado = snapshot.docs[0].data();
-  empleado.id = snapshot.docs[0].id;
-  return empleado;
-}
+    // 2️⃣ Tomar los datos del primer usuario encontrado
+    const userData = querySnapshot.docs[0].data();
 
-// 🔹 Registra una asistencia en la colección 'asistencias'
-export async function registrarAsistencia(empleado) {
-  const { legajo, nombre, apellido, area } = empleado;
-  const fecha = new Date();
+    const nombre = userData.nombre || "";
+    const apellido = userData.apellido || "";
+    const area = userData.area || "";
 
-  await addDoc(collection(db, "asistencias"), {
-    legajo,
-    nombre,
-    apellido,
-    area,
-    tipo: "entrada",
-    fecha: fecha.toLocaleDateString(),
-    hora: fecha.toLocaleTimeString(),
-    timestamp: serverTimestamp()
-  });
-}
+    // Validación extra: evitar registrar si algo viene undefined
+    if (!nombre || !apellido || !area) {
+      return { success: false, message: "Datos del empleado incompletos" };
+    }
 
-// 🔹 Crea un nuevo empleado (si no existe)
-export async function registrarNuevoEmpleado({ legajo, nombre, apellido, area, dni }) {
-  await addDoc(collection(db, "users"), {
-    legajo,
-    nombre,
-    apellido,
-    area,
-    dni,
-    tipo: "empleado"
-  });
+    // 3️⃣ Registrar la asistencia en la colección "asistencias"
+    await addDoc(collection(db, "asistencias"), {
+      legajo,
+      nombre,
+      apellido,
+      area,
+      tipo, // entrada o salida
+      fecha: serverTimestamp(),
+    });
+
+    return { success: true, message: "Asistencia registrada correctamente" };
+  } catch (error) {
+    console.error("❌ Error en registrarAsistencia:", error);
+    return { success: false, message: "Error al registrar la asistencia" };
+  }
 }
