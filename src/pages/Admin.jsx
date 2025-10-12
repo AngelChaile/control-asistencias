@@ -42,11 +42,17 @@ export default function Admin() {
     const lista = snap.docs.map((d) => {
       const data = d.data();
 
-      // Convertir timestamps si existen
-      if (data.createdAt?.seconds) {
-        const date = new Date(data.createdAt.seconds * 1000);
-        data.createdAtStr = date.toLocaleString("es-AR");
-      }
+      // 🔹 Convertir todos los posibles Timestamps a string
+      const convertirFecha = (valor) => {
+        if (!valor) return "";
+        if (valor.toDate) return valor.toDate().toLocaleString("es-AR");
+        if (valor.seconds) return new Date(valor.seconds * 1000).toLocaleString("es-AR");
+        return valor;
+      };
+
+      data.createdAtStr = convertirFecha(data.createdAt);
+      data.fechaStr = convertirFecha(data.fecha);
+      data.horaStr = convertirFecha(data.hora);
 
       return data;
     });
@@ -119,10 +125,10 @@ export default function Admin() {
               <td>{a.nombre}</td>
               <td>{a.apellido}</td>
               <td>{a.tipo}</td>
-              <td>{a.fecha}</td>
-              <td>{a.hora}</td>
+              <td>{a.fechaStr}</td>
+              <td>{a.horaStr}</td>
               <td>{a.lugarTrabajo}</td>
-              <td>{a.createdAtStr || ""}</td>
+              <td>{a.createdAtStr}</td>
             </tr>
           ))}
         </tbody>
