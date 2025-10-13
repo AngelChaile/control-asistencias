@@ -17,7 +17,7 @@ export default function QrGenerator({ area = "" }) {
     setLoading(true);
     try {
       const t = makeToken();
-      const validMs = 1000 * 60 * 2; // 30 minutos (ajustable)
+      const validMs = 1000 * 60 * 2; // 2 minutos (ajustable)
       const expiresAt = new Date(Date.now() + validMs).toISOString();
 
       // Guardar token en Firestore (colección tokens)
@@ -48,7 +48,7 @@ export default function QrGenerator({ area = "" }) {
   return (
     <div style={{ marginTop: 12 }}>
       <button onClick={generarQR} disabled={loading}>
-        {loading ? "Generando..." : "Generar QR (30 min)"}
+        {loading ? "Generando..." : "Generar QR (2 min)"}
       </button>
 
       {qrLink && (

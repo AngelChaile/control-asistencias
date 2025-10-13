@@ -18,11 +18,11 @@ import { limit } from "firebase/firestore";
 import { db } from "./../firebase"; // Ajusta la ruta según tu estructura de carpetas
 
 
-/**
+/** ESTO LO COMENTE PARA NO BORRAR Y PROBAR LA FUNCION DE ABAJO. PERO SI FUNCIONA, BORRAR ESTO
  * Validar token: busca en collection 'tokens' por campo token,
  * verifica expiresAt (ISO string) y used flag.
  */
-export async function validarToken(token) {
+/* export async function validarToken(token) {
   if (!token) throw new Error("Token inválido.");
 
   const q = query(collection(db, "tokens"), where("token", "==", token), limit(1));
@@ -44,7 +44,29 @@ export async function validarToken(token) {
 
   // devolvemos info útil (id doc y area registrada)
   return { id: tokenDoc.id, token: data.token, area: data.area || null, docRefId: tokenDoc.id };
+} */
+
+  export async function validarToken(token) {
+  const q = query(collection(db, "tokens"), where("token", "==", token));
+  const snap = await getDocs(q);
+
+  if (snap.empty) throw new Error("QR inválido o no encontrado.");
+
+  const tokenData = snap.docs[0].data();
+  const now = new Date();
+  const expiresAt = new Date(tokenData.expiresAt);
+
+  // 🔥 Validar expiración
+  if (now > expiresAt) {
+    throw new Error("Este QR ya caducó. Por favor solicite uno nuevo.");
+  }
+
+  // Si querés también podés invalidarlo automáticamente
+  // await updateDoc(snap.docs[0].ref, { used: true });
+
+  return tokenData;
 }
+
 
 /**
  * Buscar empleado por legajo en collection 'users'
