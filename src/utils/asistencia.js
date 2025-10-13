@@ -15,6 +15,8 @@ import {
 } from "firebase/firestore"; // 👈 Importa directamente desde firebase/firestore
 
 import { limit } from "firebase/firestore";
+import { db } from "./../firebase"; // Ajusta la ruta según tu estructura de carpetas
+
 
 /**
  * Validar token: busca en collection 'tokens' por campo token,
