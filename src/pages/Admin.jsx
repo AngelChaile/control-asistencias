@@ -26,7 +26,7 @@ export default function Admin() {
       if (!snap.empty) {
         const data = snap.docs[0].data();
         setUser(data);
-        setArea(data.lugarTrabajo || ""); // área del admin
+        setArea(data.lugarTrabajo || "");
       }
     } catch (err) {
       alert("Error de login: " + err.message);
@@ -37,44 +37,56 @@ export default function Admin() {
 
   async function loadAsistencias() {
     if (!area) return;
-    const q = query(collection(db, "asistencias"), where("areaQR", "==", area));
+    const q = query(collection(db, "asistencias"), where("lugarTrabajo", "==", area));
     const snap = await getDocs(q);
-    const lista = snap.docs.map((d) => d.data());
+    const lista = snap.docs.map((d) => {
+      const data = d.data();
+
+      // 🔹 Convertir todos los posibles Timestamps a string
+      const convertirFecha = (valor) => {
+        if (!valor) return "";
+        if (valor.toDate) return valor.toDate().toLocaleString("es-AR");
+        if (valor.seconds) return new Date(valor.seconds * 1000).toLocaleString("es-AR");
+        return valor;
+      };
+
+      data.createdAtStr = convertirFecha(data.createdAt);
+      data.fechaStr = convertirFecha(data.fecha);
+      data.horaStr = convertirFecha(data.hora);
+
+      return data;
+    });
     setAsistencias(lista);
   }
 
   useEffect(() => {
-    if (user) {
-      loadAsistencias();
-    }
+    if (user) loadAsistencias();
   }, [user]);
 
   if (!user) {
     return (
-      <div style={{ padding: "20px" }}>
+      <div style={{ padding: "20px", textAlign: "center" }}>
         <h2>Login Admin / RRHH</h2>
         <form onSubmit={handleLogin}>
-          <label>
-            Email:
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </label>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
           <br />
-          <label>
-            Password:
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
+          <input
+            type="password"
+            placeholder="Contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
           <br />
-          <button type="submit">{loading ? "Ingresando..." : "Ingresar"}</button>
+          <button type="submit" disabled={loading}>
+            {loading ? "Ingresando..." : "Ingresar"}
+          </button>
         </form>
       </div>
     );
@@ -87,10 +99,14 @@ export default function Admin() {
       {/* Generador de QR */}
       <QrGenerator area={area} />
 
-      {/* Listado asistencias */}
+      {/* Listado de asistencias */}
       <h3>Asistencias registradas</h3>
-      <table border="1" cellPadding="5">
-        <thead>
+      <button onClick={loadAsistencias} style={{ marginBottom: "10px" }}>
+        🔄 Actualizar
+      </button>
+
+      <table border="1" cellPadding="5" style={{ width: "100%", textAlign: "center" }}>
+        <thead style={{ background: "#f2f2f2" }}>
           <tr>
             <th>Legajo</th>
             <th>Nombre</th>
@@ -98,7 +114,8 @@ export default function Admin() {
             <th>Tipo</th>
             <th>Fecha</th>
             <th>Hora</th>
-            <th>Área QR</th>
+            <th>Lugar de Trabajo</th>
+            <th>Registrado</th>
           </tr>
         </thead>
         <tbody>
@@ -108,9 +125,10 @@ export default function Admin() {
               <td>{a.nombre}</td>
               <td>{a.apellido}</td>
               <td>{a.tipo}</td>
-              <td>{a.fecha}</td>
-              <td>{a.hora}</td>
-              <td>{a.areaQR}</td>
+              <td>{a.fechaStr}</td>
+              <td>{a.horaStr}</td>
+              <td>{a.lugarTrabajo}</td>
+              <td>{a.createdAtStr}</td>
             </tr>
           ))}
         </tbody>
