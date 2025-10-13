@@ -1,43 +1,45 @@
+// src/components/QrGenerator.jsx
 import React, { useState } from "react";
 import { makeToken } from "../utils/tokens";
-import { addDoc, collection, serverTimestamp } from "../firebase";
-import { db } from "../firebase";
+import {
+  db,
+  collection,
+  addDoc,
+  serverTimestamp
+} from "../firebase";
 
-
-export default function QrGenerator({ area }) {
+export default function QrGenerator({ area = "" }) {
   const [loading, setLoading] = useState(false);
   const [qrLink, setQrLink] = useState(null);
   const [token, setToken] = useState(null);
 
-  // Genera token, lo guarda en Firestore en collection 'tokens' con expiry (1h)
   async function generarQR() {
     setLoading(true);
     try {
       const t = makeToken();
-      const validForMs = 1000 * 60 * 60; // 1 hora
-      const expiresAt = new Date(Date.now() + validForMs);
+      const validMs = 1000 * 60 * 30; // 30 minutos (ajustable)
+      const expiresAt = new Date(Date.now() + validMs).toISOString();
 
-      // Guardar token
+      // Guardar token en Firestore (colección tokens)
       await addDoc(collection(db, "tokens"), {
         token: t,
-        area,
+        area: area || "",
         createdAt: serverTimestamp(),
-        expiresAt: expiresAt.toISOString(),
+        expiresAt: expiresAt,
         used: false
       });
 
-      // link que escanea el empleado -> desplegará la pantalla Scan que validará token
-      const baseUrl = window.location.origin; // deploy en Vercel
-      const link = `${baseUrl}/scan?token=${encodeURIComponent(t)}&area=${encodeURIComponent(area)}`;
+      const baseUrl = window.location.origin;
+      // link simplificado: sólo token
+      const link = `${baseUrl}/scan?token=${encodeURIComponent(t)}`;
 
-      // quickchart image (opcional mostrar imagen)
       const quickUrl = `https://quickchart.io/qr?text=${encodeURIComponent(link)}&size=400`;
 
       setToken(t);
-      setQrLink({ link, quickUrl, expiresAt: expiresAt.toISOString() });
+      setQrLink({ link, quickUrl, expiresAt });
     } catch (err) {
       console.error(err);
-      alert("Error generando QR");
+      alert("Error generando QR: " + (err.message || ""));
     } finally {
       setLoading(false);
     }
@@ -46,14 +48,14 @@ export default function QrGenerator({ area }) {
   return (
     <div style={{ marginTop: 12 }}>
       <button onClick={generarQR} disabled={loading}>
-        {loading ? "Generando..." : "Generar QR por 1 hora"}
+        {loading ? "Generando..." : "Generar QR (30 min)"}
       </button>
 
       {qrLink && (
         <div style={{ marginTop: 12 }}>
           <p>Escaneá este QR (válido hasta {new Date(qrLink.expiresAt).toLocaleString()})</p>
           <img src={qrLink.quickUrl} alt="QR" style={{ width: 220, height: 220 }} />
-          <p><a href={qrLink.link} target="_blank">{qrLink.link}</a></p>
+          <p style={{ wordBreak: "break-all" }}><a href={qrLink.link} target="_blank">{qrLink.link}</a></p>
           <p>Token: {token}</p>
         </div>
       )}
