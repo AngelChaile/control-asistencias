@@ -133,8 +133,8 @@ export async function registrarAsistenciaPorLegajo(legajo, token = null) {
 
     if (lastTipo === "ENTRADA" && lastDate) {
       const diffMin = (ahora - lastDate) / 60000;
-      if (diffMin <= 10) {
-        throw new Error("Ya registraste tu entrada hace menos de 10 minutos.");
+      if (diffMin <= 1) {
+        throw new Error(`Ey ${empleado.apellido}, ya registraste tu entrada hace menos de 1 minuto.`);
       }
       // si pasó > 10 min, se considera SALIDA
       tipo = "SALIDA";

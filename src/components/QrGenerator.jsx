@@ -17,7 +17,7 @@ export default function QrGenerator({ area = "" }) {
     setLoading(true);
     try {
       const t = makeToken();
-      const validMs = 1000 * 60 * 30; // 30 minutos (ajustable)
+      const validMs = 1000 * 60 * 2; // 30 minutos (ajustable)
       const expiresAt = new Date(Date.now() + validMs).toISOString();
 
       // Guardar token en Firestore (colección tokens)
