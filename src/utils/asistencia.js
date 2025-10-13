@@ -2,19 +2,19 @@
 // Funciones: validarToken, buscarEmpleadoPorLegajo, registrarAsistenciaPorLegajo, registrarNuevoEmpleado
 
 import {
-  db,
   collection,
+  addDoc,
+  getDocs,
   query,
   where,
-  getDocs,
-  addDoc,
-  serverTimestamp,
   orderBy,
-  limit,
+  serverTimestamp,
   doc,
   getDoc,
-  setDoc
-} from "../firebase";
+  updateDoc,
+} from "firebase/firestore"; // 👈 Importa directamente desde firebase/firestore
+
+import { limit } from "firebase/firestore";
 
 /**
  * Validar token: busca en collection 'tokens' por campo token,
