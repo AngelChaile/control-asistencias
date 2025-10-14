@@ -3,7 +3,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import HR from "./pages/HR";
 import AdminArea from "./pages/AdminArea";
-import Employee from "./pages/Employee";
+import Employee from "./components/Employee";
 import { obtenerUsuarioActual } from "./utils/auth";
 import React, { useEffect, useState } from "react";
 
