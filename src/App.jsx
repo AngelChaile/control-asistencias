@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Admin from "./pages/Admin";
 import Scan from "./pages/Scan";
 import HR from "./pages/HR";
+import Navbar from "./components/Navbar";
 import { auth, signInWithEmailAndPassword, onAuthStateChanged, firebaseSignOut } from "./firebase";
 
 function Login({ setUser }) {
@@ -46,19 +47,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div style={{ display: "flex", gap: 12, padding: 12, borderBottom: "1px solid #ddd" }}>
-        <Link to="/">Inicio</Link>
-        <Link to="/admin">Admin</Link>
-        <Link to="/scan">Scan</Link>
-        <Link to="/hr">RRHH</Link>
-        {user ? (
-          <span style={{ marginLeft: "auto" }}>
-            <strong>{user.email}</strong> <button onClick={logout}>Salir</button>
-          </span>
-        ) : (
-          <Link to="/login" style={{ marginLeft: "auto" }}>Login</Link>
-        )}
-      </div>
+      <Navbar user={user} logout={logout} />
 
       <Routes>
         <Route path="/" element={<div style={{ padding: 20 }}><h2>Bienvenido al sistema de asistencias</h2></div>} />
@@ -66,8 +55,6 @@ export default function App() {
         <Route path="/scan" element={<Scan />} />
         <Route path="/hr" element={user ? <HR /> : <Login setUser={setUser} />} />
         <Route path="/login" element={<Login setUser={setUser} />} />
-
-        {/* Ruta comodín para cualquier URL desconocida */}
         <Route path="*" element={<div style={{ padding: 20 }}><h2>Página no encontrada</h2></div>} />
       </Routes>
     </BrowserRouter>

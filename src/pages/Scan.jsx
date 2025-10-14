@@ -20,10 +20,11 @@ export default function Scan() {
   const [nuevo, setNuevo] = useState({ nombre: "", apellido: "", lugarTrabajo: "" });
 
   useEffect(() => {
-    // Validamos token en cuanto entra la pantalla (opcional; si no hay token lo dejamos pasar)
+    // Validamos token en cuanto entra la pantalla ( si no hay token NO PERMITIMOS FICHAR)
     async function v() {
       if (!tokenParam) {
-        setMessage("Advertencia: QR sin token. Proceda con precaución.");
+        setMessage("❌ Acceso no permitido. Escanee un QR válido para fichar.");
+        setShowRegistro(false);
         return;
       }
       try {
@@ -80,6 +81,15 @@ export default function Scan() {
       setLegajo("");
       setEmpleadoEncontrado(null);
       setShowRegistro(false);
+
+      <input
+        type="text"
+        value={legajo}
+        onChange={(e) => setLegajo(e.target.value)}
+        placeholder="Ingrese su legajo"
+        disabled={!!empleadoEncontrado} // 🚫 bloquea si ya encontró empleado
+      />
+
     } catch (err) {
       console.error(err);
       setMessage(err.message || "Ocurrió un error al registrar la asistencia.");
@@ -144,9 +154,9 @@ export default function Scan() {
       {showRegistro && (
         <form onSubmit={handleGuardarNuevo} style={{ marginTop: 12 }}>
           <h3>Registro de nuevo empleado</h3>
-          <input placeholder="Nombre" value={nuevo.nombre} onChange={e => setNuevo({...nuevo, nombre: e.target.value})} />
-          <input placeholder="Apellido" value={nuevo.apellido} onChange={e => setNuevo({...nuevo, apellido: e.target.value})} />
-          <input placeholder="Lugar de trabajo (opcional)" value={nuevo.lugarTrabajo} onChange={e => setNuevo({...nuevo, lugarTrabajo: e.target.value})} />
+          <input placeholder="Nombre" value={nuevo.nombre} onChange={e => setNuevo({ ...nuevo, nombre: e.target.value })} />
+          <input placeholder="Apellido" value={nuevo.apellido} onChange={e => setNuevo({ ...nuevo, apellido: e.target.value })} />
+          <input placeholder="Lugar de trabajo (opcional)" value={nuevo.lugarTrabajo} onChange={e => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
           <div style={{ marginTop: 8 }}>
             <button type="submit" disabled={loading}>{loading ? "Guardando..." : "Guardar y fichar"}</button>
           </div>

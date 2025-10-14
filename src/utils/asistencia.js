@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore"; // 👈 Importa directamente desde firebase/firestore
 
 import { limit } from "firebase/firestore";
-import { db } from "./../firebase"; // Ajusta la ruta según tu estructura de carpetas
+import { db } from "./../firebase"; // Ajustar ruta según estructura de carpetas
 
 
 /** ESTO LO COMENTE PARA NO BORRAR Y PROBAR LA FUNCION DE ABAJO. PERO SI FUNCIONA, BORRAR ESTO
@@ -46,7 +46,7 @@ import { db } from "./../firebase"; // Ajusta la ruta según tu estructura de ca
   return { id: tokenDoc.id, token: data.token, area: data.area || null, docRefId: tokenDoc.id };
 } */
 
-  export async function validarToken(token) {
+  /* export async function validarToken(token) {
   const q = query(collection(db, "tokens"), where("token", "==", token));
   const snap = await getDocs(q);
 
@@ -63,6 +63,32 @@ import { db } from "./../firebase"; // Ajusta la ruta según tu estructura de ca
 
   // Si querés también podés invalidarlo automáticamente
   // await updateDoc(snap.docs[0].ref, { used: true });
+
+  return tokenData;
+} */
+
+  export async function validarToken(token) {
+  const q = query(collection(db, "tokens"), where("token", "==", token));
+  const snap = await getDocs(q);
+
+  if (snap.empty) throw new Error("QR inválido o no encontrado.");
+
+  const tokenDoc = snap.docs[0];
+  const tokenData = tokenDoc.data();
+  const now = new Date();
+  const expiresAt = new Date(tokenData.expiresAt);
+
+  // ✅ Verificar si ya expiró
+  if (now > expiresAt) {
+    // Invalida el QR para que ya no se pueda volver a usar
+    await updateDoc(tokenDoc.ref, { used: true });
+    throw new Error("⏰ Este QR ya caducó. Solicite uno nuevo.");
+  }
+
+  // ✅ Verificar si ya fue usado previamente
+  if (tokenData.used) {
+    throw new Error("⚠️ Este QR ya fue utilizado.");
+  }
 
   return tokenData;
 }
@@ -187,6 +213,11 @@ export async function registrarAsistenciaPorLegajo(legajo, token = null) {
     token: token || null,
     createdAt: serverTimestamp()
   });
+
+
+  //  marcar token como usado PERO ESTO HAY Q REVISAR SI CONVIENE DEJARLO PORQUE SI NO HAY Q ESCANEAR UN QR POR EMPLEADO Y NO ES PRACTICO
+  await updateDoc(tokenDoc.ref, { used: true });
+
 
   return {
     ok: true,
