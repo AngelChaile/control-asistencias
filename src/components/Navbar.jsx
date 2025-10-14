@@ -2,6 +2,22 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
+useEffect(() => {
+  async function cargarMenu() {
+    const user = await obtenerUsuarioActual();
+    if (!user) return;
+
+    if (user.rol === "rrhh") {
+      document.getElementById("menu-rrhh").style.display = "block";
+    } else {
+      document.getElementById("menu-rrhh").style.display = "none";
+    }
+  }
+
+  cargarMenu();
+}, []);
+
+
 export default function Navbar({ user, logout }) {
   return (
     <nav

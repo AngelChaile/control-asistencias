@@ -2,9 +2,34 @@ import React, { useEffect, useState } from "react";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "../firebase";
 import { exportToCsv } from "../components/ExportCSV";
+import { obtenerUsuarioActual } from "../utils/auth.js";
 
 export default function HR() {
   const [asistencias, setAsistencias] = useState([]);
+
+  useEffect(() => {
+    async function checkAccess() {
+      const user = await obtenerUsuarioActual();
+
+      if (!user) {
+        alert("Debes iniciar sesión para acceder.");
+        window.location.href = "/login.html";
+        return;
+      }
+
+      // Solo RRHH puede ver este módulo
+      if (user.rol !== "rrhh") {
+        alert("No tienes permisos para acceder a este módulo.");
+        window.location.href = "/index.html";
+        return;
+      }
+
+      console.log("✅ Acceso permitido a RRHH");
+      fetchAsistencias();
+    }
+
+    checkAccess();
+  }, []);
 
   async function fetchAsistencias() {
     const q = query(collection(db, "asistencias"), orderBy("createdAt", "desc"));
@@ -12,21 +37,15 @@ export default function HR() {
 
     const lista = snap.docs.map((d) => {
       const data = d.data();
-
       if (data.createdAt?.seconds) {
         const date = new Date(data.createdAt.seconds * 1000);
         data.createdAtStr = date.toLocaleString("es-AR");
       }
-
       return { id: d.id, ...data };
     });
 
     setAsistencias(lista);
   }
-
-  useEffect(() => {
-    fetchAsistencias();
-  }, []);
 
   function exportAll() {
     exportToCsv("asistencias.csv", asistencias);
