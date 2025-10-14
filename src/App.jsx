@@ -7,6 +7,22 @@ import Employee from "./components/Employee";
 import { obtenerUsuarioActual } from "./utils/auth";
 import React, { useEffect, useState } from "react";
 
+useEffect(() => {
+  async function cargarMenu() {
+    const user = await obtenerUsuarioActual();
+    if (!user) return;
+
+    if (user.rol === "rrhh") {
+      document.getElementById("menu-rrhh").style.display = "block";
+    } else {
+      document.getElementById("menu-rrhh").style.display = "none";
+    }
+  }
+
+  cargarMenu();
+}, []);
+
+
 export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [loading, setLoading] = useState(true);
