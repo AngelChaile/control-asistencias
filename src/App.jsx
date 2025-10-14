@@ -44,7 +44,7 @@ export default function App() {
   }
 
   // while auth initializing, show nothing small (avoids flicker)
-  if (!authReady) return <div style={{padding:20}}>Cargando...</div>;
+  if (!authReady) return <div style={{ padding: 20 }}>Cargando...</div>;
 
   return (
     <BrowserRouter>
@@ -52,7 +52,23 @@ export default function App() {
       {user && user.rol !== "empleado" && <Menu user={user} onLogout={logout} />}
 
       <Routes>
-        <Route path="/" element={<div style={{ padding: 20 }}><h2>Bienvenido al sistema de asistencias</h2></div>} />
+        <Route
+          path="/"
+          element={
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : user.rol === "rrhh" ? (
+              <Navigate to="/hr" replace />
+            ) : user.rol === "admin" ? (
+              <Navigate to="/admin" replace />
+            ) : (
+              <div style={{ padding: 20 }}>
+                <h2>Bienvenido al sistema de asistencias</h2>
+              </div>
+            )
+          }
+        />
+
         <Route path="/login" element={<Login />} />
         <Route path="/admin" element={user ? <Admin user={user} /> : <Navigate to="/login" replace />} />
         <Route path="/hr" element={user ? <HR user={user} /> : <Navigate to="/login" replace />} />
