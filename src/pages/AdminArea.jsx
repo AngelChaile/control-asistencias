@@ -5,7 +5,7 @@ import QrGenerator from "../components/QrGenerator";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 
-export default function Admin() {
+export default function AdminArea() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [user, setUser] = useState(null);

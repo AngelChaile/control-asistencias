@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function EmployeeList({ empleados, onEdit, onDelete }) {
+export default function Employee({ empleados, onEdit, onDelete }) {
   return (
     <div>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
