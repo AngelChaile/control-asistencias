@@ -1,18 +1,15 @@
-import { auth, db } from "../firebase";
+// helpers para auth & users collection
 import { doc, getDoc } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+import { db } from "../firebase";
 
-export async function obtenerUsuarioActual() {
-  return new Promise((resolve) => {
-    onAuthStateChanged(auth, async (userAuth) => {
-      if (!userAuth) return resolve(null);
-
-      const userDoc = await getDoc(doc(db, "users", userAuth.uid));
-      if (userDoc.exists()) {
-        resolve({ uid: userAuth.uid, ...userDoc.data() });
-      } else {
-        resolve(null);
-      }
-    });
-  });
+/**
+ * getUserDoc(uid)
+ * devuelve el objeto de la colección "users" para el uid dado, o null
+ */
+export async function getUserDoc(uid) {
+  if (!uid) return null;
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return snap.data();
 }

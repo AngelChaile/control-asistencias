@@ -1,15 +1,16 @@
 // src/pages/Scan.jsx
-import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   validarToken,
   buscarEmpleadoPorLegajo,
   registrarAsistenciaPorLegajo,
-  registrarNuevoEmpleado
+  registrarNuevoEmpleado,
 } from "../utils/asistencia";
 
 export default function Scan() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const tokenParam = searchParams.get("token") || null;
 
   const [legajo, setLegajo] = useState("");
@@ -20,11 +21,9 @@ export default function Scan() {
   const [nuevo, setNuevo] = useState({ nombre: "", apellido: "", lugarTrabajo: "" });
 
   useEffect(() => {
-    // Validamos token en cuanto entra la pantalla ( si no hay token NO PERMITIMOS FICHAR)
-    async function v() {
+    (async () => {
       if (!tokenParam) {
         setMessage("❌ Acceso no permitido. Escanee un QR válido para fichar.");
-        setShowRegistro(false);
         return;
       }
       try {
@@ -33,8 +32,7 @@ export default function Scan() {
       } catch (err) {
         setMessage(err.message || "Token inválido.");
       }
-    }
-    v();
+    })();
   }, [tokenParam]);
 
   async function handleBuscar(e) {
@@ -65,7 +63,6 @@ export default function Scan() {
   }
 
   async function handleRegistrarAsistencia(tipo = null) {
-    // si no hay empleado en memoria, buscarlo antes
     setMessage("");
     setLoading(true);
     try {
@@ -76,20 +73,11 @@ export default function Scan() {
       }
 
       const res = await registrarAsistenciaPorLegajo(legajo, tokenParam);
-      setMessage(`✅ Registro exitoso: ${res.empleado.nombre} ${res.empleado.apellido} - ${res.tipo} ${res.hora}`);
-      // limpiar
+      setMessage(`✅ Registro exitoso: ${res.empleado.nombre} ${res.empleado.apellido} - ${res.tipo} a las ${res.hora}`);
+      // limpiar y bloquear input
       setLegajo("");
       setEmpleadoEncontrado(null);
       setShowRegistro(false);
-
-      <input
-        type="text"
-        value={legajo}
-        onChange={(e) => setLegajo(e.target.value)}
-        placeholder="Ingrese su legajo"
-        disabled={!!empleadoEncontrado} // 🚫 bloquea si ya encontró empleado
-      />
-
     } catch (err) {
       console.error(err);
       setMessage(err.message || "Ocurrió un error al registrar la asistencia.");
@@ -115,7 +103,7 @@ export default function Scan() {
       setMessage("Empleado registrado. Proceda a fichar.");
       setShowRegistro(false);
       setEmpleadoEncontrado({ legajo, nombre: nuevo.nombre, apellido: nuevo.apellido, lugarTrabajo: nuevo.lugarTrabajo });
-      // opcional: registrar asistencia inmediatamente
+      // registrar asistencia ahora
       await handleRegistrarAsistencia();
     } catch (err) {
       console.error(err);
@@ -132,11 +120,20 @@ export default function Scan() {
 
       {!showRegistro && (
         <form onSubmit={handleBuscar}>
-          <label>Legajo:
-            <input value={legajo} onChange={(e) => setLegajo(e.target.value)} />
+          <label>
+            Legajo:
+            <input
+              value={legajo}
+              onChange={(e) => setLegajo(e.target.value)}
+              disabled={!!empleadoEncontrado}
+              placeholder="Ingrese su legajo"
+            />
           </label>
           <br />
-          <button type="submit" disabled={loading}>{loading ? "Buscando..." : "Buscar / Fichar"}</button>
+          <div style={{ marginTop: 8 }}>
+            <button type="submit" disabled={loading}>{loading ? "Buscando..." : "Buscar / Fichar"}</button>
+            <button type="button" onClick={() => navigate("/login")} style={{ marginLeft: 8 }}>Volver al login</button>
+          </div>
         </form>
       )}
 
@@ -159,6 +156,7 @@ export default function Scan() {
           <input placeholder="Lugar de trabajo (opcional)" value={nuevo.lugarTrabajo} onChange={e => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
           <div style={{ marginTop: 8 }}>
             <button type="submit" disabled={loading}>{loading ? "Guardando..." : "Guardar y fichar"}</button>
+            <button type="button" onClick={() => navigate("/login")} style={{ marginLeft: 8 }}>Volver al login</button>
           </div>
         </form>
       )}

@@ -1,4 +1,6 @@
 // src/utils/asistencia.js
+// funciones: validarToken, buscarEmpleadoPorLegajo, registrarAsistenciaPorLegajo, registrarNuevoEmpleado
+
 import {
   collection,
   addDoc,
@@ -7,116 +9,115 @@ import {
   where,
   orderBy,
   serverTimestamp,
+  doc,
+  getDoc,
   updateDoc,
-  limit
 } from "firebase/firestore";
-import { db } from "./../firebase";
+import { db } from "../firebase";
 
-// ✅ Validar token: comprueba si existe, expiró o fue usado
+/**
+ * validarToken(token)
+ * busca el token en collection "tokens" y verifica expiresAt (ISO string)
+ * No marca token como used (permitimos uso por múltiples empleados mientras no haya expirado).
+ * Lanza error si inválido/expirado.
+ */
 export async function validarToken(token) {
+  if (!token) throw new Error("Token requerido.");
   const q = query(collection(db, "tokens"), where("token", "==", token));
   const snap = await getDocs(q);
-
   if (snap.empty) throw new Error("QR inválido o no encontrado.");
-
   const tokenDoc = snap.docs[0];
   const tokenData = tokenDoc.data();
-  const now = new Date();
-  const expiresAt = new Date(tokenData.expiresAt);
 
-  // ✅ Si ya expiró
-  if (now > expiresAt) {
-    await updateDoc(tokenDoc.ref, { used: true });
+  const now = new Date();
+  const expiresAt = tokenData.expiresAt ? new Date(tokenData.expiresAt) : null;
+  if (expiresAt && now > expiresAt) {
+    // opcional: marcar used true
+    try { await updateDoc(tokenDoc.ref, { used: true }); } catch(e){/* ignore */ }
     throw new Error("⏰ Este QR ya caducó. Solicite uno nuevo.");
   }
 
-  // ✅ Si ya fue usado
-  if (tokenData.used) {
-    throw new Error("⚠️ Este QR ya fue utilizado.");
-  }
-
-  // Devuelve referencia también para marcarlo más adelante si querés
-  return { ref: tokenDoc.ref, ...tokenData };
+  // si tiene flag 'disabled' o 'used' y querés evitar reutilización, lo chequeas aquí.
+  if (tokenData.disabled) throw new Error("QR inválido.");
+  // OK
+  return { id: tokenDoc.id, ...tokenData };
 }
 
-// ✅ Buscar empleado en colección 'empleados'
+/**
+ * buscarEmpleadoPorLegajo(legajo)
+ * busca en collection "empleados"
+ */
 export async function buscarEmpleadoPorLegajo(legajo) {
   if (!legajo) return null;
   const q = query(collection(db, "empleados"), where("legajo", "==", String(legajo)));
   const snap = await getDocs(q);
   if (snap.empty) return null;
-  const docSnap = snap.docs[0];
-  return { id: docSnap.id, ...docSnap.data() };
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() };
 }
 
-// ✅ Registrar un nuevo empleado
+/**
+ * registrarNuevoEmpleado(emp)
+ * guarda en collection "empleados"
+ */
 export async function registrarNuevoEmpleado(emp) {
   if (!emp || !emp.legajo || !emp.nombre || !emp.apellido) {
-    throw new Error("Datos incompletos para registrar empleado.");
+    throw new Error("Datos incompletos.");
   }
-
   const ref = await addDoc(collection(db, "empleados"), {
     legajo: String(emp.legajo),
     nombre: emp.nombre,
     apellido: emp.apellido,
-    lugarTrabajo: emp.lugarTrabajo || emp.area || "",
+    lugarTrabajo: emp.lugarTrabajo || emp.lugar || "",
     secretaria: emp.secretaria || "",
     horario: emp.horario || "",
-    rol: emp.rol || "empleado",
-    email: emp.email || "",
+    rol: "empleado",
     createdAt: serverTimestamp()
   });
   return ref.id;
 }
 
-// ✅ Registrar asistencia
-export async function registrarAsistenciaPorLegajo(legajo, tokenData = null) {
+/**
+ * registrarAsistenciaPorLegajo(legajo, token)
+ * - busca último registro en 'asistencias' filtrando por legajo (sin orderBy en query para evitar índice)
+ * - decide tipo por toggling simple: si último.tipo === 'ENTRADA' => 'SALIDA' else 'ENTRADA'
+ * - guarda doc con createdAt serverTimestamp y fecha/hora como strings
+ */
+export async function registrarAsistenciaPorLegajo(legajo, token = null) {
   if (!legajo) throw new Error("Legajo requerido.");
 
-  // 1️⃣ Buscar empleado
   const empleado = await buscarEmpleadoPorLegajo(legajo);
   if (!empleado) throw new Error("Empleado no encontrado.");
 
-  // 2️⃣ Última asistencia
-  const qLast = query(
-    collection(db, "asistencias"),
-    where("legajo", "==", String(legajo)),
-    orderBy("createdAt", "desc"),
-    limit(1)
-  );
-  const snapLast = await getDocs(qLast);
-
-  const ahora = new Date();
-  const fechaStr = ahora.toLocaleDateString("es-AR");
-  const horaStr = ahora.toLocaleTimeString("es-AR");
-
-  let tipo = "ENTRADA";
-  if (!snapLast.empty) {
-    const last = snapLast.docs[0].data();
-    const lastTipo = last.tipo;
-    let lastDate = null;
-
-    if (last.createdAt?.seconds) {
-      lastDate = new Date(last.createdAt.seconds * 1000);
-    } else if (typeof last.createdAt === "string") {
-      lastDate = new Date(last.createdAt);
-    } else if (last.createdAt instanceof Date) {
-      lastDate = last.createdAt;
-    }
-
-    if (lastTipo === "ENTRADA" && lastDate) {
-      const diffMin = (ahora - lastDate) / 60000;
-      if (diffMin <= 1) {
-        throw new Error(`Ey ${empleado.apellido}, ya registraste tu entrada hace menos de 1 minuto.`);
-      }
-      tipo = "SALIDA";
-    } else if (lastTipo === "SALIDA") {
-      tipo = "ENTRADA";
-    }
+  // obtener todas asistencias para el legajo y elegir la última por createdAt (client-side)
+  const q = query(collection(db, "asistencias"), where("legajo", "==", String(legajo)));
+  const snap = await getDocs(q);
+  let last = null;
+  if (!snap.empty) {
+    // map docs to with createdAt numeric timestamp if available
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // sort by createdAt (try to handle different formats)
+    docs.sort((a, b) => {
+      const aTime = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      const bTime = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+      return bTime - aTime;
+    });
+    last = docs[0];
   }
 
-  // 3️⃣ Guardar asistencia
-  const docRef = await addDoc(collection(db, "asistencias"), {
+  const now = new Date();
+  const fechaStr = now.toLocaleDateString("es-AR");
+  const horaStr = now.toLocaleTimeString("es-AR");
+
+  let tipo = "ENTRADA";
+  if (last && last.tipo === "ENTRADA") {
+    tipo = "SALIDA";
+  } else {
+    tipo = "ENTRADA";
+  }
+
+  // guardar
+  const newDoc = await addDoc(collection(db, "asistencias"), {
     legajo: String(legajo),
     nombre: empleado.nombre,
     apellido: empleado.apellido,
@@ -125,21 +126,15 @@ export async function registrarAsistenciaPorLegajo(legajo, tokenData = null) {
     tipo,
     fecha: fechaStr,
     hora: horaStr,
-    token: tokenData?.token || null,
+    token: token || null,
     createdAt: serverTimestamp()
   });
 
-  // 4️⃣ Si querés invalidar el token en el primer uso:
-  if (tokenData?.ref) {
-    await updateDoc(tokenData.ref, { used: true });
-  }
-
   return {
-    ok: true,
-    docId: docRef.id,
+    empleado,
     tipo,
     fecha: fechaStr,
     hora: horaStr,
-    empleado
+    id: newDoc.id
   };
 }
