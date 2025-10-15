@@ -1,165 +1,54 @@
 // src/pages/Scan.jsx
-import React, { useEffect, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import {
-  validarToken,
-  buscarEmpleadoPorLegajo,
-  registrarAsistenciaPorLegajo,
-  registrarNuevoEmpleado,
-} from "../utils/asistencia";
+import React, { useState, useEffect } from "react";
+import { registrarAsistenciaPorLegajo } from "../utils/asistencia.js";
+import { obtenerUsuarioActual } from "../utils/auth.js";
 
 export default function Scan() {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const tokenParam = searchParams.get("token") || null;
-
+  const [user, setUser] = useState(null);
   const [legajo, setLegajo] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [empleadoEncontrado, setEmpleadoEncontrado] = useState(null);
-  const [showRegistro, setShowRegistro] = useState(false);
-  const [nuevo, setNuevo] = useState({ nombre: "", apellido: "", lugarTrabajo: "" });
+  const [mensaje, setMensaje] = useState("");
 
   useEffect(() => {
-    (async () => {
-      if (!tokenParam) {
-        setMessage("❌ Acceso no permitido. Escanee un QR válido para fichar.");
+    async function cargarUsuario() {
+      const u = await obtenerUsuarioActual();
+      if (!u) {
+        window.location.href = "/login";
         return;
       }
-      try {
-        await validarToken(tokenParam);
-        setMessage("QR válido. Ingrese su legajo.");
-      } catch (err) {
-        setMessage(err.message || "Token inválido.");
-      }
-    })();
-  }, [tokenParam]);
-
-  async function handleBuscar(e) {
-    e && e.preventDefault();
-    setMessage("");
-    if (!legajo) {
-      setMessage("Ingrese su legajo.");
-      return;
+      setUser(u);
     }
-    setLoading(true);
-    try {
-      const emp = await buscarEmpleadoPorLegajo(legajo);
-      if (!emp) {
-        setEmpleadoEncontrado(null);
-        setShowRegistro(true);
-        setMessage("Empleado no encontrado. Complete el registro.");
-      } else {
-        setEmpleadoEncontrado(emp);
-        setShowRegistro(false);
-        setMessage(`Empleado encontrado: ${emp.nombre} ${emp.apellido}`);
-      }
-    } catch (err) {
-      console.error(err);
-      setMessage("Ocurrió un error al buscar el empleado.");
-    } finally {
-      setLoading(false);
-    }
-  }
+    cargarUsuario();
+  }, []);
 
-  async function handleRegistrarAsistencia(tipo = null) {
-    setMessage("");
-    setLoading(true);
-    try {
-      let emp = empleadoEncontrado;
-      if (!emp) {
-        emp = await buscarEmpleadoPorLegajo(legajo);
-        if (!emp) throw new Error("Empleado no encontrado. Por favor registrese.");
-      }
+  async function fichar(e) {
+    e.preventDefault();
+    if (!legajo) return setMensaje("Ingrese un legajo válido.");
 
-      const res = await registrarAsistenciaPorLegajo(legajo, tokenParam);
-      setMessage(`✅ Registro exitoso: ${res.empleado.nombre} ${res.empleado.apellido} - ${res.tipo} a las ${res.hora}`);
-      // limpiar y bloquear input
+    try {
+      const res = await registrarAsistenciaPorLegajo(legajo);
+      setMensaje(`✅ ${res.empleado.nombre} ${res.empleado.apellido} registró ${res.tipo}`);
       setLegajo("");
-      setEmpleadoEncontrado(null);
-      setShowRegistro(false);
     } catch (err) {
-      console.error(err);
-      setMessage(err.message || "Ocurrió un error al registrar la asistencia.");
-    } finally {
-      setLoading(false);
+      setMensaje(`❌ ${err.message}`);
     }
   }
 
-  async function handleGuardarNuevo(e) {
-    e && e.preventDefault();
-    if (!legajo || !nuevo.nombre || !nuevo.apellido) {
-      setMessage("Complete todos los campos para registrar empleado.");
-      return;
-    }
-    setLoading(true);
-    try {
-      await registrarNuevoEmpleado({
-        legajo,
-        nombre: nuevo.nombre,
-        apellido: nuevo.apellido,
-        lugarTrabajo: nuevo.lugarTrabajo || ""
-      });
-      setMessage("Empleado registrado. Proceda a fichar.");
-      setShowRegistro(false);
-      setEmpleadoEncontrado({ legajo, nombre: nuevo.nombre, apellido: nuevo.apellido, lugarTrabajo: nuevo.lugarTrabajo });
-      // registrar asistencia ahora
-      await handleRegistrarAsistencia();
-    } catch (err) {
-      console.error(err);
-      setMessage("Error guardando nuevo empleado.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  if (!user) return null; // evita render antes de validar usuario
 
   return (
-    <div style={{ padding: 20, maxWidth: 480, margin: "auto" }}>
-      <h2>Registro de Asistencia</h2>
-      <p>{message}</p>
-
-      {!showRegistro && (
-        <form onSubmit={handleBuscar}>
-          <label>
-            Legajo:
-            <input
-              value={legajo}
-              onChange={(e) => setLegajo(e.target.value)}
-              disabled={!!empleadoEncontrado}
-              placeholder="Ingrese su legajo"
-            />
-          </label>
-          <br />
-          <div style={{ marginTop: 8 }}>
-            <button type="submit" disabled={loading}>{loading ? "Buscando..." : "Buscar / Fichar"}</button>
-            <button type="button" onClick={() => navigate("/login")} style={{ marginLeft: 8 }}>Volver al login</button>
-          </div>
-        </form>
-      )}
-
-      {empleadoEncontrado && (
-        <div style={{ marginTop: 16 }}>
-          <h3>{empleadoEncontrado.nombre} {empleadoEncontrado.apellido}</h3>
-          <p>Legajo: {empleadoEncontrado.legajo}</p>
-          <p>Lugar de trabajo: {empleadoEncontrado.lugarTrabajo}</p>
-          <button onClick={() => handleRegistrarAsistencia()} disabled={loading}>
-            {loading ? "Registrando..." : "Registrar asistencia"}
-          </button>
-        </div>
-      )}
-
-      {showRegistro && (
-        <form onSubmit={handleGuardarNuevo} style={{ marginTop: 12 }}>
-          <h3>Registro de nuevo empleado</h3>
-          <input placeholder="Nombre" value={nuevo.nombre} onChange={e => setNuevo({ ...nuevo, nombre: e.target.value })} />
-          <input placeholder="Apellido" value={nuevo.apellido} onChange={e => setNuevo({ ...nuevo, apellido: e.target.value })} />
-          <input placeholder="Lugar de trabajo (opcional)" value={nuevo.lugarTrabajo} onChange={e => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
-          <div style={{ marginTop: 8 }}>
-            <button type="submit" disabled={loading}>{loading ? "Guardando..." : "Guardar y fichar"}</button>
-            <button type="button" onClick={() => navigate("/login")} style={{ marginLeft: 8 }}>Volver al login</button>
-          </div>
-        </form>
-      )}
+    <div style={{ padding: 20 }}>
+      <h2>Fichaje de Asistencias</h2>
+      <form onSubmit={fichar}>
+        <input
+          type="text"
+          placeholder="Ingrese legajo"
+          value={legajo}
+          onChange={(e) => setLegajo(e.target.value)}
+          style={{ marginRight: 8 }}
+        />
+        <button type="submit">Registrar</button>
+      </form>
+      {mensaje && <p style={{ marginTop: 12 }}>{mensaje}</p>}
     </div>
   );
 }
