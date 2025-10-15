@@ -1,68 +1,101 @@
+// src/pages/Admin.jsx
 import React, { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import QrGenerator from "../components/QrGenerator";
+import Menu from "../components/Menu";
 
-/**
- * Admin page: expects prop user (from App) with .rol and .lugarTrabajo
- */
-export default function Admin({ user }) {
+export default function Admin({ user, onLogout }) {
   const [asistencias, setAsistencias] = useState([]);
-  const [area, setArea] = useState(user?.lugarTrabajo || "");
+  const [loading, setLoading] = useState(false);
 
-  async function loadAsistencias() {
-    // si user rol rrhh -> cargar todo, si admin -> cargar por area
-    let q;
-    if (user?.rol === "rrhh") {
-      q = query(collection(db, "asistencias"));
-    } else {
-      q = query(collection(db, "asistencias"), where("lugarTrabajo", "==", area));
-    }
-    const snap = await getDocs(q);
-    const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    setAsistencias(lista);
-  }
+  const rol = user?.rol || "";
+  const area = user?.lugarTrabajo || "";
 
   useEffect(() => {
-    loadAsistencias();
-    // eslint-disable-next-line
+    if (!user) return;
+
+    async function fetchAsistencias() {
+      setLoading(true);
+      try {
+        let q;
+        if (rol === "rrhh") {
+          q = query(collection(db, "asistencias"));
+        } else if (rol === "admin" && area) {
+          q = query(collection(db, "asistencias"), where("lugarTrabajo", "==", area));
+        } else {
+          setLoading(false);
+          return;
+        }
+
+        const snap = await getDocs(q);
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setAsistencias(data);
+      } catch (err) {
+        console.error("Error cargando asistencias:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchAsistencias();
   }, [user]);
 
-  if (!user) return <div style={{ padding: 20 }}>Debes iniciar sesión</div>;
-
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Panel Admin - {user.lugarTrabajo || "General"}</h2>
-      <QrGenerator area={area} user={user} />
-      <h3>Asistencias registradas</h3>
-      <button onClick={loadAsistencias} style={{ marginBottom: 10 }}>🔄 Actualizar</button>
-      <table border="1" cellPadding="6" style={{ width: "100%", textAlign: "left" }}>
-        <thead>
-          <tr><th>Legajo</th><th>Nombre</th><th>Apellido</th><th>Tipo</th><th>Fecha</th><th>Hora</th><th>Lugar</th></tr>
-        </thead>
-        <tbody>
-          {asistencias.map(a => {
-            // convertir fechas y horas si vienen como timestamp
-            const fecha = a.fecha?.seconds
-              ? new Date(a.fecha.seconds * 1000).toLocaleDateString("es-AR")
-              : a.fecha || "";
-            const hora = a.hora?.seconds
-              ? new Date(a.hora.seconds * 1000).toLocaleTimeString("es-AR")
-              : a.hora || "";
-            return (
-              <tr key={a.id}>
-                <td>{a.legajo}</td>
-                <td>{a.nombre}</td>
-                <td>{a.apellido}</td>
-                <td>{a.tipo}</td>
-                <td>{fecha}</td>
-                <td>{hora}</td>
-                <td>{a.lugarTrabajo}</td>
+    <div>
+      {/* Mostrar el menú si el usuario es admin o rrhh */}
+      {rol !== "empleado" && <Menu user={user} onLogout={onLogout} />}
+
+      <div style={{ padding: 16 }}>
+        <h2>Panel {rol === "rrhh" ? "Recursos Humanos" : `Área ${area}`}</h2>
+
+        {rol !== "empleado" && (
+          <div style={{ marginBottom: 20 }}>
+            <QrGenerator area={area} user={user} />
+          </div>
+        )}
+
+        {loading ? (
+          <p>Cargando asistencias...</p>
+        ) : asistencias.length > 0 ? (
+          <table border="1" cellPadding="8">
+            <thead>
+              <tr>
+                <th>Legajo</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Área</th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {asistencias.map((a) => {
+                const fecha = a.fecha?.seconds
+                  ? new Date(a.fecha.seconds * 1000).toLocaleDateString("es-AR")
+                  : a.fecha || "";
+                const hora = a.hora?.seconds
+                  ? new Date(a.hora.seconds * 1000).toLocaleTimeString("es-AR")
+                  : a.hora || "";
+                return (
+                  <tr key={a.id}>
+                    <td>{a.legajo}</td>
+                    <td>{a.nombre}</td>
+                    <td>{a.apellido}</td>
+                    <td>{a.tipo}</td>
+                    <td>{fecha}</td>
+                    <td>{hora}</td>
+                    <td>{a.lugarTrabajo}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <p>No hay asistencias registradas.</p>
+        )}
+      </div>
     </div>
   );
 }

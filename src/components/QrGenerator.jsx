@@ -8,7 +8,7 @@ import {
   serverTimestamp
 } from "../firebase";
 
-export default function QrGenerator({ area = "" }) {
+export default function QrGenerator({ area = "", user }) {
   const [loading, setLoading] = useState(false);
   const [qrLink, setQrLink] = useState(null);
   const [token, setToken] = useState(null);
@@ -31,7 +31,7 @@ export default function QrGenerator({ area = "" }) {
 
       const baseUrl = window.location.origin;
       // link simplificado: sólo token
-      const link = `${baseUrl}/scan?token=${encodeURIComponent(t)}`;
+      const link = `${baseUrl}/scan?token=${encodeURIComponent(t)}&area=${encodeURIComponent(area)}`;
 
       const quickUrl = `https://quickchart.io/qr?text=${encodeURIComponent(link)}&size=400`;
 
