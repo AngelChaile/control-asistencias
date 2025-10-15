@@ -25,7 +25,7 @@ export default function HR({ user }) {
       } else {
         q = query(
           collection(db, "asistencias"),
-          where("area", "==", user.area),
+          where("area", "==", user.lugarTrabajo),
           orderBy("createdAt", "desc")
         );
       }
@@ -52,7 +52,7 @@ export default function HR({ user }) {
       if (user.rol === "rrhh") {
         q = query(collection(db, "empleados"));
       } else {
-        q = query(collection(db, "empleados"), where("area", "==", user.area));
+        q = query(collection(db, "empleados"), where("area", "==", user.lugarTrabajo));
       }
       const snap = await getDocs(q);
       const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -72,7 +72,7 @@ export default function HR({ user }) {
       <Menu user={user} onChangeView={setView} />
 
       <h2 style={{ marginTop: 20 }}>
-        {user.rol === "rrhh" ? "Recursos Humanos" : `Panel - ${user.area}`}
+        {user.rol === "rrhh" ? "Recursos Humanos" : `Panel - ${user.lugarTrabajo}`}
       </h2>
 
       {view === "asistencias" && (
