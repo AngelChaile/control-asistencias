@@ -1,112 +1,171 @@
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { collection, addDoc, query, where, getDocs, orderBy, limit } from "firebase/firestore";
-import { db } from "../firebase";
-import Swal from "sweetalert2";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import {
+  validarToken,
+  buscarEmpleadoPorLegajo,
+  registrarAsistenciaPorLegajo,
+  registrarNuevoEmpleado,
+} from "../utils/asistencia";
 
 export default function Scan() {
-  const [params] = useSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [empleado, setEmpleado] = useState(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const tokenParam = searchParams.get("token") || null;
 
-  const token = params.get("token");
-  const area = params.get("area");
+  const [legajo, setLegajo] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [empleadoEncontrado, setEmpleadoEncontrado] = useState(null);
+  const [showRegistro, setShowRegistro] = useState(false);
+  const [tokenValido, setTokenValido] = useState(false); // 👈 NUEVO
+  const [nuevo, setNuevo] = useState({ nombre: "", apellido: "", lugarTrabajo: "" });
 
   useEffect(() => {
-    if (!token || !area) {
-      Swal.fire("Error", "QR inválido o incompleto", "error");
-      setLoading(false);
-      return;
-    }
-    verificarEmpleado();
-  }, [token, area]);
-
-  async function verificarEmpleado() {
-    try {
-      const q = query(collection(db, "empleados"), where("token", "==", token));
-      const snap = await getDocs(q);
-      if (snap.empty) {
-        Swal.fire("Error", "Empleado no encontrado o QR inválido", "error");
-        setLoading(false);
+    (async () => {
+      if (!tokenParam) {
+        setMessage("❌ Acceso no permitido. Escanee un QR válido para fichar.");
         return;
       }
-      const emp = { id: snap.docs[0].id, ...snap.docs[0].data() };
-      setEmpleado(emp);
-      await registrarAsistencia(emp);
+      try {
+        await validarToken(tokenParam);
+        setTokenValido(true); // 👈 QR válido
+        setMessage("✅ QR válido. Ingrese su legajo.");
+      } catch (err) {
+        setMessage(err.message || "Token inválido.");
+        setTokenValido(false); // 👈 QR vencido
+      }
+    })();
+  }, [tokenParam]);
+
+  async function handleBuscar(e) {
+    e && e.preventDefault();
+    if (!tokenValido) return setMessage("⏰ Este QR ya caducó. Solicite uno nuevo."); // 👈 bloquea acción
+    if (!legajo) return setMessage("Ingrese su legajo.");
+    setLoading(true);
+    try {
+      const emp = await buscarEmpleadoPorLegajo(legajo);
+      if (!emp) {
+        setShowRegistro(true);
+        setEmpleadoEncontrado(null);
+        setMessage("Empleado no encontrado. Complete el registro.");
+      } else {
+        setEmpleadoEncontrado(emp);
+        setShowRegistro(false);
+        setMessage(`Empleado encontrado: ${emp.nombre} ${emp.apellido}`);
+      }
     } catch (err) {
-      console.error("Error verificando empleado:", err);
-      Swal.fire("Error", "No se pudo verificar el empleado", "error");
+      console.error(err);
+      setMessage("Error al buscar el empleado.");
     } finally {
       setLoading(false);
     }
   }
 
-  async function registrarAsistencia(emp) {
+  async function handleRegistrarAsistencia() {
+    if (!tokenValido) return setMessage("⏰ Este QR ya caducó. Solicite uno nuevo."); // 👈 bloquea acción
+    setLoading(true);
     try {
-      const hoy = new Date();
-      const fecha = hoy.toLocaleDateString("es-AR");
-      const hora = hoy.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-
-      // Verificar última asistencia
-      const q = query(
-        collection(db, "asistencias"),
-        where("legajo", "==", emp.legajo),
-        orderBy("createdAt", "desc"),
-        limit(1)
-      );
-      const snap = await getDocs(q);
-
-      if (!snap.empty) {
-        const ultima = snap.docs[0].data();
-        if (ultima.createdAt?.seconds) {
-          const ultimaHora = new Date(ultima.createdAt.seconds * 1000);
-          const diffMin = (hoy - ultimaHora) / 60000;
-          if (diffMin < 10) {
-            Swal.fire({
-              icon: "info",
-              title: "Ya registraste tu entrada",
-              text: `Tu última marcación fue hace ${diffMin.toFixed(1)} minutos.`,
-              timer: 4000,
-            });
-            return;
-          }
-        }
-      }
-
-      // Registrar nueva asistencia
-      await addDoc(collection(db, "asistencias"), {
-        nombre: emp.nombre,
-        apellido: emp.apellido,
-        legajo: emp.legajo,
-        tipo: "entrada",
-        area,
-        lugarTrabajo: emp.area,
-        createdAt: new Date(),
-        fecha,
-        hora,
-      });
-
-      Swal.fire({
-        icon: "success",
-        title: "Asistencia registrada ✅",
-        text: `${emp.nombre} ${emp.apellido} - ${hora}`,
-        timer: 4000,
-      });
+      const res = await registrarAsistenciaPorLegajo(legajo, tokenParam);
+      setMessage(`✅ ${res.empleado.nombre} ${res.empleado.apellido} registró ${res.tipo} a las ${res.hora}`);
+      setLegajo("");
+      setEmpleadoEncontrado(null);
+      setShowRegistro(false);
     } catch (err) {
-      console.error("Error registrando asistencia:", err);
-      Swal.fire("Error", "No se pudo registrar la asistencia", "error");
+      setMessage(err.message || "Error al registrar la asistencia.");
+    } finally {
+      setLoading(false);
     }
   }
 
-  if (loading) return <p style={{ textAlign: "center" }}>Verificando...</p>;
+  async function handleGuardarNuevo(e) {
+    e && e.preventDefault();
+    if (!tokenValido) return setMessage("⏰ Este QR ya caducó. Solicite uno nuevo."); // 👈 bloquea acción
+    if (!legajo || !nuevo.nombre || !nuevo.apellido)
+      return setMessage("Complete todos los campos.");
 
-  if (!empleado)
-    return <p style={{ textAlign: "center" }}>No se encontró información del empleado.</p>;
+    setLoading(true);
+    try {
+      await registrarNuevoEmpleado({
+        legajo,
+        nombre: nuevo.nombre,
+        apellido: nuevo.apellido,
+        lugarTrabajo: nuevo.lugarTrabajo || "",
+      });
+      setMessage("✅ Empleado registrado. Proceda a fichar.");
+      setShowRegistro(false);
+      setEmpleadoEncontrado({
+        legajo,
+        nombre: nuevo.nombre,
+        apellido: nuevo.apellido,
+        lugarTrabajo: nuevo.lugarTrabajo,
+      });
+      await handleRegistrarAsistencia();
+    } catch (err) {
+      console.error(err);
+      setMessage("Error guardando nuevo empleado.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <div style={{ textAlign: "center", marginTop: 50 }}>
-      <h2>Hola, {empleado.nombre} 👋</h2>
-      <p>Tu asistencia fue procesada correctamente.</p>
+    <div style={{ padding: 20, maxWidth: 480, margin: "auto" }}>
+      <h2>Registro de Asistencia</h2>
+      <p>{message}</p>
+
+      {!showRegistro && (
+        <form onSubmit={handleBuscar}>
+          <label>
+            Legajo:
+            <input
+              value={legajo}
+              onChange={(e) => setLegajo(e.target.value)}
+              disabled={!!empleadoEncontrado || !tokenValido}
+              placeholder="Ingrese su legajo"
+            />
+          </label>
+          <div style={{ marginTop: 8 }}>
+            <button type="submit" disabled={loading || !tokenValido}>
+              {loading ? "Buscando..." : "Buscar / Fichar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              style={{ marginLeft: 8 }}
+            >
+              Volver al login
+            </button>
+          </div>
+        </form>
+      )}
+
+      {empleadoEncontrado && (
+        <div style={{ marginTop: 16 }}>
+          <h3>{empleadoEncontrado.nombre} {empleadoEncontrado.apellido}</h3>
+          <p>Legajo: {empleadoEncontrado.legajo}</p>
+          <p>Lugar: {empleadoEncontrado.lugarTrabajo}</p>
+          <button onClick={handleRegistrarAsistencia} disabled={loading || !tokenValido}>
+            {loading ? "Registrando..." : "Registrar asistencia"}
+          </button>
+        </div>
+      )}
+
+      {showRegistro && (
+        <form onSubmit={handleGuardarNuevo} style={{ marginTop: 12 }}>
+          <h3>Registro de nuevo empleado</h3>
+          <input placeholder="Nombre" value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} />
+          <input placeholder="Apellido" value={nuevo.apellido} onChange={(e) => setNuevo({ ...nuevo, apellido: e.target.value })} />
+          <input placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={(e) => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
+          <div style={{ marginTop: 8 }}>
+            <button type="submit" disabled={loading || !tokenValido}>
+              {loading ? "Guardando..." : "Guardar y fichar"}
+            </button>
+            <button type="button" onClick={() => navigate("/login")} style={{ marginLeft: 8 }}>
+              Volver al login
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
