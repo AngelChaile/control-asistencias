@@ -33,7 +33,7 @@ export default function Admin({ user }) {
   return (
     <div style={{ padding: 20 }}>
       <h2>Panel Admin - {user.lugarTrabajo || "General"}</h2>
-      <QrGenerator area={area} />
+      <QrGenerator area={area} user={user} />
       <h3>Asistencias registradas</h3>
       <button onClick={loadAsistencias} style={{ marginBottom: 10 }}>🔄 Actualizar</button>
       <table border="1" cellPadding="6" style={{ width: "100%", textAlign: "left" }}>
@@ -41,17 +41,26 @@ export default function Admin({ user }) {
           <tr><th>Legajo</th><th>Nombre</th><th>Apellido</th><th>Tipo</th><th>Fecha</th><th>Hora</th><th>Lugar</th></tr>
         </thead>
         <tbody>
-          {asistencias.map(a => (
-            <tr key={a.id}>
-              <td>{a.legajo}</td>
-              <td>{a.nombre}</td>
-              <td>{a.apellido}</td>
-              <td>{a.tipo}</td>
-              <td>{a.fecha}</td>
-              <td>{a.hora}</td>
-              <td>{a.lugarTrabajo}</td>
-            </tr>
-          ))}
+          {asistencias.map(a => {
+            // convertir fechas y horas si vienen como timestamp
+            const fecha = a.fecha?.seconds
+              ? new Date(a.fecha.seconds * 1000).toLocaleDateString("es-AR")
+              : a.fecha || "";
+            const hora = a.hora?.seconds
+              ? new Date(a.hora.seconds * 1000).toLocaleTimeString("es-AR")
+              : a.hora || "";
+            return (
+              <tr key={a.id}>
+                <td>{a.legajo}</td>
+                <td>{a.nombre}</td>
+                <td>{a.apellido}</td>
+                <td>{a.tipo}</td>
+                <td>{fecha}</td>
+                <td>{hora}</td>
+                <td>{a.lugarTrabajo}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
