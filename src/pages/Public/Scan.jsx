@@ -6,7 +6,7 @@ import {
   buscarEmpleadoPorLegajo,
   registrarAsistenciaPorLegajo,
   registrarNuevoEmpleado,
-} from "../utils/asistencia";
+} from "../../utils/asistencia";
 
 export default function Scan() {
   const [searchParams] = useSearchParams();
