@@ -4,19 +4,19 @@ import { auth, onAuthStateChanged, firebaseSignOut } from "./firebase";
 import { getUserDoc } from "./utils/auth";
 
 // 🔹 Componentes
-import Menu from "./components/Menu";
+import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // 🔹 Páginas RRHH
-import HRDashboard from "./pages/RRHH/Dashboard";
+import HomeRRHH from "./pages/RRHH/HomeRRHH";
 import EmpleadosRRHH from "./pages/RRHH/Empleados";
 import AusenciasRRHH from "./pages/RRHH/Ausencias";
 import Usuarios from "./pages/RRHH/Usuarios";
 import ReportesRRHH from "./pages/RRHH/Reportes";
-import ScanGenerator from "./pages/RRHH/ScanGenerator";
+import QRGenerator from "./pages/RRHH/QRGenerator";
 
 // 🔹 Páginas Admin de área
-import AdminDashboard from "./pages/Admin/Dashboard";
+import HomeAdmin from "./pages/Admin/HomeAdmin";
 import EmpleadosAdmin from "./pages/Admin/Empleados";
 import AsistenciasAdmin from "./pages/Admin/Asistencias";
 import AusenciasAdmin from "./pages/Admin/Ausencias";
@@ -24,7 +24,7 @@ import ReportesAdmin from "./pages/Admin/Reportes";
 
 // 🔹 Páginas públicas y login
 import Scan from "./pages/Public/Scan";
-import Login from "./pages/Login";
+import Login from "./pages/Auth/Login";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -59,7 +59,7 @@ export default function App() {
   return (
     <BrowserRouter>
       {/* 🔹 Menú general: solo visible si hay usuario logueado y no es empleado */}
-      {user && user.rol !== "empleado" && <Menu user={user} onLogout={logout} />}
+      {user && user.rol !== "empleado" && <Navbar user={user} onLogout={logout} />}
 
       <Routes>
         {/* 🔹 Ruta pública: los empleados escanean el QR */}
@@ -94,7 +94,7 @@ export default function App() {
           path="/rrhh"
           element={
             <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-              <HRDashboard user={user} />
+              <HomeRRHH user={user} />
             </ProtectedRoute>
           }
         />
@@ -134,7 +134,7 @@ export default function App() {
           path="/rrhh/scan"
           element={
             <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-              <ScanGenerator user={user} />
+              <QRGenerator user={user} />
             </ProtectedRoute>
           }
         />
@@ -146,7 +146,7 @@ export default function App() {
           path="/admin"
           element={
             <ProtectedRoute user={user} allowedRoles={["admin"]}>
-              <AdminDashboard user={user} />
+              <HomeAdmin user={user} />
             </ProtectedRoute>
           }
         />
