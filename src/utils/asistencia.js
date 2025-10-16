@@ -86,6 +86,11 @@ export async function registrarNuevoEmpleado(emp) {
 export async function registrarAsistenciaPorLegajo(legajo, token = null) {
   if (!legajo) throw new Error("Legajo requerido.");
 
+    // ✅ Validar token antes de continuar
+  if (token) {
+    await validarToken(token); // Si el token está vencido, lanzará error automáticamente
+  }
+
   const empleado = await buscarEmpleadoPorLegajo(legajo);
   if (!empleado) throw new Error("Empleado no encontrado.");
 

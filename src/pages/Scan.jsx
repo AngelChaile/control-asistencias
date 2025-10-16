@@ -1,3 +1,4 @@
+// src/pages/Scan.jsx
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
@@ -15,10 +16,11 @@ export default function Scan() {
   const [legajo, setLegajo] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [empleadoEncontrado, setEmpleadoEncontrado] = useState(null);
+  const [empleado, setEmpleado] = useState(null);
   const [showRegistro, setShowRegistro] = useState(false);
-  const [tokenValido, setTokenValido] = useState(false); // 👈 NUEVO
+  const [tokenValido, setTokenValido] = useState(false);
   const [nuevo, setNuevo] = useState({ nombre: "", apellido: "", lugarTrabajo: "" });
+  const [bloqueado, setBloqueado] = useState(false); // 🔒 evita trampas
 
   useEffect(() => {
     (async () => {
@@ -28,47 +30,46 @@ export default function Scan() {
       }
       try {
         await validarToken(tokenParam);
-        setTokenValido(true); // 👈 QR válido
-        setMessage("✅ QR válido. Ingrese su legajo.");
+        setTokenValido(true);
+        setMessage("✅ QR válido. Ingrese su legajo para fichar.");
       } catch (err) {
-        setMessage(err.message || "Token inválido.");
-        setTokenValido(false); // 👈 QR vencido
+        setTokenValido(false);
+        setMessage(err.message || "⏰ Este QR ya no es válido.");
       }
     })();
   }, [tokenParam]);
 
   async function handleBuscar(e) {
-    e && e.preventDefault();
-    if (!tokenValido) return setMessage("⏰ Este QR ya caducó. Solicite uno nuevo."); // 👈 bloquea acción
-    if (!legajo) return setMessage("Ingrese su legajo.");
+    e.preventDefault();
+    if (!tokenValido) return setMessage("⏰ Este QR ya caducó. Solicite uno nuevo.");
+    if (!legajo) return setMessage("Ingrese su legajo para continuar.");
     setLoading(true);
     try {
       const emp = await buscarEmpleadoPorLegajo(legajo);
       if (!emp) {
         setShowRegistro(true);
-        setEmpleadoEncontrado(null);
+        setEmpleado(null);
         setMessage("Empleado no encontrado. Complete el registro.");
       } else {
-        setEmpleadoEncontrado(emp);
+        setEmpleado(emp);
         setShowRegistro(false);
         setMessage(`Empleado encontrado: ${emp.nombre} ${emp.apellido}`);
       }
     } catch (err) {
       console.error(err);
-      setMessage("Error al buscar el empleado.");
+      setMessage("⚠️ Error al buscar el empleado.");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleRegistrarAsistencia() {
-    if (!tokenValido) return setMessage("⏰ Este QR ya caducó. Solicite uno nuevo."); // 👈 bloquea acción
+    if (!tokenValido) return setMessage("⏰ Este QR ya caducó. Solicite uno nuevo.");
     setLoading(true);
     try {
       const res = await registrarAsistenciaPorLegajo(legajo, tokenParam);
-      setMessage(`✅ ${res.empleado.nombre} ${res.empleado.apellido} registró ${res.tipo} a las ${res.hora}`);
-      setLegajo("");
-      setEmpleadoEncontrado(null);
+      setMessage(`✅ ${res.empleado.nombre} ${res.empleado.apellido} registró ${res.tipo} a las ${res.hora}.`);
+      setBloqueado(true); // 🔒 Bloquear input para evitar segunda fichada
       setShowRegistro(false);
     } catch (err) {
       setMessage(err.message || "Error al registrar la asistencia.");
@@ -78,11 +79,10 @@ export default function Scan() {
   }
 
   async function handleGuardarNuevo(e) {
-    e && e.preventDefault();
-    if (!tokenValido) return setMessage("⏰ Este QR ya caducó. Solicite uno nuevo."); // 👈 bloquea acción
+    e.preventDefault();
+    if (!tokenValido) return setMessage("⏰ Este QR ya caducó. Solicite uno nuevo.");
     if (!legajo || !nuevo.nombre || !nuevo.apellido)
-      return setMessage("Complete todos los campos.");
-
+      return setMessage("Complete todos los campos para registrarse.");
     setLoading(true);
     try {
       await registrarNuevoEmpleado({
@@ -91,9 +91,9 @@ export default function Scan() {
         apellido: nuevo.apellido,
         lugarTrabajo: nuevo.lugarTrabajo || "",
       });
-      setMessage("✅ Empleado registrado. Proceda a fichar.");
+      setMessage("✅ Empleado registrado correctamente. Fichando...");
       setShowRegistro(false);
-      setEmpleadoEncontrado({
+      setEmpleado({
         legajo,
         nombre: nuevo.nombre,
         apellido: nuevo.apellido,
@@ -120,31 +120,27 @@ export default function Scan() {
             <input
               value={legajo}
               onChange={(e) => setLegajo(e.target.value)}
-              disabled={!!empleadoEncontrado || !tokenValido}
+              disabled={bloqueado || !tokenValido}
               placeholder="Ingrese su legajo"
             />
           </label>
           <div style={{ marginTop: 8 }}>
-            <button type="submit" disabled={loading || !tokenValido}>
+            <button type="submit" disabled={loading || !tokenValido || bloqueado}>
               {loading ? "Buscando..." : "Buscar / Fichar"}
             </button>
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              style={{ marginLeft: 8 }}
-            >
+            <button type="button" onClick={() => navigate("/login")} style={{ marginLeft: 8 }}>
               Volver al login
             </button>
           </div>
         </form>
       )}
 
-      {empleadoEncontrado && (
+      {empleado && (
         <div style={{ marginTop: 16 }}>
-          <h3>{empleadoEncontrado.nombre} {empleadoEncontrado.apellido}</h3>
-          <p>Legajo: {empleadoEncontrado.legajo}</p>
-          <p>Lugar: {empleadoEncontrado.lugarTrabajo}</p>
-          <button onClick={handleRegistrarAsistencia} disabled={loading || !tokenValido}>
+          <h3>{empleado.nombre} {empleado.apellido}</h3>
+          <p>Legajo: {empleado.legajo}</p>
+          <p>Lugar: {empleado.lugarTrabajo}</p>
+          <button onClick={handleRegistrarAsistencia} disabled={loading || !tokenValido || bloqueado}>
             {loading ? "Registrando..." : "Registrar asistencia"}
           </button>
         </div>

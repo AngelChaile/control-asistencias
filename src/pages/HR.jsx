@@ -1,3 +1,4 @@
+// src/pages/HR.jsx
 import React, { useEffect, useState } from "react";
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { db } from "../firebase";
@@ -8,7 +9,7 @@ import Menu from "../components/Menu";
 export default function HR({ user }) {
   const [asistencias, setAsistencias] = useState([]);
   const [empleados, setEmpleados] = useState([]);
-  const [view, setView] = useState("asistencias"); // 'asistencias' o 'empleados'
+  const [view, setView] = useState("asistencias");
 
   useEffect(() => {
     if (!user) return;
@@ -16,8 +17,8 @@ export default function HR({ user }) {
     fetchEmpleados();
   }, [user]);
 
-  // 🔹 Obtener asistencias con conversión de Timestamp a fecha legible
   async function fetchAsistencias() {
+    if (!user) return;
     try {
       let q;
       if (user.rol === "rrhh") {
@@ -45,8 +46,8 @@ export default function HR({ user }) {
     }
   }
 
-  // 🔹 Obtener empleados
   async function fetchEmpleados() {
+    if (!user) return;
     try {
       let q;
       if (user.rol === "rrhh") {
@@ -68,11 +69,9 @@ export default function HR({ user }) {
 
   return (
     <div style={{ padding: 20 }}>
-      {/* 🔹 Menú dinámico */}
       <Menu user={user} onChangeView={setView} />
-
       <h2 style={{ marginTop: 20 }}>
-        {user.rol === "rrhh" ? "Recursos Humanos" : `Panel - ${user.area}`}
+        {user?.rol === "rrhh" ? "Recursos Humanos" : `Panel - ${user?.area}`}
       </h2>
 
       {view === "asistencias" && (
@@ -116,11 +115,7 @@ export default function HR({ user }) {
       {view === "empleados" && (
         <>
           <h3 style={{ marginTop: 20 }}>Listado de empleados</h3>
-          <Employee
-            empleados={empleados}
-            onEdit={(e) => console.log("Editar", e)}
-            onDelete={(e) => console.log("Eliminar", e)}
-          />
+          <Employee empleados={empleados} />
         </>
       )}
     </div>
