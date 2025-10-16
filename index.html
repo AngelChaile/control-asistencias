@@ -1,80 +1,12 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema de Control de Asistencias</title>
-
-  <!-- ✅ TailwindCSS por CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- ✅ Configuración personalizada -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#2563eb',   // Azul profesional
-            secondary: '#1e293b', // Gris oscuro
-            accent: '#fbbf24',    // Amarillo
-            danger: '#dc2626',    // Rojo para alertas
-            success: '#16a34a'    // Verde para mensajes OK
-          }
-        }
-      }
-    };
-  </script>
-</head>
-
-<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
-
-  <!-- 🔷 Navbar -->
-  <nav class="bg-primary text-white shadow-md">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-      <h1 class="text-xl font-semibold tracking-wide">Control de Asistencias</h1>
-
-      <div class="space-x-4">
-        <a href="#" class="hover:text-accent transition">Inicio</a>
-        <a href="#" class="hover:text-accent transition">RRHH</a>
-        <a href="#" class="hover:text-accent transition">Admin</a>
-        <a href="#" class="hover:text-accent transition">Salir</a>
-      </div>
-    </div>
-  </nav>
-
-  <!-- 🧠 Contenido principal -->
-  <main class="flex-grow max-w-5xl mx-auto p-6">
-
-    <!-- Cabecera -->
-    <div class="mb-6">
-      <h2 class="text-2xl font-semibold text-secondary">Panel Principal</h2>
-      <p class="text-gray-600">Bienvenido al sistema de control de asistencias.</p>
-    </div>
-
-    <!-- Ejemplo de tarjeta -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Tarjeta RRHH -->
-      <div class="bg-white rounded-2xl shadow p-5 border border-gray-100 hover:shadow-lg transition">
-        <h3 class="text-lg font-semibold text-secondary mb-2">Panel RRHH</h3>
-        <p class="text-gray-600 mb-4">Carga y revisión de asistencias del personal.</p>
-        <a href="./src/pages/RRHH/HomeRRHH.jsx" class="block text-center bg-primary text-white py-2 rounded-lg hover:bg-blue-700 transition">Acceder</a>
-      </div>
-
-      <!-- Tarjeta Admin -->
-      <div class="bg-white rounded-2xl shadow p-5 border border-gray-100 hover:shadow-lg transition">
-        <h3 class="text-lg font-semibold text-secondary mb-2">Panel Admin</h3>
-        <p class="text-gray-600 mb-4">Gestión de usuarios y reportes globales.</p>
-        <a href="admin.html" class="block text-center bg-primary text-white py-2 rounded-lg hover:bg-blue-700 transition">Acceder</a>
-      </div>
-    </div>
-  </main>
-
-  <!-- ⚙️ Footer -->
-  <footer class="bg-secondary text-gray-300 text-center py-4 mt-10">
-    <p>© 2025 Sistema de Control de Asistencias - Desarrollado por Angel Chaile</p>
-  </footer>
-
-  <!-- JS principal (si lo necesitás) -->
-  <script src="main.js"></script>
-</body>
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Control de Asistencias</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

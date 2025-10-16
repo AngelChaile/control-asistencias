@@ -1,26 +1,100 @@
-export default function HomeAdmin() {
+// src/pages/Admin.jsx
+import React, { useEffect, useState } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../firebase";
+import QrGenerator from "../components/QrGenerator";
+import Menu from "../components/Navbar";
+
+export default function Admin({ user, onLogout }) {
+  const [asistencias, setAsistencias] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const rol = user?.rol || "";
+  const area = user?.lugarTrabajo || "";
+
+  useEffect(() => {
+    if (!user) return;
+
+    async function fetchAsistencias() {
+      setLoading(true);
+      try {
+        let q;
+        if (rol === "rrhh") {
+          q = query(collection(db, "asistencias"));
+        } else if (rol === "admin" && area) {
+          q = query(collection(db, "asistencias"), where("lugarTrabajo", "==", area));
+        } else {
+          setLoading(false);
+          return;
+        }
+
+        const snap = await getDocs(q);
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setAsistencias(data);
+      } catch (err) {
+        console.error("Error cargando asistencias:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchAsistencias();
+  }, [user]);
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Panel del Administrador de Área</h1>
-      <p className="text-gray-700 mb-6">
-        Desde aquí podés generar códigos QR, ver empleados de tu área, y revisar asistencias o ausencias.
-      </p>
+    <div>
+      {/* Mostrar el menú si el usuario es admin o rrhh */}
+      {rol !== "empleado" && <Menu user={user} onLogout={onLogout} />}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white shadow-lg rounded-xl p-5 border-l-4 border-indigo-500">
-          <h2 className="text-lg font-semibold mb-2">Generar QR</h2>
-          <p className="text-gray-600">Crea un código QR para fichar asistencia en tu área.</p>
-        </div>
+      <div style={{ padding: 16 }}>
+        <h2>Panel {rol === "rrhh" ? "Recursos Humanos" : `Área ${area}`}</h2>
 
-        <div className="bg-white shadow-lg rounded-xl p-5 border-l-4 border-yellow-500">
-          <h2 className="text-lg font-semibold mb-2">Empleados del Área</h2>
-          <p className="text-gray-600">Gestión de empleados de tu sector.</p>
-        </div>
+        {rol !== "empleado" && (
+          <div style={{ marginBottom: 20 }}>
+            <QrGenerator area={area} user={user} />
+          </div>
+        )}
 
-        <div className="bg-white shadow-lg rounded-xl p-5 border-l-4 border-red-500">
-          <h2 className="text-lg font-semibold mb-2">Reportes</h2>
-          <p className="text-gray-600">Generá reportes de asistencia y ausencias del área.</p>
-        </div>
+        {loading ? (
+          <p>Cargando asistencias...</p>
+        ) : asistencias.length > 0 ? (
+          <table border="1" cellPadding="8">
+            <thead>
+              <tr>
+                <th>Legajo</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Área</th>
+              </tr>
+            </thead>
+            <tbody>
+              {asistencias.map((a) => {
+                const fecha = a.fecha?.seconds
+                  ? new Date(a.fecha.seconds * 1000).toLocaleDateString("es-AR")
+                  : a.fecha || "";
+                const hora = a.hora?.seconds
+                  ? new Date(a.hora.seconds * 1000).toLocaleTimeString("es-AR")
+                  : a.hora || "";
+                return (
+                  <tr key={a.id}>
+                    <td>{a.legajo}</td>
+                    <td>{a.nombre}</td>
+                    <td>{a.apellido}</td>
+                    <td>{a.tipo}</td>
+                    <td>{fecha}</td>
+                    <td>{hora}</td>
+                    <td>{a.lugarTrabajo}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <p>No hay asistencias registradas.</p>
+        )}
       </div>
     </div>
   );

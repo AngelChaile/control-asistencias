@@ -1,31 +1,46 @@
-import React from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-export default function Navbar({ user, onLogout }) {
+export default function Navbar() {
+  const { user, logout } = useAuth();
+
+  if (!user) return null;
+
+  const menus = {
+    rrhh: [
+      { name: "Inicio", path: "/rrhh" },
+      { name: "Ausencias", path: "/rrhh/ausencias" },
+      { name: "QR", path: "/rrhh/qr" },
+      { name: "Empleados", path: "/rrhh/empleados" },
+      { name: "Usuarios", path: "/rrhh/usuarios" },
+      { name: "Reportes", path: "/rrhh/reportes" },
+    ],
+    admin: [
+      { name: "Inicio", path: "/admin" },
+      { name: "Empleados", path: "/admin/empleados" },
+      { name: "Asistencias", path: "/admin/asistencias" },
+      { name: "Ausencias", path: "/admin/ausencias" },
+      { name: "Reportes", path: "/admin/reportes" },
+    ],
+  };
+
   return (
-    <nav style={{ padding: 10, background: "#007bff", color: "#fff" }}>
-      <span style={{ marginRight: 20 }}>Bienvenido, {user.nombre}</span>
-      {user.rol === "rrhh" && (
-        <>
-          <Link to="/rrhh/home" style={{ marginRight: 10, color: "#fff" }}>Inicio</Link>
-          <Link to="/rrhh/ausencias" style={{ marginRight: 10, color: "#fff" }}>Ausencias</Link>
-          <Link to="/rrhh/empleados" style={{ marginRight: 10, color: "#fff" }}>Empleados</Link>
-          <Link to="/rrhh/usuarios" style={{ marginRight: 10, color: "#fff" }}>Usuarios</Link>
-          <Link to="/rrhh/reportes" style={{ marginRight: 10, color: "#fff" }}>Reportes</Link>
-          <Link to="/rrhh/qr" style={{ marginRight: 10, color: "#fff" }}>QR</Link>
-        </>
-      )}
-      {user.rol === "admin" && (
-        <>
-          <Link to="/admin/home" style={{ marginRight: 10, color: "#fff" }}>Inicio</Link>
-          <Link to="/admin/empleados" style={{ marginRight: 10, color: "#fff" }}>Empleados</Link>
-          <Link to="/admin/asistencias" style={{ marginRight: 10, color: "#fff" }}>Asistencias</Link>
-          <Link to="/admin/ausencias" style={{ marginRight: 10, color: "#fff" }}>Ausencias</Link>
-          <Link to="/admin/reportes" style={{ marginRight: 10, color: "#fff" }}>Reportes</Link>
-        </>
-      )}
-      {user.rol === "empleado" && <Link to="/scan" style={{ marginRight: 10, color: "#fff" }}>Fichar</Link>}
-      <button onClick={onLogout} style={{ marginLeft: 20 }}>Cerrar sesión</button>
+    <nav className="bg-blue-600 text-white flex justify-between items-center px-6 py-3 shadow-md">
+      <h1 className="font-bold text-lg">Gestión de Asistencias</h1>
+      <ul className="flex gap-4">
+        {menus[user.role]?.map((item) => (
+          <li key={item.name}>
+            <Link to={item.path} className="hover:underline">
+              {item.name}
+            </Link>
+          </li>
+        ))}
+        <li>
+          <button onClick={logout} className="bg-red-500 px-3 py-1 rounded hover:bg-red-600">
+            Cerrar sesión
+          </button>
+        </li>
+      </ul>
     </nav>
   );
 }

@@ -1,67 +1,194 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { auth, onAuthStateChanged, firebaseSignOut } from "./firebase";
+import { getUserDoc } from "./utils/auth";
+
+// 🔹 Componentes
+import Menu from "./components/Menu";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Navbar from "./components/Navbar";
 
-import Login from "./pages/Auth/Login";
-import Fichar from "./pages/Empleado/Fichar";
-
-// RRHH Pages
-import HomeRRHH from "./pages/RRHH/HomeRRHH";
-import Ausencias from "./pages/RRHH/Ausencias";
-import Empleados from "./pages/RRHH/Empleados";
+// 🔹 Páginas RRHH
+import HRDashboard from "./pages/RRHH/Dashboard";
+import EmpleadosRRHH from "./pages/RRHH/Empleados";
+import AusenciasRRHH from "./pages/RRHH/Ausencias";
 import Usuarios from "./pages/RRHH/Usuarios";
-import Reportes from "./pages/RRHH/Reportes";
-import QRPage from "./pages/RRHH/QRGenerator";
+import ReportesRRHH from "./pages/RRHH/Reportes";
+import ScanGenerator from "./pages/RRHH/ScanGenerator";
 
-// Admin Pages
-import HomeAdmin from "./pages/Admin/HomeAdmin";
-import EmpleadosAdmin from "./pages/Admin/EmpleadosAdmin";
-import AsistenciasAdmin from "./pages/Admin/AsistenciasAdmin";
-import AusenciasAdmin from "./pages/Admin/AusenciasAdmin";
-import ReportesAdmin from "./pages/Admin/ReportesAdmin";
+// 🔹 Páginas Admin de área
+import AdminDashboard from "./pages/Admin/Dashboard";
+import EmpleadosAdmin from "./pages/Admin/Empleados";
+import AsistenciasAdmin from "./pages/Admin/Asistencias";
+import AusenciasAdmin from "./pages/Admin/Ausencias";
+import ReportesAdmin from "./pages/Admin/Reportes";
 
-function AppRoutes() {
-  const { user, loading } = useAuth();
-  if (loading) return <div style={{ padding: 20 }}>Cargando...</div>;
-  return (
-    <>
-      {user && <Navbar user={user} onLogout={() => window.location.reload()} />}
-      <Routes>
-        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-
-        {/* Empleado */}
-        <Route path="/scan" element={<ProtectedRoute roles={["empleado"]}><Fichar /></ProtectedRoute>} />
-
-        {/* RRHH */}
-        <Route path="/rrhh/home" element={<ProtectedRoute roles={["rrhh"]}><HomeRRHH /></ProtectedRoute>} />
-        <Route path="/rrhh/ausencias" element={<ProtectedRoute roles={["rrhh"]}><Ausencias /></ProtectedRoute>} />
-        <Route path="/rrhh/empleados" element={<ProtectedRoute roles={["rrhh"]}><Empleados /></ProtectedRoute>} />
-        <Route path="/rrhh/usuarios" element={<ProtectedRoute roles={["rrhh"]}><Usuarios /></ProtectedRoute>} />
-        <Route path="/rrhh/reportes" element={<ProtectedRoute roles={["rrhh"]}><Reportes /></ProtectedRoute>} />
-        <Route path="/rrhh/qr" element={<ProtectedRoute roles={["rrhh"]}><QRPage user={user} /></ProtectedRoute>} />
-
-        {/* Admin */}
-        <Route path="/admin/home" element={<ProtectedRoute roles={["admin"]}><HomeAdmin /></ProtectedRoute>} />
-        <Route path="/admin/empleados" element={<ProtectedRoute roles={["admin"]}><EmpleadosAdmin /></ProtectedRoute>} />
-        <Route path="/admin/asistencias" element={<ProtectedRoute roles={["admin"]}><AsistenciasAdmin /></ProtectedRoute>} />
-        <Route path="/admin/ausencias" element={<ProtectedRoute roles={["admin"]}><AusenciasAdmin /></ProtectedRoute>} />
-        <Route path="/admin/reportes" element={<ProtectedRoute roles={["admin"]}><ReportesAdmin /></ProtectedRoute>} />
-
-        <Route path="/" element={user ? <Navigate to={user.rol === "rrhh" ? "/rrhh/home" : user.rol === "admin" ? "/admin/home" : "/scan"} /> : <Navigate to="/login" />} />
-        <Route path="*" element={<div style={{ padding: 20 }}><h2>Página no encontrada</h2></div>} />
-      </Routes>
-    </>
-  );
-}
+// 🔹 Páginas públicas y login
+import Scan from "./pages/Public/Scan";
+import Login from "./pages/Login";
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (!u) {
+        setUser(null);
+        setAuthReady(true);
+        return;
+      }
+      try {
+        const userDoc = await getUserDoc(u.uid);
+        if (userDoc) setUser({ uid: u.uid, ...userDoc });
+      } catch (err) {
+        console.error("Error cargando user doc:", err);
+      } finally {
+        setAuthReady(true);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  async function logout() {
+    await firebaseSignOut(auth);
+    setUser(null);
+  }
+
+  if (!authReady) return <div style={{ padding: 20 }}>Cargando...</div>;
+
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      {/* 🔹 Menú general: solo visible si hay usuario logueado y no es empleado */}
+      {user && user.rol !== "empleado" && <Menu user={user} onLogout={logout} />}
+
+      <Routes>
+        {/* 🔹 Ruta pública: los empleados escanean el QR */}
+        <Route path="/scan" element={<Scan />} />
+
+        {/* 🔹 Login */}
+        <Route
+          path="/login"
+          element={!user ? <Login /> : <Navigate to="/" replace />}
+        />
+
+        {/* 🔹 Redirección raíz según rol */}
+        <Route
+          path="/"
+          element={
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : user.rol === "rrhh" ? (
+              <Navigate to="/rrhh" replace />
+            ) : user.rol === "admin" ? (
+              <Navigate to="/admin" replace />
+            ) : (
+              <Navigate to="/scan" replace />
+            )
+          }
+        />
+
+        {/* ===========================
+           🔹 RUTAS RRHH
+        =========================== */}
+        <Route
+          path="/rrhh"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
+              <HRDashboard user={user} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/rrhh/empleados"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
+              <EmpleadosRRHH user={user} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/rrhh/ausencias"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
+              <AusenciasRRHH user={user} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/rrhh/usuarios"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
+              <Usuarios user={user} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/rrhh/reportes"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
+              <ReportesRRHH user={user} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/rrhh/scan"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
+              <ScanGenerator user={user} />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ===========================
+           🔹 RUTAS ADMIN
+        =========================== */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["admin"]}>
+              <AdminDashboard user={user} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/empleados"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["admin"]}>
+              <EmpleadosAdmin user={user} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/asistencias"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["admin"]}>
+              <AsistenciasAdmin user={user} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/ausencias"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["admin"]}>
+              <AusenciasAdmin user={user} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reportes"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["admin"]}>
+              <ReportesAdmin user={user} />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 🔹 Página no encontrada */}
+        <Route
+          path="*"
+          element={<div style={{ padding: 20 }}>Página no encontrada</div>}
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }

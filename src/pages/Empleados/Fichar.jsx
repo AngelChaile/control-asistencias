@@ -1,5 +1,5 @@
 import React from "react";
-import Scan from "../../components/Scan";
+import Scan from "../Public/Scan";
 
 export default function Fichar() {
   return (
