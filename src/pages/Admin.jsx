@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import QrGenerator from "../components/QrGenerator";
-import Menu from "../components/Menu";
+import Menu from "../components/Navbar";
 
 export default function Admin({ user, onLogout }) {
   const [asistencias, setAsistencias] = useState([]);

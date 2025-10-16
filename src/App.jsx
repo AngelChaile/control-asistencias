@@ -1,90 +1,67 @@
-// src/App.jsx
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Admin from "./pages/Admin";
-import Scan from "./pages/Scan";
-import HR from "./pages/HR";
-import Login from "./pages/Login";
-import { auth, onAuthStateChanged, firebaseSignOut } from "./firebase";
-import { getUserDoc } from "./utils/auth";
-import Menu from "./components/Menu";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Navbar from "./components/Navbar";
 
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [lastActivity, setLastActivity] = useState(Date.now());
+import Login from "./pages/Auth/Login";
+import Fichar from "./pages/Empleado/Fichar";
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) {
-        setUser(null);
-        setAuthReady(true);
-        return;
-      }
-      try {
-        const userDoc = await getUserDoc(u.uid);
-        setUser(userDoc ? { uid: u.uid, ...userDoc } : { uid: u.uid, email: u.email, rol: "admin" });
-      } catch (err) {
-        console.error("Error cargando user doc:", err);
-        setUser(null);
-      } finally {
-        setAuthReady(true);
-      }
-    });
-    return () => unsub();
-  }, []);
+// RRHH Pages
+import HomeRRHH from "./pages/RRHH/HomeRRHH";
+import Ausencias from "./pages/RRHH/Ausencias";
+import Empleados from "./pages/RRHH/Empleados";
+import Usuarios from "./pages/RRHH/Usuarios";
+import Reportes from "./pages/RRHH/Reportes";
+import QRPage from "./pages/RRHH/QRGenerator";
 
-  // 🔸 Cierre de sesión por inactividad (20 minutos)
-  useEffect(() => {
-    const timeout = setInterval(() => {
-      if (user && Date.now() - lastActivity > 20 * 60 * 1000) {
-        logout();
-        alert("⚠️ Sesión cerrada por inactividad.");
-      }
-    }, 60 * 1000);
+// Admin Pages
+import HomeAdmin from "./pages/Admin/HomeAdmin";
+import EmpleadosAdmin from "./pages/Admin/EmpleadosAdmin";
+import AsistenciasAdmin from "./pages/Admin/AsistenciasAdmin";
+import AusenciasAdmin from "./pages/Admin/AusenciasAdmin";
+import ReportesAdmin from "./pages/Admin/ReportesAdmin";
 
-    const resetTimer = () => setLastActivity(Date.now());
-    window.addEventListener("mousemove", resetTimer);
-    window.addEventListener("keydown", resetTimer);
-    return () => {
-      clearInterval(timeout);
-      window.removeEventListener("mousemove", resetTimer);
-      window.removeEventListener("keydown", resetTimer);
-    };
-  }, [user, lastActivity]);
-
-  async function logout() {
-    await firebaseSignOut(auth);
-    setUser(null);
-  }
-
-  if (!authReady) return <div style={{ padding: 20 }}>Cargando...</div>;
-
+function AppRoutes() {
+  const { user, loading } = useAuth();
+  if (loading) return <div style={{ padding: 20 }}>Cargando...</div>;
   return (
-    <BrowserRouter>
-      {user && user.rol !== "empleado" && <Menu user={user} onLogout={logout} />}
-
+    <>
+      {user && <Navbar user={user} onLogout={() => window.location.reload()} />}
       <Routes>
-        <Route
-          path="/"
-          element={
-            !user ? (
-              <Navigate to="/login" replace />
-            ) : user.rol === "rrhh" ? (
-              <Navigate to="/hr" replace />
-            ) : user.rol === "admin" ? (
-              <Navigate to="/admin" replace />
-            ) : (
-              <Navigate to="/scan" replace />
-            )
-          }
-        />
-        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
-        <Route path="/admin" element={user ? <Admin user={user} /> : <Navigate to="/login" replace />} />
-        <Route path="/hr" element={user ? <HR user={user} /> : <Navigate to="/login" replace />} />
-        <Route path="/scan" element={<Scan />} />
+        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+
+        {/* Empleado */}
+        <Route path="/scan" element={<ProtectedRoute roles={["empleado"]}><Fichar /></ProtectedRoute>} />
+
+        {/* RRHH */}
+        <Route path="/rrhh/home" element={<ProtectedRoute roles={["rrhh"]}><HomeRRHH /></ProtectedRoute>} />
+        <Route path="/rrhh/ausencias" element={<ProtectedRoute roles={["rrhh"]}><Ausencias /></ProtectedRoute>} />
+        <Route path="/rrhh/empleados" element={<ProtectedRoute roles={["rrhh"]}><Empleados /></ProtectedRoute>} />
+        <Route path="/rrhh/usuarios" element={<ProtectedRoute roles={["rrhh"]}><Usuarios /></ProtectedRoute>} />
+        <Route path="/rrhh/reportes" element={<ProtectedRoute roles={["rrhh"]}><Reportes /></ProtectedRoute>} />
+        <Route path="/rrhh/qr" element={<ProtectedRoute roles={["rrhh"]}><QRPage user={user} /></ProtectedRoute>} />
+
+        {/* Admin */}
+        <Route path="/admin/home" element={<ProtectedRoute roles={["admin"]}><HomeAdmin /></ProtectedRoute>} />
+        <Route path="/admin/empleados" element={<ProtectedRoute roles={["admin"]}><EmpleadosAdmin /></ProtectedRoute>} />
+        <Route path="/admin/asistencias" element={<ProtectedRoute roles={["admin"]}><AsistenciasAdmin /></ProtectedRoute>} />
+        <Route path="/admin/ausencias" element={<ProtectedRoute roles={["admin"]}><AusenciasAdmin /></ProtectedRoute>} />
+        <Route path="/admin/reportes" element={<ProtectedRoute roles={["admin"]}><ReportesAdmin /></ProtectedRoute>} />
+
+        <Route path="/" element={user ? <Navigate to={user.rol === "rrhh" ? "/rrhh/home" : user.rol === "admin" ? "/admin/home" : "/scan"} /> : <Navigate to="/login" />} />
         <Route path="*" element={<div style={{ padding: 20 }}><h2>Página no encontrada</h2></div>} />
       </Routes>
-    </BrowserRouter>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
