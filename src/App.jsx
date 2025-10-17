@@ -55,18 +55,18 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {/* 🔹 Navbar solo si hay usuario y no es empleado */}
-      {user && user.rol !== "empleado" && <Navbar user={user} logout={logout} />}
+      {/* Navbar global según rol */}
+      {user && user.rol !== "empleado" && <Navbar />}
 
       <Routes>
-        {/* 🔹 Rutas públicas */}
+        {/* Rutas públicas */}
         <Route path="/scan" element={<Scan />} />
         <Route
           path="/login"
           element={!user ? <Login /> : <Navigate to="/" replace />}
         />
 
-        {/* 🔹 Redirección raíz según rol */}
+        {/* Redirección raíz según rol */}
         <Route
           path="/"
           element={
@@ -138,7 +138,7 @@ export default function App() {
           }
         />
 
-        {/* 🔹 Página no encontrada */}
+        {/* Página no encontrada */}
         <Route
           path="*"
           element={<div style={{ padding: 20 }}>Página no encontrada</div>}
