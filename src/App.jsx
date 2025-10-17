@@ -150,7 +150,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route
+{/*         <Route
           path="/admin/empleados"
           element={
             <ProtectedRoute user={user} allowedRoles={["admin"]}>
@@ -173,7 +173,7 @@ export default function App() {
               <AusenciasAdmin user={user} />
             </ProtectedRoute>
           }
-        />
+        /> */}
         {/* <Route
           path="/admin/reportes"
           element={
