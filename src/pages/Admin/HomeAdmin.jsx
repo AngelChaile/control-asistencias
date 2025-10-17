@@ -1,16 +1,12 @@
-// src/pages/Admin.jsx
 import React, { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../firebase";
 import QrGenerator from "../../components/QrGenerator";
 import Navbar from "../../components/Navbar";
-import { useAuth } from "../../context/AuthContext";
 
-export default function Admin({ user, onLogout }) {
+export default function HomeAdmin({ user, onLogout }) {
   const [asistencias, setAsistencias] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  const { user } = useAuth();
 
   const rol = user?.rol || "";
   const area = user?.lugarTrabajo || "";

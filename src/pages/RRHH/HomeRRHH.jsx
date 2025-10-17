@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { db, collection, getDocs, query, where, orderBy } from "../../firebase";
+import { db, collection, getDocs, query, orderBy } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/Navbar";
 
 export default function HomeRRHH() {
-  const { user } = useAuth();
+  const { user } = useAuth(); // OK, solo una vez
+
   const [asistencias, setAsistencias] = useState([]);
   const [filter, setFilter] = useState({ legajo: "", nombre: "", area: "" });
 
@@ -31,7 +32,7 @@ export default function HomeRRHH() {
 
   return (
     <div style={{ padding: 20 }}>
-      <Navbar /> {/* ahora se ve */}
+      <Navbar user={user} /> {/* ahora se ve */}
       <h2>Asistencias del día</h2>
       <div>
         <input placeholder="Legajo" value={filter.legajo} onChange={e => setFilter({...filter, legajo: e.target.value})} />
