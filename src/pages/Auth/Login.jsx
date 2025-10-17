@@ -29,10 +29,10 @@ export default function Login() {
       // Redirección según rol
       switch (data.rol) {
         case "rrhh":
-          navigate("/RRHH");
+          navigate("/RRHH/HomeRRHH");
           break;
         case "admin":
-          navigate("/Admin");
+          navigate("/Admin/HomeAdmin");
           break;
         case "empleado":
           navigate("/Empleado");
