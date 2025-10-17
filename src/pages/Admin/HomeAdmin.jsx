@@ -42,8 +42,7 @@ export default function HomeAdmin({ user, onLogout }) {
 
   return (
     <div>
-      {/* Mostrar el menú si el usuario es admin o rrhh */}
-      {rol !== "empleado" && <Navbar user={user} onLogout={onLogout} />}
+ 
 
       <div style={{ padding: 16 }}>
         <h2>Panel {rol === "rrhh" ? "Recursos Humanos" : `Área ${area}`}</h2>

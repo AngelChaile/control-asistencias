@@ -32,7 +32,6 @@ export default function HomeRRHH() {
 
   return (
     <div style={{ padding: 20 }}>
-      <Navbar user={user} /> {/* ahora se ve */}
       <h2>Asistencias del día</h2>
       <div>
         <input placeholder="Legajo" value={filter.legajo} onChange={e => setFilter({...filter, legajo: e.target.value})} />

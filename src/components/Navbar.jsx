@@ -8,12 +8,12 @@ export default function Navbar() {
 
   const menus = {
     rrhh: [
-      { name: "Inicio", path: "/RRHH" },
-      { name: "Ausencias", path: "/RRHH/ausencias" },
-      { name: "QR", path: "/RRHH/qr" },
-      { name: "Empleados", path: "/RRHH/empleados" },
-      { name: "Usuarios", path: "/RRHH/usuarios" },
-      { name: "Reportes", path: "/RRHH/reportes" },
+      { name: "Inicio", path: "/rrhh" },
+      { name: "Ausencias", path: "/rrhh/ausencias" },
+      { name: "Empleados", path: "/rrhh/empleados" },
+      { name: "QR", path: "/rrhh/qr" },
+      { name: "Reportes", path: "/rrhh/reportes" },
+      { name: "Usuarios", path: "/rrhh/usuarios" },
     ],
     admin: [
       { name: "Inicio", path: "/admin" },
@@ -28,7 +28,7 @@ export default function Navbar() {
     <nav className="bg-blue-600 text-white flex justify-between items-center px-6 py-3 shadow-md">
       <h1 className="font-bold text-lg">Gestión de Asistencias</h1>
       <ul className="flex gap-4">
-        {menus[user.rol]?.map((item) => (  // <-- CORREGIDO rol
+        {menus[user.rol]?.map((item) => (
           <li key={item.name}>
             <Link to={item.path} className="hover:underline">
               {item.name}
@@ -36,7 +36,10 @@ export default function Navbar() {
           </li>
         ))}
         <li>
-          <button onClick={logout} className="bg-red-500 px-3 py-1 rounded hover:bg-red-600">
+          <button
+            onClick={logout}
+            className="bg-red-500 px-3 py-1 rounded hover:bg-red-600"
+          >
             Cerrar sesión
           </button>
         </li>
