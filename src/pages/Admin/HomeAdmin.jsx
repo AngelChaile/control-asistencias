@@ -3,11 +3,14 @@ import React, { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../firebase";
 import QrGenerator from "../../components/QrGenerator";
-import Menu from "../../components/Navbar";
+import Navbar from "../../components/Navbar";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Admin({ user, onLogout }) {
   const [asistencias, setAsistencias] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const { user } = useAuth();
 
   const rol = user?.rol || "";
   const area = user?.lugarTrabajo || "";
@@ -44,7 +47,7 @@ export default function Admin({ user, onLogout }) {
   return (
     <div>
       {/* Mostrar el menú si el usuario es admin o rrhh */}
-      {rol !== "empleado" && <Menu user={user} onLogout={onLogout} />}
+      {rol !== "empleado" && <Navbar user={user} onLogout={onLogout} />}
 
       <div style={{ padding: 16 }}>
         <h2>Panel {rol === "rrhh" ? "Recursos Humanos" : `Área ${area}`}</h2>

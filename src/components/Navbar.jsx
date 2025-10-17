@@ -28,7 +28,7 @@ export default function Navbar() {
     <nav className="bg-blue-600 text-white flex justify-between items-center px-6 py-3 shadow-md">
       <h1 className="font-bold text-lg">Gestión de Asistencias</h1>
       <ul className="flex gap-4">
-        {menus[user.role]?.map((item) => (
+        {menus[user.rol]?.map((item) => (  // <-- CORREGIDO rol
           <li key={item.name}>
             <Link to={item.path} className="hover:underline">
               {item.name}

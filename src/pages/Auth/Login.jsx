@@ -1,42 +1,46 @@
 // src/pages/Auth/Login.jsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { auth, signInWithEmailAndPassword } from "../../firebase";
-import { getUserDoc } from "../../utils/auth"; // tu helper para obtener user doc
 import Swal from "sweetalert2";
+import { getUserDoc } from "../../utils/auth";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const navigate = useNavigate();
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      const uid = cred.user.uid;
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCred.user.uid;
 
-      // Traer rol desde Firestore
+      // 🔹 Obtener datos del usuario
       const userDoc = await getUserDoc(uid);
       if (!userDoc) throw new Error("No se pudo cargar la información del usuario.");
 
+      // 🔹 Redirigir según rol
       Swal.fire({
         icon: "success",
         title: "¡Bienvenido!",
-        text: `Hola ${userDoc.nombre || ""}`,
+        text: `Hola ${userDoc.nombre} ${userDoc.apellido}`,
         timer: 1500,
         showConfirmButton: false,
       });
 
-      // Redirigir según rol
       if (userDoc.rol === "rrhh") {
-        window.location.href = "/rrhh"; // HomeRRHH
+        navigate("/rrhh", { replace: true });
       } else if (userDoc.rol === "admin") {
-        window.location.href = "/admin"; // HomeAdmin
+        navigate("/admin", { replace: true });
       } else {
-        window.location.href = "/scan"; // empleados u otros
+        navigate("/scan", { replace: true });
       }
+
     } catch (error) {
       console.error("Error en login:", error);
 
@@ -44,8 +48,8 @@ export default function Login() {
       if (error.code === "auth/invalid-email") mensaje = "El formato del correo no es válido.";
       else if (error.code === "auth/user-not-found") mensaje = "No existe una cuenta con ese correo.";
       else if (error.code === "auth/wrong-password") mensaje = "Contraseña incorrecta.";
-      else if (error.code === "auth/too-many-requests")
-        mensaje = "Demasiados intentos. Espera unos minutos e inténtalo nuevamente.";
+      else if (error.code === "auth/too-many-requests") mensaje = "Demasiados intentos. Espera unos minutos e inténtalo nuevamente.";
+      else if (error.message) mensaje = error.message;
 
       Swal.fire({
         icon: "error",

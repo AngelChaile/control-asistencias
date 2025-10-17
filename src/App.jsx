@@ -12,15 +12,10 @@ import HomeRRHH from "./pages/RRHH/HomeRRHH";
 import EmpleadosRRHH from "./pages/RRHH/Empleados";
 import AusenciasRRHH from "./pages/RRHH/Ausencias";
 import Usuarios from "./pages/RRHH/Usuarios";
-//import ReportesRRHH from "./pages/RRHH/Reportes";
 import QRGenerator from "./pages/RRHH/QRGenerator";
 
 // 🔹 Páginas Admin de área
 import HomeAdmin from "./pages/Admin/HomeAdmin";
-//import EmpleadosAdmin from "./pages/Admin/Empleados";
-//import AsistenciasAdmin from "./pages/Admin/Asistencias";
-//import AusenciasAdmin from "./pages/Admin/Ausencias";
-//import ReportesAdmin from "./pages/Admin/Reportes";
 
 // 🔹 Páginas públicas y login
 import Scan from "./pages/Public/Scan";
@@ -30,6 +25,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
+  // 🔹 Detectar cambios de auth
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) {
@@ -49,6 +45,7 @@ export default function App() {
     return () => unsub();
   }, []);
 
+  // 🔹 Cerrar sesión
   async function logout() {
     await firebaseSignOut(auth);
     setUser(null);
@@ -58,14 +55,12 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {/* 🔹 Menú general: solo visible si hay usuario logueado y no es empleado */}
-      {user && user.rol !== "empleado" && <Navbar user={user} onLogout={logout} />}
+      {/* 🔹 Navbar solo si hay usuario y no es empleado */}
+      {user && user.rol !== "empleado" && <Navbar user={user} logout={logout} />}
 
       <Routes>
-        {/* 🔹 Ruta pública: los empleados escanean el QR */}
+        {/* 🔹 Rutas públicas */}
         <Route path="/scan" element={<Scan />} />
-
-        {/* 🔹 Login */}
         <Route
           path="/login"
           element={!user ? <Login /> : <Navigate to="/" replace />}
@@ -88,13 +83,13 @@ export default function App() {
         />
 
         {/* ===========================
-           🔹 RUTAS RRHH
+             🔹 RUTAS RRHH
         =========================== */}
         <Route
           path="/rrhh"
           element={
             <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-              <HomeRRHH user={user} />
+              <HomeRRHH />
             </ProtectedRoute>
           }
         />
@@ -102,7 +97,7 @@ export default function App() {
           path="/rrhh/empleados"
           element={
             <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-              <EmpleadosRRHH user={user} />
+              <EmpleadosRRHH />
             </ProtectedRoute>
           }
         />
@@ -110,7 +105,7 @@ export default function App() {
           path="/rrhh/ausencias"
           element={
             <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-              <AusenciasRRHH user={user} />
+              <AusenciasRRHH />
             </ProtectedRoute>
           }
         />
@@ -118,71 +113,31 @@ export default function App() {
           path="/rrhh/usuarios"
           element={
             <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-              <Usuarios user={user} />
+              <Usuarios />
             </ProtectedRoute>
           }
         />
-{/*         <Route
-          path="/rrhh/reportes"
-          element={
-            <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-              <ReportesRRHH user={user} />
-            </ProtectedRoute>
-          }
-        /> */}
         <Route
-          path="/rrhh/scan"
+          path="/rrhh/qr"
           element={
             <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-              <QRGenerator user={user} />
+              <QRGenerator />
             </ProtectedRoute>
           }
         />
 
         {/* ===========================
-           🔹 RUTAS ADMIN
+             🔹 RUTAS ADMIN
         =========================== */}
         <Route
           path="/admin"
           element={
             <ProtectedRoute user={user} allowedRoles={["admin"]}>
-              <HomeAdmin user={user} />
+              <HomeAdmin />
             </ProtectedRoute>
           }
         />
-{/*         <Route
-          path="/admin/empleados"
-          element={
-            <ProtectedRoute user={user} allowedRoles={["admin"]}>
-              <EmpleadosAdmin user={user} />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/asistencias"
-          element={
-            <ProtectedRoute user={user} allowedRoles={["admin"]}>
-              <AsistenciasAdmin user={user} />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/ausencias"
-          element={
-            <ProtectedRoute user={user} allowedRoles={["admin"]}>
-              <AusenciasAdmin user={user} />
-            </ProtectedRoute>
-          }
-        /> */}
-        {/* <Route
-          path="/admin/reportes"
-          element={
-            <ProtectedRoute user={user} allowedRoles={["admin"]}>
-              <ReportesAdmin user={user} />
-            </ProtectedRoute>
-          }
-        />
- */}
+
         {/* 🔹 Página no encontrada */}
         <Route
           path="*"

@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { db, collection, getDocs, query, where, orderBy } from "../../firebase";
+import { useAuth } from "../../context/AuthContext";
+import Navbar from "../../components/Navbar";
 
 export default function HomeRRHH() {
+  const { user } = useAuth();
   const [asistencias, setAsistencias] = useState([]);
   const [filter, setFilter] = useState({ legajo: "", nombre: "", area: "" });
 
@@ -28,6 +31,7 @@ export default function HomeRRHH() {
 
   return (
     <div style={{ padding: 20 }}>
+      <Navbar /> {/* ahora se ve */}
       <h2>Asistencias del día</h2>
       <div>
         <input placeholder="Legajo" value={filter.legajo} onChange={e => setFilter({...filter, legajo: e.target.value})} />
@@ -43,6 +47,7 @@ export default function HomeRRHH() {
             <th>Apellido</th>
             <th>Área</th>
             <th>Hora</th>
+            <th>Fecha</th>
             <th>Tipo</th>
           </tr>
         </thead>
@@ -52,7 +57,8 @@ export default function HomeRRHH() {
               <td>{a.legajo}</td>
               <td>{a.nombre}</td>
               <td>{a.apellido}</td>
-              <td>{a.area}</td>
+              <td>{a.lugarTrabajo}</td>
+              <td>{a.fecha}</td>
               <td>{a.hora}</td>
               <td>{a.tipo}</td>
             </tr>
