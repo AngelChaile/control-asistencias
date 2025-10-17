@@ -1,7 +1,6 @@
-// Helpers para generar tokens simples.
-// Podemos usar crypto si está disponible, pero string uuid simple:
+// src/utils/tokens.js
+// Helper para generar tokens simples y únicos
 export function makeToken() {
-  // 16 bytes base36 + timestamp
   const rnd = Math.random().toString(36).slice(2, 10).toUpperCase();
   return `${rnd}-${Date.now().toString(36)}`;
 }
