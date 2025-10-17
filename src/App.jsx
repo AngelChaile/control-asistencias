@@ -12,15 +12,15 @@ import HomeRRHH from "./pages/RRHH/HomeRRHH";
 import EmpleadosRRHH from "./pages/RRHH/Empleados";
 import AusenciasRRHH from "./pages/RRHH/Ausencias";
 import Usuarios from "./pages/RRHH/Usuarios";
-import ReportesRRHH from "./pages/RRHH/Reportes";
+//import ReportesRRHH from "./pages/RRHH/Reportes";
 import QRGenerator from "./pages/RRHH/QRGenerator";
 
 // 🔹 Páginas Admin de área
 import HomeAdmin from "./pages/Admin/HomeAdmin";
-import EmpleadosAdmin from "./pages/Admin/Empleados";
-import AsistenciasAdmin from "./pages/Admin/Asistencias";
-import AusenciasAdmin from "./pages/Admin/Ausencias";
-import ReportesAdmin from "./pages/Admin/Reportes";
+//import EmpleadosAdmin from "./pages/Admin/Empleados";
+//import AsistenciasAdmin from "./pages/Admin/Asistencias";
+//import AusenciasAdmin from "./pages/Admin/Ausencias";
+//import ReportesAdmin from "./pages/Admin/Reportes";
 
 // 🔹 Páginas públicas y login
 import Scan from "./pages/Public/Scan";
