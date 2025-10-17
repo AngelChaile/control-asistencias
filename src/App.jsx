@@ -122,14 +122,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route
+{/*         <Route
           path="/rrhh/reportes"
           element={
             <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
               <ReportesRRHH user={user} />
             </ProtectedRoute>
           }
-        />
+        /> */}
         <Route
           path="/rrhh/scan"
           element={
@@ -174,7 +174,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route
+        {/* <Route
           path="/admin/reportes"
           element={
             <ProtectedRoute user={user} allowedRoles={["admin"]}>
@@ -182,7 +182,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
+ */}
         {/* 🔹 Página no encontrada */}
         <Route
           path="*"
