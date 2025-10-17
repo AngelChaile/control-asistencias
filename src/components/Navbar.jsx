@@ -24,6 +24,8 @@ export default function Navbar() {
     ],
   };
 
+  console.log(user)
+
   return (
     <nav className="bg-blue-600 text-white flex justify-between items-center px-6 py-3 shadow-md">
       <h1 className="font-bold text-lg">Gestión de Asistencias</h1>

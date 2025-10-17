@@ -6,6 +6,7 @@ import { getUserDoc } from "./utils/auth";
 // 🔹 Componentes
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { useAuth } from "./context/AuthContext"; // <-- agregado
 
 // 🔹 Páginas RRHH
 import HomeRRHH from "./pages/RRHH/HomeRRHH";
@@ -25,17 +26,24 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
+  const { setUser: setContextUser } = useAuth(); // <-- sincronizar contexto
+
   // 🔹 Detectar cambios de auth
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) {
         setUser(null);
+        setContextUser(null); // <-- mantener contexto en sync
         setAuthReady(true);
         return;
       }
       try {
         const userDoc = await getUserDoc(u.uid);
-        if (userDoc) setUser({ uid: u.uid, ...userDoc });
+        if (userDoc) {
+          const full = { uid: u.uid, ...userDoc };
+          setUser(full);
+          setContextUser(full); // <-- mantener contexto en sync
+        }
       } catch (err) {
         console.error("Error cargando user doc:", err);
       } finally {
@@ -43,12 +51,13 @@ export default function App() {
       }
     });
     return () => unsub();
-  }, []);
+  }, [setContextUser]);
 
   // 🔹 Cerrar sesión
   async function logout() {
     await firebaseSignOut(auth);
     setUser(null);
+    setContextUser(null); // <-- mantener contexto en sync
   }
 
   if (!authReady) return <div style={{ padding: 20 }}>Cargando...</div>;
