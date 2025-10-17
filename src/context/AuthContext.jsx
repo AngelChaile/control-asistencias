@@ -18,7 +18,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("user");
   };
 
-  // Auto logout tras 20 minutos de inactividad
   useEffect(() => {
     let timer;
     const resetTimer = () => {
@@ -38,7 +37,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
