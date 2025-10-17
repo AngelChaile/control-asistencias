@@ -14,6 +14,7 @@ export default function Login() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      const userDoc = await getDoc(doc(db, "users", userCred.user.uid));
       Swal.fire({
         icon: "success",
         title: "¡Bienvenido!",
@@ -22,8 +23,23 @@ export default function Login() {
         showConfirmButton: false,
       });
 
-      // 👇 Ejemplo: redirigir al dashboard
-      window.location.href = "/Admin/HomeAdmin";
+
+          const data = userDoc.data();
+
+      // Redirección según rol
+      switch (data.rol) {
+        case "rrhh":
+          navigate("/RRHH");
+          break;
+        case "admin":
+          navigate("/Admin");
+          break;
+        case "empleado":
+          navigate("/Empleado");
+          break;
+        default:
+          alert("Rol desconocido. Contacta a soporte.");
+      }
     } catch (error) {
       console.error("Error en login:", error);
 
