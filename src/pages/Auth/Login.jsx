@@ -1,6 +1,7 @@
-// src/pages/Login.jsx
+// src/pages/Auth/Login.jsx
 import { useState } from "react";
 import { auth, signInWithEmailAndPassword } from "../../firebase";
+import { getUserDoc } from "../../utils/auth"; // tu helper para obtener user doc
 import Swal from "sweetalert2";
 
 export default function Login() {
@@ -13,32 +14,28 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      const userDoc = await getDoc(doc(db, "users", userCred.user.uid));
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const uid = cred.user.uid;
+
+      // Traer rol desde Firestore
+      const userDoc = await getUserDoc(uid);
+      if (!userDoc) throw new Error("No se pudo cargar la información del usuario.");
+
       Swal.fire({
         icon: "success",
         title: "¡Bienvenido!",
-        text: "Inicio de sesión exitoso",
+        text: `Hola ${userDoc.nombre || ""}`,
         timer: 1500,
         showConfirmButton: false,
       });
 
-
-          const data = userDoc.data();
-
-      // Redirección según rol
-      switch (data.rol) {
-        case "rrhh":
-          navigate("/RRHH/HomeRRHH");
-          break;
-        case "admin":
-          navigate("/Admin/HomeAdmin");
-          break;
-        case "empleado":
-          navigate("/Empleado");
-          break;
-        default:
-          alert("Rol desconocido. Contacta a soporte.");
+      // Redirigir según rol
+      if (userDoc.rol === "rrhh") {
+        window.location.href = "/rrhh"; // HomeRRHH
+      } else if (userDoc.rol === "admin") {
+        window.location.href = "/admin"; // HomeAdmin
+      } else {
+        window.location.href = "/scan"; // empleados u otros
       }
     } catch (error) {
       console.error("Error en login:", error);
