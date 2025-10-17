@@ -23,7 +23,7 @@ export default function Login() {
       });
 
       // 👇 Ejemplo: redirigir al dashboard
-      window.location.href = "/dashboard";
+      window.location.href = "/Admin/HomeAdmin";
     } catch (error) {
       console.error("Error en login:", error);
 
