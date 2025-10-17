@@ -1,7 +1,7 @@
 // src/pages/Admin.jsx
 import React, { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../../firebase";
 import QrGenerator from "../../components/QrGenerator";
 import Menu from ".../../components/Navbar";
 
