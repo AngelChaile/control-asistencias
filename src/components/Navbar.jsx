@@ -8,12 +8,12 @@ export default function Navbar() {
 
   const menus = {
     rrhh: [
-      { name: "Inicio", path: "/rrhh" },
-      { name: "Ausencias", path: "/rrhh/ausencias" },
-      { name: "Empleados", path: "/rrhh/empleados" },
-      { name: "QR", path: "/rrhh/qr" },
-      { name: "Reportes", path: "/rrhh/reportes" },
-      { name: "Usuarios", path: "/rrhh/usuarios" },
+      { name: "Inicio", path: "/RRHH/HomeRRHH" },
+      { name: "Ausencias", path: "/RRHH/Ausencias" },
+      { name: "Empleados", path: "/RRHH/Empleados" },
+      { name: "QR", path: "/RRHH/QRGenerator" },
+      { name: "Reportes", path: "/RRHH/Reportes" },
+      { name: "Usuarios", path: "/RRHH/Usuarios" },
     ],
     admin: [
       { name: "Inicio", path: "/admin" },
