@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
-import {
-  fetchEmpleadosByLugarTrabajo,
-  fetchAsistenciasByDate,
-  saveAusenciaJustificacion,
-} from "../../utils/usuarios"; // o adapta a los utils correctos
+import { fetchEmpleadosByLugarTrabajo, saveAusenciaJustificacion } from "../../utils/usuarios";
+import { fetchAsistenciasByDate } from "../../utils/asistencia";
 
 export default function AusenciasAdmin() {
   const { user } = useAuth();
