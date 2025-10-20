@@ -1,11 +1,18 @@
 import React from "react";
-import * as XLSX from "xlsx";
+// import * as XLSX from "xlsx"; // Usar esta línea cuando puedas instalar con npm
 
 /**
  * exportToExcel(filename, rows)
  * rows: array de objetos [{col1: val, col2: val}, ...]
  */
 export function exportToExcel(filename, rows = []) {
+  // ✅ Usar la librería desde el objeto global window
+  const XLSX = window.XLSX;
+  if (!XLSX) {
+    alert("⚠️ No se ha cargado la librería XLSX. Agrega el script del CDN en tu index.html");
+    return;
+  }
+
   if (!Array.isArray(rows)) rows = [];
 
   const wb = XLSX.utils.book_new();
@@ -24,8 +31,11 @@ export function exportToExcel(filename, rows = []) {
   // Ajustar anchos de columnas
   try {
     const keys = Object.keys(rows[0]);
-    ws["!cols"] = keys.map(k => ({
-      wch: Math.min(Math.max(k.length, ...rows.map(r => String(r[k] || "").length)), 50)
+    ws["!cols"] = keys.map((k) => ({
+      wch: Math.min(
+        Math.max(k.length, ...rows.map((r) => String(r[k] || "").length)),
+        50
+      ),
     }));
   } catch {}
 
@@ -33,11 +43,8 @@ export function exportToExcel(filename, rows = []) {
   XLSX.writeFile(wb, filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`);
 }
 
-
 /**
  * Botón que descarga el Excel
-
- * Componente simple: botón que descarga el Excel
  * Props:
  *  - data: array de objetos
  *  - filename: nombre del archivo (.xlsx opcional)
@@ -46,12 +53,12 @@ export function exportToExcel(filename, rows = []) {
 export default function ExportExcel({ data = [], filename = "report.xlsx", children }) {
   const onClick = () => exportToExcel(filename, data);
   return (
-    <button type="button" onClick={onClick} className="bg-green-600 text-white px-3 py-1 rounded">
+    <button
+      type="button"
+      onClick={onClick}
+      className="bg-green-600 text-white px-3 py-1 rounded"
+    >
       {children || "Exportar Excel"}
     </button>
   );
 }
-
-
-
-
