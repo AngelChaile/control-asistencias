@@ -34,8 +34,8 @@ export default function HomeRRHH() {
       (filter.legajo === "" || a.legajo.includes(filter.legajo)) &&
       (filter.nombre === "" ||
         a.nombre.toLowerCase().includes(filter.nombre.toLowerCase())) &&
-      (filter.area === "" ||
-        (a.area || "").toLowerCase().includes(filter.area.toLowerCase()))
+      (filter.lugarTrabajo === "" ||
+        (a.lugarTrabajo || "").toLowerCase().includes(filter.lugarTrabajo.toLowerCase()))
   );
 
   return (
