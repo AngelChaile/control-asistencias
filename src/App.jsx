@@ -14,9 +14,14 @@ import EmpleadosRRHH from "./pages/RRHH/Empleados";
 import AusenciasRRHH from "./pages/RRHH/Ausencias";
 import Usuarios from "./pages/RRHH/Usuarios";
 import QRGenerator from "./pages/RRHH/QRGenerator";
+import ReportesRRHH from "./pages/RRHH/Reportes"; // nuevo
 
 // 🔹 Páginas Admin de área
 import HomeAdmin from "./pages/Admin/HomeAdmin";
+import AsistenciasAdmin from "./pages/Admin/AsistenciasAdmin";
+import AusenciasAdmin from "./pages/Admin/AusenciasAdmin";
+import EmpleadosAdmin from "./pages/Admin/EmpleadosAdmin";
+import ReportesAdmin from "./pages/Admin/ReportesAdmin";
 
 // 🔹 Páginas públicas y login
 import Scan from "./pages/Public/Scan";
@@ -134,6 +139,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/rrhh/reportes"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
+              <ReportesRRHH />
+            </ProtectedRoute>
+          }
+        />
 
         {/* ===========================
              🔹 RUTAS ADMIN
@@ -143,6 +156,46 @@ export default function App() {
           element={
             <ProtectedRoute user={user} allowedRoles={["admin"]}>
               <HomeAdmin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/empleados"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["admin"]}>
+              <EmpleadosAdmin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/asistencias"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["admin"]}>
+              <AsistenciasAdmin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/ausencias"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["admin"]}>
+              <AusenciasAdmin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reportes"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["admin"]}>
+              <ReportesAdmin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/qr"
+          element={
+            <ProtectedRoute user={user} allowedRoles={["admin"]}>
+              <QRGenerator />
             </ProtectedRoute>
           }
         />
