@@ -6,7 +6,7 @@ export default function HomeRRHH() {
   const { user } = useAuth();
 
   const [asistencias, setAsistencias] = useState([]);
-  const [filter, setFilter] = useState({ legajo: "", nombre: "", area: "" });
+  const [filter, setFilter] = useState({ legajo: "", nombre: "", lugarTrabajo: "" });
 
   useEffect(() => {
     fetchAsistencias();
@@ -57,9 +57,9 @@ export default function HomeRRHH() {
           }
         />
         <input
-          placeholder="Área"
-          value={filter.area}
-          onChange={(e) => setFilter({ ...filter, area: e.target.value })}
+          placeholder="Lugar de Trabajo"
+          value={filter.lugarTrabajo}
+          onChange={(e) => setFilter({ ...filter, lugarTrabajo: e.target.value })}
         />
       </div>
 
