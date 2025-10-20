@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import ExportCSV from "../../components/ExportCSV";
+import ExportExcel from "../../components/ExportExcel";
 import { fetchAusenciasByRange, fetchAusenciasByArea } from "../../utils/asistencia"; // adapta
 
 export default function AusenciasRRHH() {
@@ -39,7 +39,7 @@ export default function AusenciasRRHH() {
         <label style={{ marginLeft: 8 }}>Desde: <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></label>
         <label style={{ marginLeft: 8 }}>Hasta: <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></label>
         <button onClick={handleSearch} style={{ marginLeft: 8 }}>Buscar</button>
-        <ExportCSV data={result} filename={`ausencias_rrhh_${area || "all"}.csv`} />
+        <ExportExcel data={result} filename={`ausencias_rrhh_${area || "all"}.xlsx`} />
       </div>
 
       {loading ? <p>Cargando...</p> : result.length === 0 ? <p>No hay ausencias.</p> : (

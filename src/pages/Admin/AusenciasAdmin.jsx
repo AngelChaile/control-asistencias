@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import ExportCSV from "../../components/ExportCSV";
+import ExportExcel from "../../components/ExportExcel";
 import {
   fetchEmpleadosByLugarTrabajo,
   fetchAsistenciasByDate,
@@ -55,7 +55,7 @@ export default function AusenciasAdmin() {
       <h2>Ausencias - Área {lugar}</h2>
 
       <div style={{ marginBottom: 12 }}>
-        <ExportCSV data={faltantes} filename={`ausencias_${lugar}_${new Date().toISOString().slice(0,10)}.csv`} />
+        <ExportExcel data={faltantes} filename={`ausencias_${lugar}_${new Date().toISOString().slice(0,10)}.xlsx`} />
       </div>
 
       {loading ? (

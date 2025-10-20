@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import ExportCSV from "../../components/ExportCSV";
+import ExportExcel from "../../components/ExportExcel";
 import { fetchAsistenciasByRange } from "../../utils/asistencia"; // adapta
 
 export default function ReportesAdmin() {
@@ -40,7 +40,7 @@ export default function ReportesAdmin() {
         <input placeholder="Legajo" value={filters.legajo} onChange={(e) => setFilters({ ...filters, legajo: e.target.value })} style={{ marginLeft: 8 }} />
         <input placeholder="Nombre/Apellido" value={filters.nombre} onChange={(e) => setFilters({ ...filters, nombre: e.target.value })} style={{ marginLeft: 8 }} />
         <button onClick={handleSearch} style={{ marginLeft: 8 }}>Buscar</button>
-        <ExportCSV data={result} filename={`reportes_${user?.lugarTrabajo || "all"}.csv`} />
+        <ExportExcel data={result} filename={`reporte_${user?.lugarTrabajo || "all"}.xlsx`} />
       </div>
 
       {loading ? <p>Cargando...</p> : result.length === 0 ? <p>No hay resultados.</p> : (

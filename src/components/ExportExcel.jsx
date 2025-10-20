@@ -21,46 +21,29 @@ export function exportToExcel(filename, rows = []) {
   // Usar json_to_sheet para generar tabla
   const ws = XLSX.utils.json_to_sheet(rows);
 
-  // Aplicar autofilter al rango de la hoja
-  if (ws["!ref"]) {
-    try {
-      ws["!autofilter"] = { ref: ws["!ref"] };
-    } catch (e) {
-      // noop
-    }
-  }
-
-  // Ajustar anchos de columnas según longitud de cabeceras/valores
+  // Ajustar anchos de columnas
   try {
     const keys = Object.keys(rows[0]);
-    const cols = keys.map((k) => {
-      const maxLen =
-        Math.max(
-          k.length,
-          ...rows.map((r) => {
-            const v = r[k];
-            return v === null || v === undefined ? 0 : String(v).length;
-          })
-        ) + 2;
-      return { wch: Math.min(Math.max(maxLen, 10), 50) };
-    });
-    ws["!cols"] = cols;
-  } catch (e) {
-    // noop
-  }
+    ws["!cols"] = keys.map(k => ({
+      wch: Math.min(Math.max(k.length, ...rows.map(r => String(r[k] || "").length)), 50)
+    }));
+  } catch {}
 
   XLSX.utils.book_append_sheet(wb, ws, "Report");
   XLSX.writeFile(wb, filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`);
 }
 
+
 /**
+ * Botón que descarga el Excel
+
  * Componente simple: botón que descarga el Excel
  * Props:
  *  - data: array de objetos
  *  - filename: nombre del archivo (.xlsx opcional)
  *  - children: contenido del botón
  */
-export default function ExportCSV({ data = [], filename = "export.xlsx", children }) {
+export default function ExportExcel({ data = [], filename = "report.xlsx", children }) {
   const onClick = () => exportToExcel(filename, data);
   return (
     <button type="button" onClick={onClick} className="bg-green-600 text-white px-3 py-1 rounded">
@@ -68,3 +51,7 @@ export default function ExportCSV({ data = [], filename = "export.xlsx", childre
     </button>
   );
 }
+
+
+
+

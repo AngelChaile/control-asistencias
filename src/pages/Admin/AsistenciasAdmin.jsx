@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import ExportCSV from "../../components/ExportCSV";
+import ExportCSV from "../../components/ExportExcel";
 import { fetchAsistenciasToday, fetchAsistenciasByFilters } from "../../utils/asistencia"; // adapta nombres
 
 export default function AsistenciasAdmin() {
