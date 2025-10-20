@@ -19,7 +19,7 @@ export default function Scan() {
   const [empleado, setEmpleado] = useState(null);
   const [showRegistro, setShowRegistro] = useState(false);
   const [tokenValido, setTokenValido] = useState(false);
-  const [nuevo, setNuevo] = useState({ nombre: "", apellido: "", lugarTrabajo: "" });
+  const [nuevo, setNuevo] = useState({ nombre: "", apellido: "", lugarTrabajo: "", secretaria: "", horario: "" });
   const [bloqueado, setBloqueado] = useState(false); // 🔒 evita trampas
 
   useEffect(() => {
@@ -152,6 +152,8 @@ export default function Scan() {
           <input placeholder="Nombre" value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} />
           <input placeholder="Apellido" value={nuevo.apellido} onChange={(e) => setNuevo({ ...nuevo, apellido: e.target.value })} />
           <input placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={(e) => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
+          <input placeholder="Secretaria" value={nuevo.secretaria} onChange={(e) => setNuevo({ ...nuevo, secretaria: e.target.value })} />
+          <input placeholder="Horario" value={nuevo.horario} onChange={(e) => setNuevo({ ...nuevo, horario: e.target.value })} />
           <div style={{ marginTop: 8 }}>
             <button type="submit" disabled={loading || !tokenValido}>
               {loading ? "Guardando..." : "Guardar y fichar"}

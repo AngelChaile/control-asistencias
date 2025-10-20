@@ -3,7 +3,7 @@ import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "../.
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
-  const [nuevo, setNuevo] = useState({ email: "", nombre: "", rol: "empleado" });
+  const [nuevo, setNuevo] = useState({ email: "", nombre: "", apellido: "", legajo: "", lugarTrabajo: "", contraseña: "", rol: "empleado" });
   const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export default function Usuarios() {
     } else {
       await addDoc(collection(db, "users"), nuevo);
     }
-    setNuevo({ email: "", nombre: "", rol: "empleado" });
+    setNuevo({ email: "", nombre: "", apellido: "", legajo: "", lugarTrabajo: "", contraseña: "", rol: "empleado" });
     fetchUsuarios();
   }
 
@@ -47,6 +47,8 @@ export default function Usuarios() {
           <tr>
             <th>Email</th>
             <th>Nombre</th>
+            <th>Apellido</th>
+            <th>Legajo</th>
             <th>Rol</th>
             <th>Acciones</th>
           </tr>
@@ -56,6 +58,8 @@ export default function Usuarios() {
             <tr key={u.id}>
               <td>{u.email}</td>
               <td>{u.nombre}</td>
+              <td>{u.apellido}</td>
+              <td>{u.legajo}</td>
               <td>{u.rol}</td>
               <td>
                 <button onClick={() => handleEditar(u)}>✏️</button>
@@ -70,6 +74,10 @@ export default function Usuarios() {
       <form onSubmit={handleGuardar}>
         <input placeholder="Email" value={nuevo.email} onChange={e => setNuevo({...nuevo, email: e.target.value})} required/>
         <input placeholder="Nombre" value={nuevo.nombre} onChange={e => setNuevo({...nuevo, nombre: e.target.value})} required/>
+        <input placeholder="Apellido" value={nuevo.apellido} onChange={e => setNuevo({...nuevo, apellido: e.target.value})} required/>
+        <input placeholder="Legajo" value={nuevo.legajo} onChange={e => setNuevo({...nuevo, legajo: e.target.value})} required/>
+        <input placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={e => setNuevo({...nuevo, lugarTrabajo: e.target.value})} required/>
+        <input placeholder="Contraseña" value={nuevo.contraseña} onChange={e => setNuevo({...nuevo, contraseña: e.target.value})} required/>
         <select value={nuevo.rol} onChange={e => setNuevo({...nuevo, rol: e.target.value})}>
           <option value="empleado">Empleado</option>
           <option value="admin">Admin</option>
