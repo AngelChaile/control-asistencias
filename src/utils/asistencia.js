@@ -142,3 +142,111 @@ export async function registrarAsistenciaPorLegajo(legajo, token = null) {
     id: newDoc.id,
   };
 }
+
+/* ---------------------
+   Nuevas utilidades para Reportes / Admin / RRHH
+   --------------------- */
+
+/**
+ * fetchAsistenciasByDate(date, area)
+ * date: Date object (default = today)
+ * area: string o null -> filtra por lugarTrabajo
+ */
+export async function fetchAsistenciasByDate(date = new Date(), area = null) {
+  const fechaStr = date.toLocaleDateString("es-AR");
+  const constraints = [where("fecha", "==", fechaStr)];
+  if (area) constraints.push(where("lugarTrabajo", "==", area));
+  const q = query(collection(db, "asistencias"), ...constraints);
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * fetchAsistenciasToday(area)
+ */
+export async function fetchAsistenciasToday(area = null) {
+  return fetchAsistenciasByDate(new Date(), area);
+}
+
+/**
+ * fetchAsistenciasByRange({ desde: Date|null, hasta: Date|null, legajo: string|null, nombre: string|null, area: string|null })
+ * - realiza la consulta básica y filtra en cliente por fecha, legajo y nombre/apellido
+ */
+export async function fetchAsistenciasByRange({ desde = null, hasta = null, legajo = "", nombre = "", area = null } = {}) {
+  const constraints = [];
+  if (area) constraints.push(where("lugarTrabajo", "==", area));
+  const q = query(collection(db, "asistencias"), ...constraints);
+  const snap = await getDocs(q);
+  const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  function toTime(r) {
+    if (r.createdAt?.seconds) return r.createdAt.seconds * 1000;
+    // intentar parsear fecha (dd/mm/yyyy) -> crear Date con partes
+    if (r.fecha && typeof r.fecha === "string") {
+      const parts = r.fecha.split("/");
+      if (parts.length === 3) {
+        const [d, m, y] = parts.map(Number);
+        return new Date(y, m - 1, d).getTime();
+      }
+    }
+    return 0;
+  }
+
+  const desdeTs = desde ? desde.getTime() : null;
+  const hastaTs = hasta ? hasta.getTime() : null;
+
+  const filtered = rows.filter((r) => {
+    const t = toTime(r);
+    if (desdeTs && t < desdeTs) return false;
+    if (hastaTs && t > hastaTs + 24 * 3600 * 1000 - 1) return false; // incluir hasta día completo
+    if (legajo && String(r.legajo).indexOf(String(legajo)) === -1) return false;
+    if (nombre) {
+      const full = `${r.nombre || ""} ${r.apellido || ""}`.toLowerCase();
+      if (!full.includes(nombre.toLowerCase())) return false;
+    }
+    return true;
+  });
+
+  // ordenar por fecha/hora (descendente)
+  filtered.sort((a, b) => toTime(b) - toTime(a));
+  return filtered;
+}
+
+/**
+ * fetchAusenciasByRange({ desde, hasta, area })
+ * - Busca en colección "ausencias" si existe, si no devuelve vacío.
+ */
+export async function fetchAusenciasByRange({ desde = null, hasta = null, area = null } = {}) {
+  // si no existe colección "ausencias" esta función asume que hay docs en esa colección
+  const constraints = [];
+  if (area) constraints.push(where("lugarTrabajo", "==", area));
+  const q = query(collection(db, "ausencias"), ...constraints);
+  try {
+    const snap = await getDocs(q);
+    const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // filtrar por fecha si se pasa rango (asumiendo campo fecha en formato dd/mm/yyyy o createdAt)
+    if (desde || hasta) {
+      const desdeTs = desde ? desde.getTime() : null;
+      const hastaTs = hasta ? hasta.getTime() : null;
+      return rows.filter((r) => {
+        let t = 0;
+        if (r.createdAt?.seconds) t = r.createdAt.seconds * 1000;
+        else if (r.fecha) {
+          const parts = String(r.fecha).split("/");
+          if (parts.length === 3) {
+            const [d, m, y] = parts.map(Number);
+            t = new Date(y, m - 1, d).getTime();
+          }
+        }
+        if (desdeTs && t < desdeTs) return false;
+        if (hastaTs && t > hastaTs + 24 * 3600 * 1000 - 1) return false;
+        return true;
+      });
+    }
+    return rows;
+  } catch (err) {
+    // si la colección no existe o error -> devolver []
+    console.warn("fetchAusenciasByRange:", err);
+    return [];
+  }
+}

@@ -8,7 +8,6 @@ export default function HomeAdmin() {
   const { user } = useAuth();
   const [asistencias, setAsistencias] = useState([]);
   const [loading, setLoading] = useState(false);
-
   const rol = user?.rol || "";
   const area = user?.lugarTrabajo || "";
 

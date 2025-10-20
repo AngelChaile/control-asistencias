@@ -1,76 +1,73 @@
 import React, { useEffect, useState } from "react";
-import { db, collection, getDocs, query, where, updateDoc, doc, orderBy } from "../../firebase";
+import { useAuth } from "../../context/AuthContext";
+import ExportCSV from "../../components/ExportCSV";
+import { fetchAusenciasByRange, fetchAusenciasByArea } from "../../utils/asistencia"; // adapta
 
-export default function Ausencias() {
-  const [ausencias, setAusencias] = useState([]);
-  const [filter, setFilter] = useState({ legajo: "", nombre: "", area: "", fechaDesde: "", fechaHasta: "" });
+export default function AusenciasRRHH() {
+  const { user } = useAuth();
+  const [area, setArea] = useState(""); // seleccionar área (RRHH puede ver todas)
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [result, setResult] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchAusencias();
-  }, []);
-
-  async function fetchAusencias() {
+  async function handleSearch() {
+    setLoading(true);
     try {
-      const q = query(collection(db, "ausencias"), orderBy("fecha", "desc"));
-      const snap = await getDocs(q);
-      const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setAusencias(lista);
+      const desdeD = desde ? new Date(desde) : null;
+      const hastaD = hasta ? new Date(hasta) : null;
+      const data = await fetchAusenciasByRange({ desde: desdeD, hasta: hastaD, area: area || null });
+      setResult(data || []);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   }
 
-  const filtered = ausencias.filter(a =>
-    (filter.legajo === "" || a.legajo.includes(filter.legajo)) &&
-    (filter.nombre === "" || a.nombre.toLowerCase().includes(filter.nombre.toLowerCase())) &&
-    (filter.area === "" || (a.area || "").toLowerCase().includes(filter.area.toLowerCase())) &&
-    (!filter.fechaDesde || new Date(a.fecha) >= new Date(filter.fechaDesde)) &&
-    (!filter.fechaHasta || new Date(a.fecha) <= new Date(filter.fechaHasta))
-  );
-
-  async function marcarJustificativo(id) {
-    await updateDoc(doc(db, "ausencias", id), { justificativo: true });
-    fetchAusencias();
-  }
+  useEffect(() => {
+    // si quieres precargar área del usuario si tiene (opcional)
+    if (user?.lugarTrabajo) setArea(user.lugarTrabajo);
+  }, [user]);
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Ausencias</h2>
-      <div>
-        <input placeholder="Legajo" value={filter.legajo} onChange={e => setFilter({...filter, legajo: e.target.value})} />
-        <input placeholder="Nombre" value={filter.nombre} onChange={e => setFilter({...filter, nombre: e.target.value})} />
-        <input placeholder="Área" value={filter.area} onChange={e => setFilter({...filter, area: e.target.value})} />
-        <input type="date" placeholder="Desde" value={filter.fechaDesde} onChange={e => setFilter({...filter, fechaDesde: e.target.value})} />
-        <input type="date" placeholder="Hasta" value={filter.fechaHasta} onChange={e => setFilter({...filter, fechaHasta: e.target.value})} />
-        <button onClick={fetchAusencias}>🔄 Refrescar</button>
+    <div style={{ padding: 16 }}>
+      <h2>Ausencias (RRHH)</h2>
+
+      <div style={{ marginBottom: 12 }}>
+        <label>Área: <input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Dejar vacío para todas" /></label>
+        <label style={{ marginLeft: 8 }}>Desde: <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></label>
+        <label style={{ marginLeft: 8 }}>Hasta: <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></label>
+        <button onClick={handleSearch} style={{ marginLeft: 8 }}>Buscar</button>
+        <ExportCSV data={result} filename={`ausencias_rrhh_${area || "all"}.csv`} />
       </div>
 
-      <table border="1" cellPadding="6" style={{ marginTop: 12, width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th>Legajo</th>
-            <th>Nombre</th>
-            <th>Apellido</th>
-            <th>Fecha</th>
-            <th>Justificativo</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map(a => (
-            <tr key={a.id}>
-              <td>{a.legajo}</td>
-              <td>{a.nombre}</td>
-              <td>{a.apellido}</td>
-              <td>{a.fecha}</td>
-              <td>{a.justificativo ? "✅" : "❌"}</td>
-              <td>
-                {!a.justificativo && <button onClick={() => marcarJustificativo(a.id)}>Marcar Justificativo</button>}
-              </td>
+      {loading ? <p>Cargando...</p> : result.length === 0 ? <p>No hay ausencias.</p> : (
+        <table border="1" cellPadding="8">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Legajo</th>
+              <th>Nombre</th>
+              <th>Área</th>
+              <th>Justificado</th>
+              <th>Observaciones</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {result.map((r) => (
+              <tr key={r.id || `${r.legajo}-${r.fecha}`}>
+                <td>{r.fecha}</td>
+                <td>{r.legajo}</td>
+                <td>{r.nombre} {r.apellido}</td>
+                <td>{r.lugarTrabajo}</td>
+                <td>{r.justificado ? "Sí" : "No"}</td>
+                <td>{r.justificativo || ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
