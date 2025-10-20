@@ -1,8 +1,9 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   if (!user) return null;
 
@@ -24,13 +25,16 @@ export default function Navbar() {
     ],
   };
 
-  console.log(user)
+  async function handleLogout() {
+    await logout();
+    navigate("/login", { replace: true });
+  }
 
   return (
     <nav className="bg-blue-600 text-white flex justify-between items-center px-6 py-3 shadow-md">
       <h1 className="font-bold text-lg">Gestión de Asistencias</h1>
       <ul className="flex gap-4">
-        {menus[user.rol]?.map((item) => (
+        {menus[user?.rol]?.map((item) => (
           <li key={item.name}>
             <Link to={item.path} className="hover:underline">
               {item.name}
@@ -39,7 +43,7 @@ export default function Navbar() {
         ))}
         <li>
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="bg-red-500 px-3 py-1 rounded hover:bg-red-600"
           >
             Cerrar sesión
