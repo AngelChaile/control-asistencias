@@ -39,60 +39,57 @@ export default function HomeRRHH() {
   );
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Asistencias del día</h2>
-      <div>
-        <input
-          placeholder="Legajo"
-          value={filter.legajo}
-          onChange={(e) =>
-            setFilter({ ...filter, legajo: e.target.value })
-          }
-        />
-        <input
-          placeholder="Nombre"
-          value={filter.nombre}
-          onChange={(e) =>
-            setFilter({ ...filter, nombre: e.target.value })
-          }
-        />
-        <input
-          placeholder="Lugar de Trabajo"
-          value={filter.lugarTrabajo}
-          onChange={(e) => setFilter({ ...filter, lugarTrabajo: e.target.value })}
-        />
-      </div>
+    <div className="app-container">
+      <div className="card">
+        <h2>Asistencias del día</h2>
 
-      <table
-        border="1"
-        cellPadding="6"
-        style={{ marginTop: 12, width: "100%", borderCollapse: "collapse" }}
-      >
-        <thead>
-          <tr>
-            <th>Legajo</th>
-            <th>Nombre</th>
-            <th>Apellido</th>
-            <th>Área</th>
-            <th>Hora</th>
-            <th>Fecha</th>
-            <th>Tipo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((a) => (
-            <tr key={a.id}>
-              <td>{a.legajo}</td>
-              <td>{a.nombre}</td>
-              <td>{a.apellido}</td>
-              <td>{a.lugarTrabajo}</td>
-              <td>{a.fecha}</td>
-              <td>{a.hora}</td>
-              <td>{a.tipo}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        <div className="flex" style={{ gap: 12, marginTop: 12 }}>
+          <input
+            placeholder="Legajo"
+            value={filter.legajo}
+            onChange={(e) => setFilter({ ...filter, legajo: e.target.value })}
+          />
+          <input
+            placeholder="Nombre"
+            value={filter.nombre}
+            onChange={(e) => setFilter({ ...filter, nombre: e.target.value })}
+          />
+          <input
+            placeholder="Lugar de Trabajo"
+            value={filter.lugarTrabajo}
+            onChange={(e) => setFilter({ ...filter, lugarTrabajo: e.target.value })}
+          />
+        </div>
+
+        <div style={{ overflowX: "auto", marginTop: 16 }}>
+          <table className="table" aria-label="Asistencias del día">
+            <thead>
+              <tr>
+                <th>Legajo</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Área</th>
+                <th>Hora</th>
+                <th>Fecha</th>
+                <th>Tipo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.legajo}</td>
+                  <td>{a.nombre}</td>
+                  <td>{a.apellido}</td>
+                  <td>{a.lugarTrabajo}</td>
+                  <td>{a.fecha}</td>
+                  <td>{a.hora}</td>
+                  <td>{a.tipo}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
