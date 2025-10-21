@@ -32,7 +32,8 @@ export async function registrarUsuario(email, password, nombre, apellido, rol, a
 /* ---------------------
    Nuevas utilidades para Admin / Ausencias
    --------------------- */
-import { collection, getDocs, query, where, addDoc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, query, where, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase";
 
 /**
  * fetchEmpleadosByLugarTrabajo(lugar)
@@ -59,14 +60,33 @@ export async function fetchAllEmpleados() {
  */
 export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), justificativo = "", justificar = true } = {}) {
   if (!legajo) throw new Error("Legajo requerido.");
+
   const fechaStr = typeof fecha === "string" ? fecha : fecha.toLocaleDateString("es-AR");
+
+  // Buscar datos del empleado para guardar nombre/apellido/lugarTrabajo junto a la ausencia
+  let empleado = null;
+  try {
+    const q = query(collection(db, "empleados"), where("legajo", "==", String(legajo)));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const d = snap.docs[0];
+      empleado = { id: d.id, ...d.data() };
+    }
+  } catch (err) {
+    console.warn("No se pudo obtener empleado para la ausencia:", err);
+  }
+
   const payload = {
     legajo: String(legajo),
     fecha: fechaStr,
     justificativo: justificativo || null,
     justificado: !!justificar,
+    nombre: empleado?.nombre || null,
+    apellido: empleado?.apellido || null,
+    lugarTrabajo: empleado?.lugarTrabajo || null,
     createdAt: serverTimestamp(),
   };
+
   const ref = await addDoc(collection(db, "ausencias"), payload);
   return { id: ref.id, ...payload };
 }

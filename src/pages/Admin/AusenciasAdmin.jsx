@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
 import { fetchEmpleadosByLugarTrabajo, saveAusenciaJustificacion } from "../../utils/usuarios";
-import { fetchAsistenciasByDate } from "../../utils/asistencia";
+import { fetchAsistenciasByDate, fetchAusenciasByRange } from "../../utils/asistencia";
 
 export default function AusenciasAdmin() {
   const { user } = useAuth();
   const lugar = user?.lugarTrabajo || "";
   const [empleados, setEmpleados] = useState([]);
+  const [asistencias, setAsistencias] = useState([]);
   const [ausencias, setAusencias] = useState([]);
   const [loading, setLoading] = useState(false);
   const [edit, setEdit] = useState(null); // { legajo, justificativo }
@@ -18,30 +19,42 @@ export default function AusenciasAdmin() {
       try {
         const emp = await fetchEmpleadosByLugarTrabajo(lugar);
         setEmpleados(emp || []);
+
         const asist = await fetchAsistenciasByDate(new Date(), lugar);
-        setAusencias(asist || []);
+        setAsistencias(asist || []);
+
+        // traer ausencias registradas hoy para esta área
+        const hoy = new Date();
+        const aus = await fetchAusenciasByRange({ desde: hoy, hasta: hoy, area: lugar });
+        setAusencias(aus || []);
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     }
-    load();
+    if (lugar) load();
   }, [lugar]);
 
-  // empleados que no ficharon = empleados - asistencias (por legajo)
+  // empleados que no ficharon y no tienen ausencia registrada hoy
   const faltantes = empleados.filter(
-    (e) => !ausencias.some((a) => String(a.legajo) === String(e.legajo))
+    (e) =>
+      !asistencias.some((a) => String(a.legajo) === String(e.legajo)) &&
+      !ausencias.some((au) => String(au.legajo) === String(e.legajo))
   );
 
   async function handleSaveJust(legajo, justificativo, justificar = true) {
     try {
       await saveAusenciaJustificacion({ legajo, fecha: new Date(), justificativo, justificar });
-      // recargar lista (simplemente actualizar estado local)
       setEdit(null);
-      // volver a cargar ausencias para reflejar cambios
-      const asist = await fetchAsistenciasByDate(new Date(), lugar);
-      setAusencias(asist || []);
+
+      // recargar asistencias y ausencias luego de guardar
+      const [asist, aus] = await Promise.all([
+        fetchAsistenciasByDate(new Date(), lugar),
+        fetchAusenciasByRange({ desde: new Date(), hasta: new Date(), area: lugar }),
+      ]);
+      setAsistencias(asist || []);
+      setAusencias(aus || []);
     } catch (err) {
       console.error(err);
     }
@@ -52,51 +65,89 @@ export default function AusenciasAdmin() {
       <h2>Ausencias - Área {lugar}</h2>
 
       <div style={{ marginBottom: 12 }}>
-        <ExportExcel data={faltantes} filename={`ausencias_${lugar}_${new Date().toISOString().slice(0,10)}.xlsx`} />
+        <ExportExcel
+          data={[...faltantes.map(f => ({ legajo: f.legajo, nombre: f.nombre, apellido: f.apellido, lugarTrabajo: f.lugarTrabajo })) , ...ausencias]}
+          filename={`ausencias_${lugar}_${new Date().toISOString().slice(0,10)}.xlsx`}
+        />
       </div>
 
       {loading ? (
         <p>Cargando...</p>
-      ) : faltantes.length === 0 ? (
-        <p>No hay empleados sin fichar hoy.</p>
       ) : (
-        <table border="1" cellPadding="8">
-          <thead>
-            <tr>
-              <th>Legajo</th>
-              <th>Nombre</th>
-              <th>Apellido</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {faltantes.map((e) => (
-              <tr key={e.legajo}>
-                <td>{e.legajo}</td>
-                <td>{e.nombre}</td>
-                <td>{e.apellido}</td>
-                <td>
-                  {edit?.legajo === e.legajo ? (
-                    <>
-                      <input
-                        placeholder="Justificativo"
-                        value={edit.justificativo || ""}
-                        onChange={(ev) => setEdit({ ...edit, justificativo: ev.target.value })}
-                      />
-                      <button onClick={() => handleSaveJust(e.legajo, edit.justificativo, true)}>Guardar (Justificar)</button>
-                      <button onClick={() => handleSaveJust(e.legajo, "", false)}>Guardar (Sin justificar)</button>
-                      <button onClick={() => setEdit(null)}>Cancelar</button>
-                    </>
-                  ) : (
-                    <>
-                      <button onClick={() => setEdit({ legajo: e.legajo, justificativo: "" })}>Editar</button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <h3>Empleados sin fichar hoy</h3>
+          {faltantes.length === 0 ? (
+            <p>No hay empleados sin fichar hoy.</p>
+          ) : (
+            <table border="1" cellPadding="8">
+              <thead>
+                <tr>
+                  <th>Legajo</th>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {faltantes.map((e) => (
+                  <tr key={e.legajo}>
+                    <td>{e.legajo}</td>
+                    <td>{e.nombre}</td>
+                    <td>{e.apellido}</td>
+                    <td>
+                      {edit?.legajo === e.legajo ? (
+                        <>
+                          <input
+                            placeholder="Justificativo"
+                            value={edit.justificativo || ""}
+                            onChange={(ev) => setEdit({ ...edit, justificativo: ev.target.value })}
+                          />
+                          <button onClick={() => handleSaveJust(e.legajo, edit.justificativo, true)}>Guardar (Justificar)</button>
+                          <button onClick={() => handleSaveJust(e.legajo, "", false)}>Guardar (Sin justificar)</button>
+                          <button onClick={() => setEdit(null)}>Cancelar</button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => setEdit({ legajo: e.legajo, justificativo: "" })}>Editar</button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          <h3 style={{ marginTop: 20 }}>Ausencias registradas hoy</h3>
+          {ausencias.length === 0 ? (
+            <p>No hay ausencias registradas hoy.</p>
+          ) : (
+            <table border="1" cellPadding="8">
+              <thead>
+                <tr>
+                  <th>Legajo</th>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  <th>Área</th>
+                  <th>Justificado</th>
+                  <th>Justificativo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ausencias.map((a) => (
+                  <tr key={a.id || `${a.legajo}-${a.fecha}`}>
+                    <td>{a.legajo}</td>
+                    <td>{a.nombre || ""}</td>
+                    <td>{a.apellido || ""}</td>
+                    <td>{a.lugarTrabajo || ""}</td>
+                    <td>{a.justificado ? "Sí" : "No"}</td>
+                    <td>{a.justificativo || ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
       )}
     </div>
   );

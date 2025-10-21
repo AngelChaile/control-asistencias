@@ -58,7 +58,7 @@ export default function AusenciasRRHH() {
             {result.map((r) => (
               <tr key={r.id || `${r.legajo}-${r.fecha}`}>
                 <td>{r.legajo}</td>
-                <td>{r.nombre}</td>
+                <td>{r.nombre} {r.apellido}</td>
                 <td>{r.lugarTrabajo}</td>
                 <td>{r.justificado ? "Sí" : "No"}</td>
                 <td>{r.fecha}</td>
