@@ -1,6 +1,6 @@
 // src/pages/Scan.jsx
 import React, { useEffect, useState } from "react";
-// import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   validarToken,
   buscarEmpleadoPorLegajo,
@@ -9,8 +9,8 @@ import {
 } from "../../utils/asistencia";
 
 export default function Scan() {
-  //const [searchParams] = useSearchParams();
-  //const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const tokenParam = searchParams.get("token") || null;
 
   const [legajo, setLegajo] = useState("");
