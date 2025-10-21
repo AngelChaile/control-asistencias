@@ -278,3 +278,20 @@ export async function fetchAusenciasByRange({ desde = null, hasta = null, area =
     return [];
   }
 }
+
+// Compatibilidad: alias para nombres usados en otras partes del proyecto
+/**
+ * fetchAsistenciasByFilters(filters)
+ * Wrapper para fetchAsistenciasByRange con el mismo shape de parámetros
+ */
+export async function fetchAsistenciasByFilters(filters = {}) {
+  return fetchAsistenciasByRange(filters);
+}
+
+/**
+ * fetchAusenciasByArea(area)
+ * Wrapper para obtener ausencias filtradas por área
+ */
+export async function fetchAusenciasByArea(area) {
+  return fetchAusenciasByRange({ area });
+}

@@ -44,33 +44,33 @@ export default function HomeAdmin() {
   }, [user]);
 
   return (
-    <div className="app-container">
-      <div className="card">
-        <h2>Panel {rol === "rrhh" ? "Recursos Humanos" : `Área ${area}`}</h2>
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold">Panel {rol === "rrhh" ? "Recursos Humanos" : `Área ${area}`}</h2>
 
         {rol !== "empleado" && (
-          <div style={{ margin: "16px 0" }}>
+          <div className="my-4">
             <QrGenerator area={area} user={user} />
           </div>
         )}
 
         {loading ? (
-          <p className="text-muted">Cargando asistencias...</p>
+          <p className="text-gray-500">Cargando asistencias...</p>
         ) : asistencias.length > 0 ? (
-          <div style={{ overflowX: "auto" }}>
-            <table className="table" aria-label="Tabla de asistencias">
-              <thead>
+          <div className="overflow-x-auto mt-4">
+            <table className="min-w-full divide-y divide-gray-200" aria-label="Tabla de asistencias">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th>Legajo</th>
-                  <th>Nombre</th>
-                  <th>Apellido</th>
-                  <th>Tipo</th>
-                  <th>Fecha</th>
-                  <th>Hora</th>
-                  <th>Área</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Legajo</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Nombre</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Apellido</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Tipo</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Fecha</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Hora</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Área</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white divide-y divide-gray-100">
                 {asistencias.map((a) => {
                   const fecha = a.fecha?.seconds
                     ? new Date(a.fecha.seconds * 1000).toLocaleDateString("es-AR")
@@ -80,13 +80,13 @@ export default function HomeAdmin() {
                     : a.hora || "";
                   return (
                     <tr key={a.id}>
-                      <td>{a.legajo}</td>
-                      <td>{a.nombre}</td>
-                      <td>{a.apellido}</td>
-                      <td>{a.tipo}</td>
-                      <td>{fecha}</td>
-                      <td>{hora}</td>
-                      <td>{a.lugarTrabajo}</td>
+                      <td className="px-4 py-3 text-sm text-gray-800">{a.legajo}</td>
+                      <td className="px-4 py-3 text-sm text-gray-800">{a.nombre}</td>
+                      <td className="px-4 py-3 text-sm text-gray-800">{a.apellido}</td>
+                      <td className="px-4 py-3 text-sm text-gray-800">{a.tipo}</td>
+                      <td className="px-4 py-3 text-sm text-gray-800">{fecha}</td>
+                      <td className="px-4 py-3 text-sm text-gray-800">{hora}</td>
+                      <td className="px-4 py-3 text-sm text-gray-800">{a.lugarTrabajo}</td>
                     </tr>
                   );
                 })}
@@ -94,7 +94,7 @@ export default function HomeAdmin() {
             </table>
           </div>
         ) : (
-          <p className="text-muted">No hay asistencias registradas.</p>
+          <p className="text-gray-500">No hay asistencias registradas.</p>
         )}
       </div>
     </div>

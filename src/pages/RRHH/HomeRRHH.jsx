@@ -39,51 +39,39 @@ export default function HomeRRHH() {
   );
 
   return (
-    <div className="app-container">
-      <div className="card">
-        <h2>Asistencias del día</h2>
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow p-4">
+        <h2 className="text-lg font-semibold">Asistencias del día</h2>
 
-        <div className="flex" style={{ gap: 12, marginTop: 12 }}>
-          <input
-            placeholder="Legajo"
-            value={filter.legajo}
-            onChange={(e) => setFilter({ ...filter, legajo: e.target.value })}
-          />
-          <input
-            placeholder="Nombre"
-            value={filter.nombre}
-            onChange={(e) => setFilter({ ...filter, nombre: e.target.value })}
-          />
-          <input
-            placeholder="Lugar de Trabajo"
-            value={filter.lugarTrabajo}
-            onChange={(e) => setFilter({ ...filter, lugarTrabajo: e.target.value })}
-          />
+        <div className="flex gap-3 mt-3">
+          <input className="border rounded px-3 py-2" placeholder="Legajo" value={filter.legajo} onChange={(e) => setFilter({ ...filter, legajo: e.target.value })} />
+          <input className="border rounded px-3 py-2" placeholder="Nombre" value={filter.nombre} onChange={(e) => setFilter({ ...filter, nombre: e.target.value })} />
+          <input className="border rounded px-3 py-2" placeholder="Lugar de Trabajo" value={filter.lugarTrabajo} onChange={(e) => setFilter({ ...filter, lugarTrabajo: e.target.value })} />
         </div>
 
-        <div style={{ overflowX: "auto", marginTop: 16 }}>
-          <table className="table" aria-label="Asistencias del día">
-            <thead>
+        <div className="overflow-x-auto mt-4">
+          <table className="min-w-full divide-y divide-gray-200" aria-label="Asistencias del día">
+            <thead className="bg-gray-50">
               <tr>
-                <th>Legajo</th>
-                <th>Nombre</th>
-                <th>Apellido</th>
-                <th>Área</th>
-                <th>Hora</th>
-                <th>Fecha</th>
-                <th>Tipo</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Legajo</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Nombre</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Apellido</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Área</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Hora</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Fecha</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Tipo</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white divide-y divide-gray-100">
               {filtered.map((a) => (
                 <tr key={a.id}>
-                  <td>{a.legajo}</td>
-                  <td>{a.nombre}</td>
-                  <td>{a.apellido}</td>
-                  <td>{a.lugarTrabajo}</td>
-                  <td>{a.fecha}</td>
-                  <td>{a.hora}</td>
-                  <td>{a.tipo}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">{a.legajo}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">{a.nombre}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">{a.apellido}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">{a.lugarTrabajo}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">{a.fecha}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">{a.hora}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">{a.tipo}</td>
                 </tr>
               ))}
             </tbody>

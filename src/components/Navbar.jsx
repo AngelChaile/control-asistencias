@@ -31,15 +31,19 @@ export default function Navbar() {
   }
 
   return (
-    <header className="navbar">
-      <div className="brand">Gestión de Asistencias</div>
-      <nav className="nav-list">
+    <header className="bg-municipio-500 text-white rounded-lg mx-4 my-4 p-4 shadow-lg flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-municipio-600 font-bold">M</div>
+        <div className="text-lg font-semibold">Gestión de Asistencias</div>
+      </div>
+
+      <nav className="flex items-center gap-4">
         {menus[user?.rol]?.map((item) => (
-          <Link key={item.name} to={item.path} aria-label={item.name}>
+          <Link key={item.name} to={item.path} aria-label={item.name} className="hover:underline font-medium">
             {item.name}
           </Link>
         ))}
-        <button onClick={handleLogout} className="btn" style={{ marginLeft: 6 }}>
+        <button onClick={handleLogout} className="ml-2 bg-white text-municipio-700 px-3 py-1 rounded-md font-semibold hover:bg-gray-100">
           Cerrar sesión
         </button>
       </nav>
