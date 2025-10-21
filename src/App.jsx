@@ -14,7 +14,7 @@ import EmpleadosRRHH from "./pages/RRHH/Empleados";
 import AusenciasRRHH from "./pages/RRHH/Ausencias";
 import Usuarios from "./pages/RRHH/Usuarios";
 import QRGenerator from "./pages/RRHH/QRGenerator";
-import ReportesRRHH from "./pages/RRHH/Reportes"; // nuevo
+import ReportesRRHH from "./pages/RRHH/Reportes"; 
 
 // 🔹 Páginas Admin de área
 import HomeAdmin from "./pages/Admin/HomeAdmin";

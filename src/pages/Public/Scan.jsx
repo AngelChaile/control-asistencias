@@ -158,9 +158,9 @@ export default function Scan() {
             <button type="submit" disabled={loading || !tokenValido}>
               {loading ? "Guardando..." : "Guardar y fichar"}
             </button>
-            <button type="button" onClick={() => navigate("/login")} style={{ marginLeft: 8 }}>
+{/*             <button type="button" onClick={() => navigate("/login")} style={{ marginLeft: 8 }}>
               Volver al login
-            </button>
+            </button> */}
           </div>
         </form>
       )}

@@ -119,7 +119,35 @@ export async function registrarAsistenciaPorLegajo(legajo, token = null) {
   const fechaStr = now.toLocaleDateString("es-AR");
   const horaStr = now.toLocaleTimeString("es-AR");
 
-  const tipo = last && last.tipo === "ENTRADA" ? "SALIDA" : "ENTRADA";
+  // Determinar si la última fichada es del mismo día que 'now'
+  function parseCreatedAtToDate(r) {
+    if (!r) return null;
+    if (r.createdAt?.seconds) return new Date(r.createdAt.seconds * 1000);
+    if (r.fecha && typeof r.fecha === "string") {
+      const parts = r.fecha.split("/");
+      if (parts.length === 3) {
+        const [d, m, y] = parts.map(Number);
+        return new Date(y, m - 1, d);
+      }
+    }
+    return null;
+  }
+
+  const lastDate = parseCreatedAtToDate(last);
+  const isSameDay = lastDate
+    ? lastDate.getFullYear() === now.getFullYear() &&
+      lastDate.getMonth() === now.getMonth() &&
+      lastDate.getDate() === now.getDate()
+    : false;
+
+  // Si la última fichada fue el mismo día: alternar ENTRADA/SALIDA según last.tipo
+  // Si la última fichada fue otro día o no existe: siempre marcar ENTRADA
+  let tipo;
+  if (isSameDay) {
+    tipo = last && last.tipo === "ENTRADA" ? "SALIDA" : "ENTRADA";
+  } else {
+    tipo = "ENTRADA";
+  }
 
   const newDoc = await addDoc(collection(db, "asistencias"), {
     legajo: String(legajo),
