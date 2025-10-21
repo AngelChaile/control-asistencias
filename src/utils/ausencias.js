@@ -2,18 +2,58 @@ import { collection, getDocs, query, where, addDoc, updateDoc, serverTimestamp }
 import { db } from "../firebase";
 
 /**
+ * Normalize input date to a local Date object (no timezone shift)
+ * acepta:
+ *  - string "yyyy-mm-dd" (input[type=date])
+ *  - string "dd/mm/yyyy"
+ *  - Date
+ */
+function normalizeToLocalDate(fecha) {
+  if (!fecha) return new Date();
+  if (fecha instanceof Date) {
+    // crear una nueva Date que conserva solo y/m/d en zona local
+    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+  }
+  const s = String(fecha);
+  // YYYY-MM-DD -> parsear por partes (evita shift UTC)
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    const [, y, m, d] = isoMatch;
+    return new Date(Number(y), Number(m) - 1, Number(d));
+  }
+  // dd/mm/yyyy
+  const localMatch = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (localMatch) {
+    const [, d, m, y] = localMatch;
+    return new Date(Number(y), Number(m) - 1, Number(d));
+  }
+  // fallback
+  const parsed = new Date(s);
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+function formatDateToDDMMYYYY(dateObj) {
+  const d = dateObj.getDate().toString().padStart(2, "0");
+  const m = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+  const y = dateObj.getFullYear().toString();
+  return `${d}/${m}/${y}`;
+}
+
+/**
  * saveAusenciaJustificacion({ legajo, fecha: Date|string, justificativo, justificar })
  * - busca empleado por legajo (si existe) y completa nombre/apellido/lugarTrabajo
  * - si ya existe ausencia para legajo+fecha la actualiza; si no la crea
- * - devuelve el objeto guardado (incluye id, fecha en dd/mm/yyyy, justificativo, nombre/apellido/lugarTrabajo)
+ * - devuelve el objeto guardado (incluye id y campos)
  */
 export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), justificativo = "", justificar = true } = {}) {
   if (!legajo) throw new Error("Legajo requerido.");
 
-  const fechaStr = typeof fecha === "string" ? fecha : fecha.toLocaleDateString("es-AR");
+  // normalizar fecha para evitar shifts de timezone
+  const fechaDate = normalizeToLocalDate(fecha);
+  const fechaStr = formatDateToDDMMYYYY(fechaDate);
 
   try {
-    // buscar empleado por legajo
+    // buscar empleado por legajo (completar nombre/apellido/lugarTrabajo si existe)
     let empleado = null;
     try {
       const qEmp = query(collection(db, "empleados"), where("legajo", "==", String(legajo)));
@@ -26,7 +66,6 @@ export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), ju
       console.warn("ausencias.save: no se pudo buscar empleado:", err);
     }
 
-    // preparar payload
     const payload = {
       legajo: String(legajo),
       fecha: fechaStr,
