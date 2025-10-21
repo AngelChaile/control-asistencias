@@ -14,7 +14,6 @@ function toLocaleDateStr(date) {
   return date.toLocaleDateString("es-AR");
 }
 function inputDateFromLocaleStr(fechaStr) {
-  // fechaStr "dd/mm/yyyy" -> "yyyy-mm-dd" para input[type=date]
   if (!fechaStr) return "";
   const parts = String(fechaStr).split("/");
   if (parts.length !== 3) return "";
@@ -23,6 +22,13 @@ function inputDateFromLocaleStr(fechaStr) {
 }
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
+}
+
+// nuevo helper: parsear "YYYY-MM-DD" a Date local (sin shift UTC)
+function parseInputDateToLocal(isoYmd) {
+  if (!isoYmd) return new Date();
+  const [y, m, d] = String(isoYmd).split("-");
+  return new Date(Number(y), Number(m) - 1, Number(d));
 }
 
 export default function AusenciasAdmin() {
@@ -40,7 +46,7 @@ export default function AusenciasAdmin() {
       if (!lugar) return;
       setLoading(true);
       try {
-        const fechaDate = selectedDate ? new Date(selectedDate) : new Date();
+        const fechaDate = parseInputDateToLocal(selectedDate);
         const emp = await fetchEmpleadosByLugarTrabajo(lugar);
         setEmpleados(emp || []);
 
@@ -78,7 +84,8 @@ export default function AusenciasAdmin() {
     try {
       console.log("DEBUG: handleSaveJust called", { legajo, justificativo, justificar, fechaInput });
 
-      const fechaDate = fechaInput ? new Date(fechaInput) : new Date();
+      const fechaDate = parseInputDateToLocal(fechaInput);
+
       const saved = await saveAusenciaJustificacion({
         legajo,
         fecha: fechaDate,
@@ -86,18 +93,30 @@ export default function AusenciasAdmin() {
         justificar,
       });
 
-      console.log("DEBUG: saveAusenciaJustificacion returned:", saved);
+      // mostrar el objeto concreto en logs
+      console.log("DEBUG: saveAusenciaJustificacion returned:", JSON.stringify(saved, null, 2));
 
       setEdit(null);
 
-      // actualizar estado local de ausencias: reemplazar o añadir
+      // actualizar estado local de ausencias (logueando el nuevo estado)
       setAusencias((prev) => {
         const fechaStr = typeof saved.fecha === "string" ? saved.fecha : toLocaleDateStr(fechaDate);
         const filtered = prev.filter(
           (p) => !(String(p.legajo) === String(legajo) && String(p.fecha) === String(fechaStr))
         );
-        return [...filtered, { ...saved }];
+        const newState = [...filtered, { ...saved }];
+        console.log("DEBUG: ausencias state after local update:", JSON.stringify(newState, null, 2));
+        return newState;
       });
+
+      // recargar ausencias directamente desde BD para garantizar que se vea en la tabla
+      try {
+        const ausReload = await fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar });
+        console.log("DEBUG: ausencias reloaded from DB:", JSON.stringify(ausReload || [], null, 2));
+        setAusencias(ausReload || []);
+      } catch (err) {
+        console.warn("No se pudo recargar ausencias desde DB:", err);
+      }
 
       // recargar asistencias para la fecha (opcional)
       const asist = await fetchAsistenciasByDate(fechaDate, lugar);
