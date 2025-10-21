@@ -4,28 +4,49 @@ import ExportExcel from "../../components/ExportExcel";
 import { fetchEmpleadosByLugarTrabajo, saveAusenciaJustificacion } from "../../utils/usuarios";
 import { fetchAsistenciasByDate, fetchAusenciasByRange } from "../../utils/asistencia";
 
+/**
+ * Helpers de fecha:
+ * input date (YYYY-MM-DD) <-> display fecha (dd/mm/yyyy)
+ */
+function toLocaleDateStr(date) {
+  if (!(date instanceof Date)) return null;
+  return date.toLocaleDateString("es-AR");
+}
+function inputDateFromLocaleStr(fechaStr) {
+  // fechaStr "dd/mm/yyyy" -> "yyyy-mm-dd" para input[type=date]
+  if (!fechaStr) return "";
+  const parts = String(fechaStr).split("/");
+  if (parts.length !== 3) return "";
+  const [d, m, y] = parts;
+  return `${y.padStart(4, "0")}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+}
+function todayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function AusenciasAdmin() {
   const { user } = useAuth();
   const lugar = user?.lugarTrabajo || "";
+  const [selectedDate, setSelectedDate] = useState(todayInputValue()); // YYYY-MM-DD
   const [empleados, setEmpleados] = useState([]);
   const [asistencias, setAsistencias] = useState([]);
   const [ausencias, setAusencias] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [edit, setEdit] = useState(null); // { legajo, justificativo }
+  const [edit, setEdit] = useState(null); // { legajo, justificativo, fechaInput }
 
   useEffect(() => {
     async function load() {
+      if (!lugar) return;
       setLoading(true);
       try {
+        const fechaDate = selectedDate ? new Date(selectedDate) : new Date();
         const emp = await fetchEmpleadosByLugarTrabajo(lugar);
         setEmpleados(emp || []);
 
-        const asist = await fetchAsistenciasByDate(new Date(), lugar);
+        const asist = await fetchAsistenciasByDate(fechaDate, lugar);
         setAsistencias(asist || []);
 
-        // traer ausencias registradas hoy para esta área
-        const hoy = new Date();
-        const aus = await fetchAusenciasByRange({ desde: hoy, hasta: hoy, area: lugar });
+        const aus = await fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar });
         setAusencias(aus || []);
       } catch (err) {
         console.error(err);
@@ -33,53 +54,87 @@ export default function AusenciasAdmin() {
         setLoading(false);
       }
     }
-    if (lugar) load();
-  }, [lugar]);
+    load();
+  }, [lugar, selectedDate]);
 
-  // Lista de empleados del área que no ficharon HOY.
-  // NOTA: NO excluimos aquí a los que ya tienen ausencia registrada: deben seguir apareciendo
-  const faltantes = empleados.filter((e) => !asistencias.some((a) => String(a.legajo) === String(e.legajo)));
+  // empleados que no ficharon en la fecha seleccionada (siguen apareciendo aunque tengan ausencia)
+  const faltantes = empleados.filter(
+    (e) => !asistencias.some((a) => String(a.legajo) === String(e.legajo))
+  );
 
-  async function handleSaveJust(legajo, justificativo, justificar = true) {
+  // obtiene ausencia del legajo para la fecha seleccionada
+  function getAusenciaForDate(legajo, fechaInput = selectedDate) {
+    // ausencias vienen con campo fecha en "dd/mm/yyyy"
+    return ausencias.find((au) => {
+      if (String(au.legajo) !== String(legajo)) return false;
+      if (!au.fecha) return false;
+      const auInput = inputDateFromLocaleStr(au.fecha);
+      return auInput === fechaInput;
+    });
+  }
+
+  async function handleSaveJust(legajo, justificativo, justificar = true, fechaInput = selectedDate) {
     try {
-      await saveAusenciaJustificacion({ legajo, fecha: new Date(), justificativo, justificar });
+      const fechaDate = fechaInput ? new Date(fechaInput) : new Date();
+      const saved = await saveAusenciaJustificacion({
+        legajo,
+        fecha: fechaDate,
+        justificativo,
+        justificar,
+      });
+
       setEdit(null);
 
-      // recargar asistencias y ausencias luego de guardar
-      const [asist, aus] = await Promise.all([
-        fetchAsistenciasByDate(new Date(), lugar),
-        fetchAusenciasByRange({ desde: new Date(), hasta: new Date(), area: lugar }),
-      ]);
+      // actualizar estado local de ausencias: reemplazar o añadir
+      setAusencias((prev) => {
+        // eliminar ausencias previas con mismo legajo+fecha
+        const fechaStr = typeof saved.fecha === "string" ? saved.fecha : toLocaleDateStr(fechaDate);
+        const filtered = prev.filter(
+          (p) => !(String(p.legajo) === String(legajo) && String(p.fecha) === String(fechaStr))
+        );
+        return [...filtered, { ...saved }];
+      });
+
+      // recargar asistencias para la fecha (opcional)
+      const asist = await fetchAsistenciasByDate(fechaDate, lugar);
       setAsistencias(asist || []);
-      setAusencias(aus || []);
     } catch (err) {
       console.error(err);
     }
-  }
-
-  // helper para obtener ausencia del empleado hoy (si existe)
-  function getAusenciaHoy(legajo) {
-    return ausencias.find((au) => String(au.legajo) === String(legajo));
   }
 
   return (
     <div style={{ padding: 16 }}>
       <h2>Ausencias - Área {lugar}</h2>
 
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
+        <label>
+          Fecha:
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            style={{ marginLeft: 8 }}
+          />
+        </label>
+
         <ExportExcel
           data={[
-            ...faltantes.map((f) => ({
-              legajo: f.legajo,
-              nombre: f.nombre,
-              apellido: f.apellido,
-              lugarTrabajo: f.lugarTrabajo,
-              justificativo: getAusenciaHoy(f.legajo)?.justificativo || null,
-              justificado: getAusenciaHoy(f.legajo)?.justificado || false,
-            })),
-            ...ausencias,
+            ...faltantes.map((f) => {
+              const aus = getAusenciaForDate(f.legajo, selectedDate);
+              return {
+                legajo: f.legajo,
+                nombre: f.nombre,
+                apellido: f.apellido,
+                lugarTrabajo: f.lugarTrabajo,
+                justificativo: aus?.justificativo || null,
+                justificado: aus?.justificado || false,
+                fecha: aus?.fecha || toLocaleDateStr(new Date(selectedDate)),
+              };
+            }),
+            ...ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate),
           ]}
-          filename={`ausencias_${lugar}_${new Date().toISOString().slice(0, 10)}.xlsx`}
+          filename={`ausencias_${lugar}_${selectedDate}.xlsx`}
         />
       </div>
 
@@ -87,9 +142,9 @@ export default function AusenciasAdmin() {
         <p>Cargando...</p>
       ) : (
         <>
-          <h3>Empleados sin fichar hoy</h3>
+          <h3>Empleados (fecha: {selectedDate})</h3>
           {faltantes.length === 0 ? (
-            <p>No hay empleados sin fichar hoy.</p>
+            <p>No hay empleados sin fichar en la fecha seleccionada.</p>
           ) : (
             <table border="1" cellPadding="8">
               <thead>
@@ -99,33 +154,56 @@ export default function AusenciasAdmin() {
                   <th>Apellido</th>
                   <th>Justificado</th>
                   <th>Justificativo</th>
+                  <th>Fecha</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {faltantes.map((e) => {
-                  const aus = getAusenciaHoy(e.legajo);
+                  const aus = getAusenciaForDate(e.legajo, selectedDate);
                   return (
-                    <tr key={e.legajo}>
+                    <tr key={`${e.legajo}-${selectedDate}`}>
                       <td>{e.legajo}</td>
                       <td>{e.nombre}</td>
                       <td>{e.apellido}</td>
                       <td>{aus ? (aus.justificado ? "Sí" : "No") : "—"}</td>
                       <td>{aus ? aus.justificativo || "" : ""}</td>
+                      <td>{aus ? aus.fecha : toLocaleDateStr(new Date(selectedDate))}</td>
                       <td>
                         {edit?.legajo === e.legajo ? (
                           <>
                             <input
+                              type="date"
+                              value={edit.fechaInput}
+                              onChange={(ev) => setEdit({ ...edit, fechaInput: ev.target.value })}
+                              style={{ marginRight: 6 }}
+                            />
+                            <input
                               placeholder="Justificativo"
                               value={edit.justificativo || ""}
                               onChange={(ev) => setEdit({ ...edit, justificativo: ev.target.value })}
+                              style={{ marginRight: 6 }}
                             />
-                            <button onClick={() => handleSaveJust(e.legajo, edit.justificativo, true)}>Guardar (Justificar)</button>
-                            <button onClick={() => handleSaveJust(e.legajo, "", false)}>Guardar (Sin justificar)</button>
-                            <button onClick={() => setEdit(null)}>Cancelar</button>
+                            <button onClick={() => handleSaveJust(e.legajo, edit.justificativo || "", true, edit.fechaInput)}>
+                              Guardar (Justificar)
+                            </button>
+                            <button onClick={() => handleSaveJust(e.legajo, "", false, edit.fechaInput)} style={{ marginLeft: 4 }}>
+                              Guardar (Sin justificar)
+                            </button>
+                            <button onClick={() => setEdit(null)} style={{ marginLeft: 6 }}>
+                              Cancelar
+                            </button>
                           </>
                         ) : (
-                          <button onClick={() => setEdit({ legajo: e.legajo, justificativo: aus?.justificativo || "" })}>
+                          <button
+                            onClick={() =>
+                              setEdit({
+                                legajo: e.legajo,
+                                justificativo: aus?.justificativo || "",
+                                fechaInput: aus?.fecha ? inputDateFromLocaleStr(aus.fecha) : selectedDate,
+                              })
+                            }
+                          >
                             {aus ? "Editar justificativo" : "Agregar justificativo"}
                           </button>
                         )}
@@ -137,9 +215,9 @@ export default function AusenciasAdmin() {
             </table>
           )}
 
-          <h3 style={{ marginTop: 20 }}>Ausencias registradas hoy</h3>
-          {ausencias.length === 0 ? (
-            <p>No hay ausencias registradas hoy.</p>
+          <h3 style={{ marginTop: 20 }}>Ausencias registradas (fecha seleccionada)</h3>
+          {ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length === 0 ? (
+            <p>No hay ausencias registradas para la fecha seleccionada.</p>
           ) : (
             <table border="1" cellPadding="8">
               <thead>
@@ -150,19 +228,23 @@ export default function AusenciasAdmin() {
                   <th>Área</th>
                   <th>Justificado</th>
                   <th>Justificativo</th>
+                  <th>Fecha</th>
                 </tr>
               </thead>
               <tbody>
-                {ausencias.map((a) => (
-                  <tr key={a.id || `${a.legajo}-${a.fecha}`}>
-                    <td>{a.legajo}</td>
-                    <td>{a.nombre || ""}</td>
-                    <td>{a.apellido || ""}</td>
-                    <td>{a.lugarTrabajo || ""}</td>
-                    <td>{a.justificado ? "Sí" : "No"}</td>
-                    <td>{a.justificativo || ""}</td>
-                  </tr>
-                ))}
+                {ausencias
+                  .filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate)
+                  .map((a) => (
+                    <tr key={a.id || `${a.legajo}-${a.fecha}`}>
+                      <td>{a.legajo}</td>
+                      <td>{a.nombre || ""}</td>
+                      <td>{a.apellido || ""}</td>
+                      <td>{a.lugarTrabajo || ""}</td>
+                      <td>{a.justificado ? "Sí" : "No"}</td>
+                      <td>{a.justificativo || ""}</td>
+                      <td>{a.fecha || ""}</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           )}
