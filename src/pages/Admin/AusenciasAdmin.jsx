@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
-import { fetchEmpleadosByLugarTrabajo, saveAusenciaJustificacion } from "../../utils/usuarios";
+import { fetchEmpleadosByLugarTrabajo } from "../../utils/usuarios";
+import { saveAusenciaJustificacion } from "../../utils/ausencias";
 import { fetchAsistenciasByDate, fetchAusenciasByRange } from "../../utils/asistencia";
 
 /**
@@ -75,6 +76,8 @@ export default function AusenciasAdmin() {
 
   async function handleSaveJust(legajo, justificativo, justificar = true, fechaInput = selectedDate) {
     try {
+      console.log("DEBUG: handleSaveJust called", { legajo, justificativo, justificar, fechaInput });
+
       const fechaDate = fechaInput ? new Date(fechaInput) : new Date();
       const saved = await saveAusenciaJustificacion({
         legajo,
@@ -83,11 +86,12 @@ export default function AusenciasAdmin() {
         justificar,
       });
 
+      console.log("DEBUG: saveAusenciaJustificacion returned:", saved);
+
       setEdit(null);
 
       // actualizar estado local de ausencias: reemplazar o añadir
       setAusencias((prev) => {
-        // eliminar ausencias previas con mismo legajo+fecha
         const fechaStr = typeof saved.fecha === "string" ? saved.fecha : toLocaleDateStr(fechaDate);
         const filtered = prev.filter(
           (p) => !(String(p.legajo) === String(legajo) && String(p.fecha) === String(fechaStr))
@@ -99,7 +103,7 @@ export default function AusenciasAdmin() {
       const asist = await fetchAsistenciasByDate(fechaDate, lugar);
       setAsistencias(asist || []);
     } catch (err) {
-      console.error(err);
+      console.error("handleSaveJust error:", err);
     }
   }
 

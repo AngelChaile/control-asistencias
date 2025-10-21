@@ -31,16 +31,15 @@ export async function registrarUsuario(email, password, nombre, apellido, rol, a
       createdAt: serverTimestamp(),
     });
 
-    console.log("✅ Usuario registrado correctamente:", uid);
     return uid;
   } catch (error) {
-    console.error("❌ Error al registrar usuario:", error);
+    console.error("registrarUsuario error:", error);
     throw error;
   }
 }
 
 /* ---------------------
-   Nuevas utilidades para Admin / Ausencias
+   Nuevas utilidades para Admin (solo empleados)
    --------------------- */
 
 /**
