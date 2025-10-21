@@ -1,6 +1,16 @@
 // src/utils/usuarios.js
-import { setDoc, doc, serverTimestamp } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  setDoc,
+  doc,
+  serverTimestamp,
+  collection,
+  getDocs,
+  query,
+  where,
+  addDoc,
+  updateDoc
+} from "firebase/firestore";
 import { db, auth } from "../firebase";
 
 /**
@@ -32,8 +42,6 @@ export async function registrarUsuario(email, password, nombre, apellido, rol, a
 /* ---------------------
    Nuevas utilidades para Admin / Ausencias
    --------------------- */
-import { collection, getDocs, query, where, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase";
 
 /**
  * fetchEmpleadosByLugarTrabajo(lugar)
@@ -56,7 +64,8 @@ export async function fetchAllEmpleados() {
 
 /**
  * saveAusenciaJustificacion({ legajo, fecha: Date|string, justificativo, justificar })
- * - guarda en colección "ausencias" un registro con justificativo / justificado
+ * - si ya existe una ausencia para ese legajo y fecha la actualiza; si no, crea una nueva.
+ * - guarda nombre, apellido y lugarTrabajo al momento de crear/actualizar.
  */
 export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), justificativo = "", justificar = true } = {}) {
   if (!legajo) throw new Error("Legajo requerido.");
@@ -66,27 +75,49 @@ export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), ju
   // Buscar datos del empleado para guardar nombre/apellido/lugarTrabajo junto a la ausencia
   let empleado = null;
   try {
-    const q = query(collection(db, "empleados"), where("legajo", "==", String(legajo)));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const d = snap.docs[0];
+    const qEmp = query(collection(db, "empleados"), where("legajo", "==", String(legajo)));
+    const snapEmp = await getDocs(qEmp);
+    if (!snapEmp.empty) {
+      const d = snapEmp.docs[0];
       empleado = { id: d.id, ...d.data() };
     }
   } catch (err) {
     console.warn("No se pudo obtener empleado para la ausencia:", err);
   }
 
-  const payload = {
-    legajo: String(legajo),
-    fecha: fechaStr,
-    justificativo: justificativo || null,
-    justificado: !!justificar,
-    nombre: empleado?.nombre || null,
-    apellido: empleado?.apellido || null,
-    lugarTrabajo: empleado?.lugarTrabajo || null,
-    createdAt: serverTimestamp(),
-  };
+  // Buscar si ya existe ausencia para ese legajo + fecha
+  try {
+    const q = query(
+      collection(db, "ausencias"),
+      where("legajo", "==", String(legajo)),
+      where("fecha", "==", fechaStr)
+    );
+    const snap = await getDocs(q);
 
-  const ref = await addDoc(collection(db, "ausencias"), payload);
-  return { id: ref.id, ...payload };
+    const payload = {
+      legajo: String(legajo),
+      fecha: fechaStr,
+      justificativo: justificativo || null,
+      justificado: !!justificar,
+      nombre: empleado?.nombre || null,
+      apellido: empleado?.apellido || null,
+      lugarTrabajo: empleado?.lugarTrabajo || null,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (!snap.empty) {
+      // actualizar el primer documento encontrado
+      const docRef = snap.docs[0].ref;
+      await updateDoc(docRef, payload);
+      return { id: snap.docs[0].id, ...payload };
+    } else {
+      // crear nueva ausencia
+      const payloadCreate = { ...payload, createdAt: serverTimestamp() };
+      const ref = await addDoc(collection(db, "ausencias"), payloadCreate);
+      return { id: ref.id, ...payloadCreate };
+    }
+  } catch (err) {
+    console.error("saveAusenciaJustificacion error:", err);
+    throw err;
+  }
 }
