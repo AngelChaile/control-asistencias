@@ -90,6 +90,8 @@ export default function Scan() {
         nombre: nuevo.nombre,
         apellido: nuevo.apellido,
         lugarTrabajo: nuevo.lugarTrabajo || "",
+        secretaria: nuevo.secretaria || "",
+        horario: nuevo.horario || "",
       });
       setMessage("✅ Empleado registrado correctamente. Fichando...");
       setShowRegistro(false);

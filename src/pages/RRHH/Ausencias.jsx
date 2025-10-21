@@ -35,7 +35,7 @@ export default function AusenciasRRHH() {
       <h2>Ausencias</h2>
 
       <div style={{ marginBottom: 12 }}>
-        <label>Área: <input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Dejar vacío para todas" /></label>
+        <label>Área: <input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Dejar vacío para ver todas" /></label>
         <label style={{ marginLeft: 8 }}>Desde: <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></label>
         <label style={{ marginLeft: 8 }}>Hasta: <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></label>
         <button onClick={handleSearch} style={{ marginLeft: 8 }}>Buscar</button>
@@ -50,8 +50,8 @@ export default function AusenciasRRHH() {
               <th>Nombre</th>
               <th>Área</th>
               <th>Justificado</th>
-              <th>Fecha</th>
               <th>Observaciones</th>
+              <th>Fecha</th>
             </tr>
           </thead>
           <tbody>
@@ -61,8 +61,8 @@ export default function AusenciasRRHH() {
                 <td>{r.nombre} {r.apellido}</td>
                 <td>{r.lugarTrabajo}</td>
                 <td>{r.justificado ? "Sí" : "No"}</td>
-                <td>{r.fecha}</td>
                 <td>{r.justificativo || ""}</td>
+                <td>{r.fecha}</td>
               </tr>
             ))}
           </tbody>
