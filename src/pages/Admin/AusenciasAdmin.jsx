@@ -152,7 +152,7 @@ export default function AusenciasAdmin() {
                 lugarTrabajo: f.lugarTrabajo,
                 justificativo: aus?.justificativo || null,
                 justificado: aus?.justificado || false,
-                fecha: aus?.fecha || toLocaleDateStr(new Date(selectedDate)),
+                fecha: aus?.fecha || toLocaleDateStr(parseInputDateToLocal(selectedDate)),
               };
             }),
             ...ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate),
@@ -191,7 +191,7 @@ export default function AusenciasAdmin() {
                       <td>{e.apellido}</td>
                       <td>{aus ? (aus.justificado ? "Sí" : "No") : "—"}</td>
                       <td>{aus ? aus.justificativo || "" : ""}</td>
-                      <td>{aus ? aus.fecha : toLocaleDateStr(new Date(selectedDate))}</td>
+                      <td>{aus ? aus.fecha : toLocaleDateStr(parseInputDateToLocal(selectedDate))}</td>
                       <td>
                         {edit?.legajo === e.legajo ? (
                           <>

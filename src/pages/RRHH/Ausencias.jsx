@@ -25,14 +25,14 @@ export default function AusenciasRRHH() {
     }
   }
 
-  useEffect(() => {
-    // si quieres precargar área del usuario si tiene (opcional)
+  // si quieres precargar área del usuario si tiene (opcional)
+/*   useEffect(() => {
     if (user?.lugarTrabajo) setArea(user.lugarTrabajo);
-  }, [user]);
+  }, [user]); */
 
   return (
     <div style={{ padding: 16 }}>
-      <h2>Ausencias (RRHH)</h2>
+      <h2>Ausencias</h2>
 
       <div style={{ marginBottom: 12 }}>
         <label>Área: <input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Dejar vacío para todas" /></label>
