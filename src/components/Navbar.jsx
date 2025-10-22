@@ -1,11 +1,12 @@
-// src/components/Navbar.jsx
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   if (!user) return null;
 
@@ -35,22 +36,40 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/60">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/60">
       <div className="app-container">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-lg">M</span>
-            </div>
-            <div>
-              <div className="text-lg font-semibold text-gray-900">Control de Asistencias</div>
-              <div className="text-xs text-gray-500 capitalize">{user.rol} • {user.lugarTrabajo || 'Municipio'}</div>
+          {/* Logo y Hamburger */}
+          <div className="flex items-center space-x-3">
+            {/* Hamburger Menu - Solo móvil */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="Abrir menú"
+            >
+              <div className="w-6 h-6 flex flex-col justify-center space-y-1">
+                <span className={`block h-0.5 w-6 bg-gray-600 transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></span>
+                <span className={`block h-0.5 w-6 bg-gray-600 transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`}></span>
+                <span className={`block h-0.5 w-6 bg-gray-600 transition-transform ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
+              </div>
+            </button>
+
+            {/* Logo */}
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-municipio-500 to-municipio-600 rounded-xl flex items-center justify-center shadow-sm">
+                <span className="text-white font-bold text-lg">M</span>
+              </div>
+              <div className="hidden sm:block">
+                <div className="text-lg font-semibold text-gray-900 leading-tight">Control de Asistencias</div>
+                <div className="text-xs text-gray-500 capitalize leading-tight">
+                  {user.rol} • {user.lugarTrabajo || 'Municipio'}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex items-center space-x-1">
+          {/* Navigation - Desktop */}
+          <nav className="hidden lg:flex items-center space-x-1">
             {currentMenus.map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -59,31 +78,96 @@ export default function Navbar() {
                   to={item.path}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-red-50 text-red-700 border border-red-200'
+                      ? 'bg-municipio-50 text-municipio-700 border border-municipio-200'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
-                  <span>{item.icon}</span>
+                  <span className="text-base">{item.icon}</span>
                   <span>{item.name}</span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* User & Logout */}
-          <div className="flex items-center space-x-4">
+          {/* User & Logout - Desktop */}
+          <div className="hidden lg:flex items-center space-x-4">
             <div className="text-right">
-              <div className="text-sm font-medium text-gray-900">{user.nombre}</div>
-              <div className="text-xs text-gray-500">{user.email}</div>
+              <div className="text-sm font-medium text-gray-900 truncate max-w-[120px]">
+                {user.nombre}
+              </div>
+              <div className="text-xs text-gray-500 truncate max-w-[120px]">
+                {user.email}
+              </div>
             </div>
             <button
               onClick={handleLogout}
-              className="btn-secondary text-sm"
+              className="btn-secondary text-sm whitespace-nowrap"
             >
               Cerrar sesión
             </button>
           </div>
+
+          {/* User & Logout - Mobile (sin menú abierto) */}
+          {!isMenuOpen && (
+            <div className="lg:hidden flex items-center space-x-3">
+              <div className="text-right">
+                <div className="text-sm font-medium text-gray-900">
+                  {user.nombre.split(' ')[0]}
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="btn-secondary text-sm px-3 py-1.5"
+              >
+                Salir
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="lg:hidden border-t border-gray-200 pt-4 pb-4">
+            {/* Navigation Links */}
+            <nav className="grid grid-cols-2 gap-2 mb-4">
+              {currentMenus.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`flex items-center space-x-2 p-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-municipio-50 text-municipio-700 border border-municipio-200'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-base">{item.icon}</span>
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* User Info Mobile */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div>
+                <div className="text-sm font-medium text-gray-900">{user.nombre}</div>
+                <div className="text-xs text-gray-500">{user.email}</div>
+                <div className="text-xs text-gray-400 capitalize mt-1">
+                  {user.rol} • {user.lugarTrabajo || 'Municipio'}
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="btn-secondary text-sm px-3 py-1.5"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );

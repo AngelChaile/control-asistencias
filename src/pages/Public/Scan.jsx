@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { validarToken, buscarEmpleadoPorLegajo, registrarAsistenciaPorLegajo, registrarNuevoEmpleado } from "../../utils/asistencia";
 
-// Clean single-component Scan.jsx (atomic overwrite)
 export default function Scan() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -27,10 +26,10 @@ export default function Scan() {
       try {
         await validarToken(tokenParam);
         setTokenValido(true);
-        setMessage("Token válido. Ingrese su legajo o búsquelo.");
+        setMessage("✅ Token válido. Ingrese su legajo para continuar.");
       } catch (err) {
         setTokenValido(false);
-        setMessage(err?.message || "Token inválido.");
+        setMessage("❌ " + (err?.message || "Token inválido o expirado."));
       } finally {
         setLoading(false);
       }
@@ -39,22 +38,22 @@ export default function Scan() {
 
   const handleBuscar = async (e) => {
     e?.preventDefault();
-    if (!legajo) return setMessage("Ingrese un legajo para buscar.");
+    if (!legajo.trim()) return setMessage("⚠️ Ingrese un legajo para buscar.");
     setLoading(true);
     try {
       const emp = await buscarEmpleadoPorLegajo(legajo);
       if (!emp) {
         setShowRegistro(true);
         setEmpleado(null);
-        setMessage("Empleado no encontrado. Complete el registro.");
+        setMessage("🔍 Empleado no encontrado. Complete el registro.");
       } else {
         setEmpleado(emp);
         setShowRegistro(false);
-        setMessage(`Empleado encontrado: ${emp.nombre} ${emp.apellido}`);
+        setMessage(`✅ Empleado encontrado: ${emp.nombre} ${emp.apellido}`);
       }
     } catch (err) {
       console.error(err);
-      setMessage("Error al buscar el empleado.");
+      setMessage("❌ Error al buscar el empleado.");
     } finally {
       setLoading(false);
     }
@@ -62,16 +61,16 @@ export default function Scan() {
 
   const handleRegistrarAsistencia = async () => {
     if (!tokenValido) return setMessage("⏰ Este QR ya caducó.");
-    if (!empleado) return setMessage("Empleado no seleccionado.");
+    if (!empleado) return setMessage("⚠️ Empleado no seleccionado.");
     setLoading(true);
     try {
       const res = await registrarAsistenciaPorLegajo(empleado.legajo, tokenParam);
-      setMessage(`Asistencia registrada: ${res.tipo} a las ${res.hora}`);
+      setMessage(`✅ Asistencia registrada: ${res.tipo} a las ${res.hora}`);
       setBloqueado(true);
-      setTimeout(() => navigate("/gracias"), 900);
+      setTimeout(() => navigate("/gracias"), 1500);
     } catch (err) {
       console.error(err);
-      setMessage(err?.message || "Error al registrar la asistencia.");
+      setMessage("❌ " + (err?.message || "Error al registrar la asistencia."));
     } finally {
       setLoading(false);
     }
@@ -79,75 +78,238 @@ export default function Scan() {
 
   const handleGuardarNuevo = async (e) => {
     e.preventDefault();
-    if (!legajo || !nuevo.nombre || !nuevo.apellido) return setMessage("Complete todos los campos.");
+    if (!legajo.trim() || !nuevo.nombre.trim() || !nuevo.apellido.trim()) {
+      return setMessage("⚠️ Complete todos los campos obligatorios.");
+    }
     setLoading(true);
     try {
       await registrarNuevoEmpleado({ legajo, ...nuevo });
-      setMessage("Empleado registrado. Registrando asistencia...");
+      setMessage("✅ Empleado registrado. Registrando asistencia...");
       setEmpleado({ legajo, nombre: nuevo.nombre, apellido: nuevo.apellido, lugarTrabajo: nuevo.lugarTrabajo });
       setShowRegistro(false);
       await handleRegistrarAsistencia();
     } catch (err) {
       console.error(err);
-      setMessage("Error creando empleado.");
+      setMessage("❌ Error creando empleado.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCancelarRegistro = () => {
+    setShowRegistro(false);
+    setNuevo({ nombre: "", apellido: "", lugarTrabajo: "" });
+    setMessage("📝 Registro cancelado. Ingrese un legajo válido.");
+  };
+
   return (
-    <div className="app-container px-4 py-6">
-      <div className="hero mb-4 text-center">
-        <h2 className="text-2xl font-semibold">Fichar</h2>
-        <p className="muted mt-1">Escanee el QR o pegue el token y luego ingrese su legajo</p>
-      </div>
-
-      <div className="card max-w-xl mx-auto">
-        <p className="text-sm text-gray-600 mt-2">{message}</p>
-
-        <form onSubmit={handleBuscar} className="mt-3">
-          <div className="flex gap-2">
-            <input
-              className="input-base flex-1"
-              value={legajo}
-              onChange={(e) => setLegajo(e.target.value)}
-              disabled={bloqueado || !tokenValido}
-              placeholder="Legajo"
-            />
-            <button type="submit" disabled={loading || !tokenValido || bloqueado} className="px-4 py-2 bg-municipio-500 text-white rounded-lg shadow">
-              {loading ? "Buscando..." : "Buscar"}
-            </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="mx-auto w-20 h-20 bg-gradient-to-r from-municipio-500 to-municipio-600 rounded-2xl flex items-center justify-center shadow-lg mb-4">
+            <span className="text-white text-2xl">📱</span>
           </div>
-        </form>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Registro de Asistencia</h1>
+          <p className="text-gray-600">
+            {tokenValido ? "Ingrese su legajo para fichar" : "Escanee un QR válido"}
+          </p>
+        </div>
 
-        {empleado && (
-          <div className="mt-4">
-            <h3 className="text-lg font-medium">{empleado.nombre} {empleado.apellido}</h3>
-            <p className="text-sm text-gray-700">Legajo: {empleado.legajo}</p>
-            <p className="text-sm text-gray-700">Lugar: {empleado.lugarTrabajo}</p>
-            <div className="mt-3">
-              <button onClick={handleRegistrarAsistencia} disabled={loading || !tokenValido || bloqueado} className="btn-primary">
-                {loading ? "Registrando..." : "Fichar"}
+        {/* Card Principal */}
+        <div className="card p-6 space-y-4">
+          {/* Estado del Token */}
+          <div className={`p-3 rounded-lg text-center text-sm font-medium ${
+            tokenValido 
+              ? 'bg-green-100 text-green-800 border border-green-200' 
+              : 'bg-red-100 text-red-800 border border-red-200'
+          }`}>
+            {tokenValido ? '✅ QR Válido' : '❌ QR Inválido'}
+          </div>
+
+          {/* Mensaje de Estado */}
+          {message && (
+            <div className={`p-3 rounded-lg text-sm ${
+              message.includes('✅') ? 'bg-green-50 text-green-800 border border-green-200' :
+              message.includes('❌') ? 'bg-red-50 text-red-800 border border-red-200' :
+              message.includes('⚠️') ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
+              'bg-blue-50 text-blue-800 border border-blue-200'
+            }`}>
+              {message}
+            </div>
+          )}
+
+          {/* Formulario de Búsqueda */}
+          {tokenValido && !bloqueado && (
+            <form onSubmit={handleBuscar} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Número de Legajo
+                </label>
+                <input
+                  className="input-modern w-full"
+                  value={legajo}
+                  onChange={(e) => setLegajo(e.target.value)}
+                  disabled={loading}
+                  placeholder="Ingrese su legajo"
+                  type="number"
+                />
+              </div>
+              
+              <button 
+                type="submit" 
+                disabled={loading || !legajo.trim()}
+                className="w-full btn-primary py-3"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-4 h-4 border-t-2 border-white rounded-full animate-spin mr-2"></div>
+                    Buscando...
+                  </div>
+                ) : (
+                  "🔍 Buscar Empleado"
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* Información del Empleado Encontrado */}
+          {empleado && !showRegistro && (
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <h3 className="font-semibold text-green-800 mb-2">Empleado Encontrado</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Nombre:</span>
+                    <span className="font-medium">{empleado.nombre} {empleado.apellido}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Legajo:</span>
+                    <span className="font-medium">{empleado.legajo}</span>
+                  </div>
+                  {empleado.lugarTrabajo && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Área:</span>
+                      <span className="font-medium">{empleado.lugarTrabajo}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button 
+                onClick={handleRegistrarAsistencia}
+                disabled={loading || bloqueado}
+                className="w-full btn-primary py-3"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-4 h-4 border-t-2 border-white rounded-full animate-spin mr-2"></div>
+                    Registrando...
+                  </div>
+                ) : (
+                  "✅ Registrar Asistencia"
+                )}
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {showRegistro && (
-          <form onSubmit={handleGuardarNuevo} className="mt-4">
-            <h3 className="text-lg font-medium">Registrar nuevo empleado</h3>
-            <div className="grid grid-cols-1 gap-2 mt-2">
-              <input className="input-base" placeholder="Nombre" value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} />
-              <input className="input-base" placeholder="Apellido" value={nuevo.apellido} onChange={(e) => setNuevo({ ...nuevo, apellido: e.target.value })} />
-              <input className="input-base" placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={(e) => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
+          {/* Formulario de Registro de Nuevo Empleado */}
+          {showRegistro && (
+            <form onSubmit={handleGuardarNuevo} className="space-y-4">
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h3 className="font-semibold text-yellow-800 mb-2">Nuevo Registro</h3>
+                <p className="text-sm text-yellow-700">
+                  Complete los datos para registrar al nuevo empleado
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nombre *
+                  </label>
+                  <input
+                    className="input-modern w-full"
+                    value={nuevo.nombre}
+                    onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })}
+                    placeholder="Nombre del empleado"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Apellido *
+                  </label>
+                  <input
+                    className="input-modern w-full"
+                    value={nuevo.apellido}
+                    onChange={(e) => setNuevo({ ...nuevo, apellido: e.target.value })}
+                    placeholder="Apellido del empleado"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Lugar de Trabajo
+                  </label>
+                  <input
+                    className="input-modern w-full"
+                    value={nuevo.lugarTrabajo}
+                    onChange={(e) => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })}
+                    placeholder="Área o departamento"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="flex-1 btn-primary py-3"
+                >
+                  {loading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-4 h-4 border-t-2 border-white rounded-full animate-spin mr-2"></div>
+                      Guardando...
+                    </div>
+                  ) : (
+                    "💾 Guardar y Fichar"
+                  )}
+                </button>
+                
+                <button 
+                  type="button"
+                  onClick={handleCancelarRegistro}
+                  disabled={loading}
+                  className="btn-secondary py-3 px-4"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Mensaje de Éxito */}
+          {bloqueado && (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+              <div className="text-green-600 text-4xl mb-2">✅</div>
+              <h3 className="font-semibold text-green-800 mb-1">¡Asistencia Registrada!</h3>
+              <p className="text-sm text-green-700">
+                Redirigiendo a la página de confirmación...
+              </p>
             </div>
-            <div className="mt-3">
-              <button type="submit" disabled={loading || !tokenValido} className="btn-primary">{loading ? "Guardando..." : "Guardar y fichar"}</button>
-            </div>
-          </form>
-        )}
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-6">
+          <p className="text-xs text-gray-500">
+            Sistema de Asistencias • Municipalidad
+          </p>
+        </div>
       </div>
     </div>
   );
 }
-
