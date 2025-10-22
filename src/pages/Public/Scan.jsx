@@ -111,23 +111,23 @@ export default function Scan() {
   }
 
   return (
-    <div className="max-w-md mx-auto p-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold">Registro de Asistencia</h2>
+    <div className="app-container">
+      <div className="card max-w-md mx-auto">
+        <h2 className="text-2xl font-semibold">Registro de Asistencia</h2>
         <p className="text-sm text-gray-600 mt-2">{message}</p>
 
         {!showRegistro && (
           <form onSubmit={handleBuscar} className="mt-4">
             <label className="block text-sm font-medium mb-1">Legajo</label>
             <input
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300"
               value={legajo}
               onChange={(e) => setLegajo(e.target.value)}
               disabled={bloqueado || !tokenValido}
               placeholder="Ingrese su legajo"
             />
             <div className="mt-3">
-              <button type="submit" disabled={loading || !tokenValido || bloqueado} className="px-4 py-2 bg-municipio-500 text-white rounded">
+              <button type="submit" disabled={loading || !tokenValido || bloqueado} className="px-4 py-2 bg-municipio-500 text-white rounded-lg shadow">
                 {loading ? "Buscando..." : "Buscar / Fichar"}
               </button>
             </div>
@@ -149,14 +149,14 @@ export default function Scan() {
           <form onSubmit={handleGuardarNuevo} className="mt-4">
             <h3 className="text-lg font-medium">Registro de nuevo empleado</h3>
             <div className="grid grid-cols-1 gap-2 mt-2">
-              <input className="border rounded px-3 py-2" placeholder="Nombre" value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} />
-              <input className="border rounded px-3 py-2" placeholder="Apellido" value={nuevo.apellido} onChange={(e) => setNuevo({ ...nuevo, apellido: e.target.value })} />
-              <input className="border rounded px-3 py-2" placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={(e) => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
-              <input className="border rounded px-3 py-2" placeholder="Secretaria" value={nuevo.secretaria} onChange={(e) => setNuevo({ ...nuevo, secretaria: e.target.value })} />
-              <input className="border rounded px-3 py-2" placeholder="Horario" value={nuevo.horario} onChange={(e) => setNuevo({ ...nuevo, horario: e.target.value })} />
+              <input className="border rounded-lg px-3 py-2" placeholder="Nombre" value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} />
+              <input className="border rounded-lg px-3 py-2" placeholder="Apellido" value={nuevo.apellido} onChange={(e) => setNuevo({ ...nuevo, apellido: e.target.value })} />
+              <input className="border rounded-lg px-3 py-2" placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={(e) => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
+              <input className="border rounded-lg px-3 py-2" placeholder="Secretaria" value={nuevo.secretaria} onChange={(e) => setNuevo({ ...nuevo, secretaria: e.target.value })} />
+              <input className="border rounded-lg px-3 py-2" placeholder="Horario" value={nuevo.horario} onChange={(e) => setNuevo({ ...nuevo, horario: e.target.value })} />
             </div>
             <div className="mt-3">
-              <button type="submit" disabled={loading || !tokenValido} className="px-4 py-2 bg-municipio-500 text-white rounded">{loading ? "Guardando..." : "Guardar y fichar"}</button>
+              <button type="submit" disabled={loading || !tokenValido} className="px-4 py-2 bg-municipio-500 text-white rounded-lg shadow">{loading ? "Guardando..." : "Guardar y fichar"}</button>
             </div>
           </form>
         )}

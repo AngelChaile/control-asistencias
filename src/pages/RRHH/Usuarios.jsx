@@ -40,9 +40,9 @@ export default function Usuarios() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold">Usuarios</h2>
+    <div className="app-container">
+      <div className="card">
+        <h2 className="text-2xl font-semibold">Usuarios</h2>
         <div className="overflow-x-auto mt-4">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -75,19 +75,19 @@ export default function Usuarios() {
 
         <h3 className="mt-6 text-lg font-medium">{editingId ? "Editar" : "Nuevo"} usuario</h3>
         <form onSubmit={handleGuardar} className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <input className="border rounded px-3 py-2" placeholder="Email" value={nuevo.email} onChange={e => setNuevo({...nuevo, email: e.target.value})} required/>
-          <input className="border rounded px-3 py-2" placeholder="Nombre" value={nuevo.nombre} onChange={e => setNuevo({...nuevo, nombre: e.target.value})} required/>
-          <input className="border rounded px-3 py-2" placeholder="Apellido" value={nuevo.apellido} onChange={e => setNuevo({...nuevo, apellido: e.target.value})} required/>
-          <input className="border rounded px-3 py-2" placeholder="Legajo" value={nuevo.legajo} onChange={e => setNuevo({...nuevo, legajo: e.target.value})} required/>
-          <input className="border rounded px-3 py-2" placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={e => setNuevo({...nuevo, lugarTrabajo: e.target.value})} required/>
-          <input className="border rounded px-3 py-2" placeholder="Contraseña" value={nuevo.contraseña} onChange={e => setNuevo({...nuevo, contraseña: e.target.value})} required/>
-          <select className="border rounded px-3 py-2" value={nuevo.rol} onChange={e => setNuevo({...nuevo, rol: e.target.value})}>
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Email" value={nuevo.email} onChange={e => setNuevo({...nuevo, email: e.target.value})} required/>
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Nombre" value={nuevo.nombre} onChange={e => setNuevo({...nuevo, nombre: e.target.value})} required/>
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Apellido" value={nuevo.apellido} onChange={e => setNuevo({...nuevo, apellido: e.target.value})} required/>
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Legajo" value={nuevo.legajo} onChange={e => setNuevo({...nuevo, legajo: e.target.value})} required/>
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={e => setNuevo({...nuevo, lugarTrabajo: e.target.value})} required/>
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Contraseña" value={nuevo.contraseña} onChange={e => setNuevo({...nuevo, contraseña: e.target.value})} required/>
+          <select className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" value={nuevo.rol} onChange={e => setNuevo({...nuevo, rol: e.target.value})}>
             <option value="empleado">Empleado</option>
             <option value="admin">Admin</option>
             <option value="rrhh">RRHH</option>
           </select>
           <div className="flex items-center gap-2">
-            <button type="submit" className="px-4 py-2 bg-municipio-500 text-white rounded">{editingId ? "Guardar cambios" : "Crear usuario"}</button>
+            <button type="submit" className="px-4 py-2 bg-municipio-500 text-white rounded-lg shadow">{editingId ? "Guardar cambios" : "Crear usuario"}</button>
           </div>
         </form>
       </div>

@@ -31,25 +31,25 @@ export default function AusenciasRRHH() {
   }, [user]); */
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold">Ausencias</h2>
+    <div className="app-container">
+      <div className="card">
+        <h2 className="text-2xl font-semibold">Ausencias</h2>
 
         <div className="flex flex-wrap gap-3 mt-4 items-end">
           <div>
             <label className="text-sm">Área</label>
-            <input className="border rounded px-3 py-2 block" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Dejar vacío para ver todas" />
+            <input className="border rounded-lg px-3 py-2 block focus:ring-2 focus:ring-municipio-300" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Dejar vacío para ver todas" />
           </div>
           <div>
             <label className="text-sm">Desde</label>
-            <input className="border rounded px-3 py-2 block" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
+            <input className="border rounded-lg px-3 py-2 block focus:ring-2 focus:ring-municipio-300" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
           </div>
           <div>
             <label className="text-sm">Hasta</label>
-            <input className="border rounded px-3 py-2 block" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+            <input className="border rounded-lg px-3 py-2 block focus:ring-2 focus:ring-municipio-300" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
           </div>
           <div className="flex gap-2">
-            <button onClick={handleSearch} className="px-4 py-2 bg-municipio-500 text-white rounded">Buscar</button>
+            <button onClick={handleSearch} className="px-4 py-2 bg-municipio-500 text-white rounded-lg shadow">Buscar</button>
             <ExportExcel data={result} filename={`ausencias_rrhh_${area || "all"}.xlsx`} />
           </div>
         </div>

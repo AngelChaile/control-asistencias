@@ -69,14 +69,14 @@ export default function Empleados() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold">Empleados</h2>
+    <div className="app-container">
+      <div className="card">
+        <h2 className="text-2xl font-semibold">Empleados</h2>
 
         <div className="flex gap-3 mt-4">
-          <input className="border rounded px-3 py-2" placeholder="Legajo" value={filter.legajo} onChange={e => setFilter({ ...filter, legajo: e.target.value })} />
-          <input className="border rounded px-3 py-2" placeholder="Nombre" value={filter.nombre} onChange={e => setFilter({ ...filter, nombre: e.target.value })} />
-          <input className="border rounded px-3 py-2" placeholder="Área" value={filter.area} onChange={e => setFilter({ ...filter, area: e.target.value })} />
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Legajo" value={filter.legajo} onChange={e => setFilter({ ...filter, legajo: e.target.value })} />
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Nombre" value={filter.nombre} onChange={e => setFilter({ ...filter, nombre: e.target.value })} />
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Área" value={filter.area} onChange={e => setFilter({ ...filter, area: e.target.value })} />
         </div>
 
         {loading ? (
@@ -117,15 +117,15 @@ export default function Empleados() {
 
         <h3 className="mt-6 text-lg font-medium">{editingId ? "Editar" : "Nuevo"} empleado</h3>
         <form onSubmit={handleGuardar} className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <input className="border rounded px-3 py-2" placeholder="Legajo" value={nuevo.legajo} onChange={e => setNuevo({ ...nuevo, legajo: e.target.value })} required />
-          <input className="border rounded px-3 py-2" placeholder="Nombre" value={nuevo.nombre} onChange={e => setNuevo({ ...nuevo, nombre: e.target.value })} required />
-          <input className="border rounded px-3 py-2" placeholder="Apellido" value={nuevo.apellido} onChange={e => setNuevo({ ...nuevo, apellido: e.target.value })} required />
-          <input className="border rounded px-3 py-2" placeholder="Lugar" value={nuevo.lugarTrabajo} onChange={e => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
-          <input className="border rounded px-3 py-2" placeholder="Secretaria" value={nuevo.secretaria} onChange={e => setNuevo({ ...nuevo, secretaria: e.target.value })} />
-          <input className="border rounded px-3 py-2" placeholder="Horario" value={nuevo.horario} onChange={e => setNuevo({ ...nuevo, horario: e.target.value })} />
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Legajo" value={nuevo.legajo} onChange={e => setNuevo({ ...nuevo, legajo: e.target.value })} required />
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Nombre" value={nuevo.nombre} onChange={e => setNuevo({ ...nuevo, nombre: e.target.value })} required />
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Apellido" value={nuevo.apellido} onChange={e => setNuevo({ ...nuevo, apellido: e.target.value })} required />
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Lugar" value={nuevo.lugarTrabajo} onChange={e => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Secretaria" value={nuevo.secretaria} onChange={e => setNuevo({ ...nuevo, secretaria: e.target.value })} />
+          <input className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-municipio-300" placeholder="Horario" value={nuevo.horario} onChange={e => setNuevo({ ...nuevo, horario: e.target.value })} />
           <div className="flex items-center gap-2">
-            <button type="submit" className="px-4 py-2 bg-municipio-500 text-white rounded">{editingId ? "Guardar cambios" : "Crear empleado"}</button>
-            {editingId && <button type="button" onClick={() => { setEditingId(null); setNuevo({ legajo: "", nombre: "", apellido: "", lugarTrabajo: "", secretaria: "", horario: "" }); }} className="px-3 py-2 border rounded">Cancelar</button>}
+            <button type="submit" className="px-4 py-2 bg-municipio-500 text-white rounded-lg shadow">{editingId ? "Guardar cambios" : "Crear empleado"}</button>
+            {editingId && <button type="button" onClick={() => { setEditingId(null); setNuevo({ legajo: "", nombre: "", apellido: "", lugarTrabajo: "", secretaria: "", horario: "" }); }} className="px-3 py-2 border rounded-lg">Cancelar</button>}
           </div>
         </form>
       </div>
