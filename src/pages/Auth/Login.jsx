@@ -2,14 +2,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, signInWithEmailAndPassword } from "../../firebase";
-import Swal from "sweetalert2";
 import { getUserDoc } from "../../utils/auth";
+import Swal from "sweetalert2";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -20,19 +19,13 @@ export default function Login() {
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       const uid = userCred.user.uid;
 
-      // 🔹 Obtener datos del usuario
       const userDoc = await getUserDoc(uid);
       if (!userDoc) throw new Error("No se pudo cargar la información del usuario.");
 
-      // 🔹 Redirigir según rol
-      Swal.fire({
-        icon: "success",
-        title: "¡Bienvenido!",
-        text: `Hola ${userDoc.nombre} ${userDoc.apellido}`,
-        timer: 1500,
-        showConfirmButton: false,
-      });
+      // 🔹 Guardar usuario en localStorage para mostrar en el header luego
+      localStorage.setItem("userData", JSON.stringify(userDoc));
 
+      // 🔹 Redirigir según rol (sin SweetAlert)
       if (userDoc.rol === "rrhh") {
         navigate("/rrhh", { replace: true });
       } else if (userDoc.rol === "admin") {
@@ -62,29 +55,68 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(180deg,#f8fafc 0%, #ffffff 50%)' }}>
-      <div className="w-full max-w-md">
-        <div className="text-center mb-6">
-          <div className="mx-auto w-16 h-16 rounded-lg bg-municipio-500 text-white flex items-center justify-center text-2xl font-bold">M</div>
-          <h1 className="text-2xl font-semibold mt-3">Bienvenido</h1>
-          <p className="muted">Inicia sesión para acceder al sistema</p>
+    <div className="min-h-screen flex flex-col md:flex-row bg-gradient-to-br from-gray-50 to-white">
+      {/* Panel izquierdo */}
+      <div className="hidden md:flex md:w-1/2 bg-municipio-500 text-white items-center justify-center p-10 flex-col">
+        <h1 className="text-4xl font-bold mb-3">Sistema de Asistencia</h1>
+        <p className="text-lg opacity-80 text-center max-w-sm">
+          Accede al panel de control del municipio y gestiona la asistencia de forma moderna y eficiente.
+        </p>
+      </div>
+
+      {/* Panel derecho (formulario) */}
+      <div className="flex flex-1 items-center justify-center p-8">
+        <div className="w-full max-w-md bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-8 border border-gray-100">
+          <div className="text-center mb-8">
+            <div className="mx-auto w-16 h-16 rounded-full bg-municipio-500 text-white flex items-center justify-center text-2xl font-bold shadow-md">
+              M
+            </div>
+            <h2 className="text-2xl font-semibold mt-4">Bienvenido</h2>
+            <p className="text-gray-500 text-sm">Inicia sesión para continuar</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium mb-1">Correo electrónico</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-municipio-400"
+                placeholder="tu@email.com"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Contraseña</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-municipio-400"
+                placeholder="********"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full py-2.5 rounded-lg text-white font-semibold transition-all ${
+                loading
+                  ? "bg-municipio-400 opacity-80 cursor-not-allowed"
+                  : "bg-municipio-500 hover:bg-municipio-600 shadow-md hover:shadow-lg"
+              }`}
+            >
+              {loading ? "Ingresando..." : "Ingresar"}
+            </button>
+          </form>
+
+          <p className="text-center text-xs text-gray-400 mt-6">
+            © 2025 Municipalidad - Sistema de Asistencia
+          </p>
         </div>
-
-        <form onSubmit={handleLogin} className="card">
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Correo electrónico</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-base w-full" placeholder="tu@email.com" required />
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-1">Contraseña</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-base w-full" placeholder="********" required />
-          </div>
-
-          <button type="submit" disabled={loading} className={`w-full btn-primary ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}>
-            {loading ? 'Ingresando...' : 'Ingresar'}
-          </button>
-        </form>
       </div>
     </div>
   );
