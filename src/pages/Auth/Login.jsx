@@ -1,4 +1,3 @@
-// src/pages/Auth/Login.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, signInWithEmailAndPassword } from "../../firebase";
@@ -14,7 +13,6 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       const uid = userCred.user.uid;
@@ -29,14 +27,12 @@ export default function Login() {
 
     } catch (error) {
       console.error("Error en login:", error);
-
       let mensaje = "Error al iniciar sesión.";
       if (error.code === "auth/invalid-email") mensaje = "El formato del correo no es válido.";
       else if (error.code === "auth/user-not-found") mensaje = "No existe una cuenta con ese correo.";
       else if (error.code === "auth/wrong-password") mensaje = "Contraseña incorrecta.";
       else if (error.code === "auth/too-many-requests") mensaje = "Demasiados intentos. Espera unos minutos e inténtalo nuevamente.";
       else if (error.message) mensaje = error.message;
-
       Swal.fire({ icon: "error", title: "Ups...", text: mensaje });
     } finally {
       setLoading(false);
@@ -44,36 +40,36 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-white">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f4f6fb] via-white to-[#e8eefc]">
+      <div className="w-full max-w-sm p-8 bg-white rounded-2xl shadow-2xl border border-gray-100">
         <div className="text-center mb-6">
-          <div className="mx-auto w-16 h-16 rounded-lg bg-municipio-500 text-white flex items-center justify-center text-2xl font-bold shadow">
+          <div className="mx-auto w-16 h-16 rounded-xl bg-[#0f4c75] text-white flex items-center justify-center text-2xl font-bold shadow-md">
             M
           </div>
-          <h1 className="text-2xl font-semibold mt-3">Bienvenido</h1>
-          <p className="muted">Inicia sesión para acceder al sistema</p>
+          <h1 className="text-2xl font-semibold mt-4 text-[#0f172a]">Bienvenido</h1>
+          <p className="text-gray-500 text-sm mt-1">Accedé al sistema de asistencia</p>
         </div>
 
-        <form onSubmit={handleLogin} className="card space-y-5">
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium mb-1">Correo electrónico</label>
+            <label className="block text-sm font-medium mb-1 text-gray-700">Correo electrónico</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="input-base w-full"
+              className="input-base w-full focus:ring-2 focus:ring-[#0f4c75]"
               placeholder="tu@email.com"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Contraseña</label>
+            <label className="block text-sm font-medium mb-1 text-gray-700">Contraseña</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input-base w-full"
+              className="input-base w-full focus:ring-2 focus:ring-[#0f4c75]"
               placeholder="********"
               required
             />
@@ -82,15 +78,17 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full btn-primary transition-all duration-200 ${
-              loading ? "opacity-60 cursor-not-allowed" : "hover:scale-[1.02]"
+            className={`w-full py-2.5 rounded-lg text-white font-semibold transition-all duration-200 ${
+              loading
+                ? "bg-[#0f4c75]/70 cursor-not-allowed"
+                : "bg-gradient-to-r from-[#0f4c75] to-[#3282b8] hover:scale-[1.03] shadow-md"
             }`}
           >
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
+        <p className="text-center text-xs text-gray-400 mt-8">
           © 2025 Municipalidad — Sistema de Asistencia
         </p>
       </div>
