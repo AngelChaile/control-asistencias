@@ -26,5 +26,10 @@ module.exports = {
       }
     }
   },
-  plugins: []
+  plugins: [],
+  safelist: [
+    'bg-municipio-50','bg-municipio-100','bg-municipio-200','bg-municipio-300','bg-municipio-400','bg-municipio-500','bg-municipio-600','bg-municipio-700','bg-municipio-800','bg-municipio-900',
+    'text-municipio-50','text-municipio-100','text-municipio-200','text-municipio-300','text-municipio-400','text-municipio-500','text-municipio-600','text-municipio-700','text-municipio-800','text-municipio-900',
+    'text-municipio-700','bg-municipio-100'
+  ]
 }
