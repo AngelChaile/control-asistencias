@@ -1,80 +1,101 @@
-/* src/index.css */
+@import "tailwindcss";
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
-@layer base {
-  html, body, #root { 
-    height: 100%; 
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  }
+@theme {
+  --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
   
-  body {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    color: #0f172a;
-  }
+  --color-municipio-50: #fff5f5;
+  --color-municipio-100: #ffecec;
+  --color-municipio-200: #ffcccc;
+  --color-municipio-300: #ff9a9a;
+  --color-municipio-400: #ff5f5f;
+  --color-municipio-500: #e11d1d;
+  --color-municipio-600: #c21a1a;
+  --color-municipio-700: #9b1515;
+  --color-municipio-800: #7a1010;
+  --color-municipio-900: #4c0a0a;
+  --color-municipioBlack: #0b0b0b;
+  
+  --border-radius-lg-xl: 12px;
 }
 
-@layer components {
-  /* Contenedor principal mejorado */
+/* Estilos base */
+html, body, #root { 
+  height: 100%; 
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #0f172a;
+}
+
+/* Componentes personalizados */
+.app-container {
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1.5rem 1rem;
+}
+
+@media (min-width: 640px) {
   .app-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6;
-  }
-
-  /* Tarjetas modernas */
-  .card {
-    @apply bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/60;
-    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.95) 100%);
-  }
-
-  /* Botones mejorados */
-  .btn-primary {
-    @apply bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 
-           text-white font-medium py-2.5 px-5 rounded-lg transition-all duration-200 
-           shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
-  }
-
-  .btn-secondary {
-    @apply bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 
-           font-medium py-2.5 px-5 rounded-lg transition-all duration-200 
-           shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
-  }
-
-  /* Inputs modernos */
-  .input-modern {
-    @apply w-full px-4 py-3 border border-gray-200 rounded-lg 
-           focus:ring-2 focus:ring-red-500 focus:border-transparent 
-           transition-all duration-200 bg-white/80 backdrop-blur-sm
-           placeholder-gray-400;
-  }
-
-  /* Navbar mejorado */
-  .navbar-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 
-           shadow-lg rounded-2xl;
-  }
-
-  /* Badges y estados */
-  .badge-success {
-    @apply bg-green-100 text-green-800 px-2.5 py-0.5 rounded-full text-xs font-medium;
-  }
-
-  .badge-warning {
-    @apply bg-yellow-100 text-yellow-800 px-2.5 py-0.5 rounded-full text-xs font-medium;
-  }
-
-  .badge-error {
-    @apply bg-red-100 text-red-800 px-2.5 py-0.5 rounded-full text-xs font-medium;
+    padding: 1.5rem 1.5rem;
   }
 }
 
-@layer utilities {
-  .text-muted {
-    @apply text-gray-600;
+@media (min-width: 1024px) {
+  .app-container {
+    padding: 2rem;
   }
-  
-  .glass-effect {
-    @apply bg-white/70 backdrop-blur-md border border-white/20;
-  }
+}
+
+.card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.95) 100%);
+  backdrop-filter: blur(6px);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.06);
+  border: 1px solid rgba(15,23,42,0.04);
+}
+
+.btn-primary {
+  background: linear-gradient(to right, #e11d1d, #c21a1a);
+  color: #fff;
+  padding: 0.6rem 1rem;
+  border-radius: 0.6rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(to right, #c21a1a, #9b1515);
+}
+
+.input-modern {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(6px);
+  transition: all 0.2s;
+}
+
+.input-modern:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: #e11d1d;
+  border-color: transparent;
+}
+
+.text-muted {
+  color: #64748b;
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
