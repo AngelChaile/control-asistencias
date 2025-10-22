@@ -31,22 +31,25 @@ export default function Navbar() {
   }
 
   return (
-    <header className="bg-municipio-500 text-white rounded-lg mx-4 my-4 p-4 shadow-lg flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-municipio-600 font-bold">M</div>
-        <div className="text-lg font-semibold">Gestión de Asistencias</div>
-      </div>
+    <header className="sticky top-4 z-40 app-container">
+      <div className="bg-white/90 backdrop-blur card flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-municipio-500 text-white rounded-lg flex items-center justify-center font-bold text-lg">M</div>
+          <div>
+            <div className="text-lg font-semibold">Gestión de Asistencias</div>
+            <div className="text-xs muted">Municipio</div>
+          </div>
+        </div>
 
-      <nav className="flex items-center gap-4">
-        {menus[user?.rol]?.map((item) => (
-          <Link key={item.name} to={item.path} aria-label={item.name} className="hover:underline font-medium">
-            {item.name}
-          </Link>
-        ))}
-        <button onClick={handleLogout} className="ml-2 bg-white text-municipio-700 px-3 py-1 rounded-md font-semibold hover:bg-gray-100">
-          Cerrar sesión
-        </button>
-      </nav>
+        <nav className="flex items-center gap-3">
+          {menus[user?.rol]?.map((item) => (
+            <Link key={item.name} to={item.path} aria-label={item.name} className="px-3 py-1 rounded-md hover:bg-gray-100 font-medium">
+              {item.name}
+            </Link>
+          ))}
+          <button onClick={handleLogout} className="ml-2 btn-primary">Cerrar sesión</button>
+        </nav>
+      </div>
     </header>
   );
 }

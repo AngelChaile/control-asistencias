@@ -44,10 +44,19 @@ export default function HomeAdmin() {
   }, [user]);
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold">Panel {rol === "rrhh" ? "Recursos Humanos" : `Área ${area}`}</h2>
+    <div className="app-container">
+      <div className="hero mb-4">
+        <h2 className="text-2xl font-semibold">Panel {rol === "rrhh" ? "Recursos Humanos" : `Área ${area}`}</h2>
+        <p className="muted mt-1">Resumen rápido de asistencias del día</p>
+      </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <div className="card">Tarjeta resumen 1</div>
+        <div className="card">Tarjeta resumen 2</div>
+        <div className="card">Tarjeta resumen 3</div>
+      </div>
+
+      <div className="card">
         {rol !== "empleado" && (
           <div className="my-4">
             <QrGenerator area={area} user={user} />

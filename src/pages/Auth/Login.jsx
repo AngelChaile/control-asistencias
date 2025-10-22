@@ -62,55 +62,30 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md"
-      >
-        <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">
-          Iniciar Sesión
-        </h2>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Correo electrónico
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400"
-            placeholder="tu@email.com"
-            required
-          />
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(180deg,#f8fafc 0%, #ffffff 50%)' }}>
+      <div className="w-full max-w-md">
+        <div className="text-center mb-6">
+          <div className="mx-auto w-16 h-16 rounded-lg bg-municipio-500 text-white flex items-center justify-center text-2xl font-bold">M</div>
+          <h1 className="text-2xl font-semibold mt-3">Bienvenido</h1>
+          <p className="muted">Inicia sesión para acceder al sistema</p>
         </div>
 
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Contraseña
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400"
-            placeholder="********"
-            required
-          />
-        </div>
+        <form onSubmit={handleLogin} className="card">
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Correo electrónico</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-base w-full" placeholder="tu@email.com" required />
+          </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full py-2 rounded-lg text-white font-medium transition-colors ${
-            loading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-municipio-500 hover:bg-municipio-600"
-          }`}
-        >
-          {loading ? "Ingresando..." : "Ingresar"}
-        </button>
-      </form>
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-1">Contraseña</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-base w-full" placeholder="********" required />
+          </div>
+
+          <button type="submit" disabled={loading} className={`w-full btn-primary ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}>
+            {loading ? 'Ingresando...' : 'Ingresar'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
