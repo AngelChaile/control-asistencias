@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { auth, onAuthStateChanged, firebaseSignOut } from "./firebase";
 import { getUserDoc } from "./utils/auth";
@@ -8,24 +8,24 @@ import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext"; // <-- agregado
 
-// 🔹 Páginas RRHH
-import HomeRRHH from "./pages/RRHH/HomeRRHH";
-import EmpleadosRRHH from "./pages/RRHH/Empleados";
-import AusenciasRRHH from "./pages/RRHH/Ausencias";
-import Usuarios from "./pages/RRHH/Usuarios";
-import QRGenerator from "./pages/RRHH/QRGenerator";
-import ReportesRRHH from "./pages/RRHH/Reportes"; 
+// 🔹 Páginas RRHH (lazy-loaded)
+const HomeRRHH = lazy(() => import("./pages/RRHH/HomeRRHH"));
+const EmpleadosRRHH = lazy(() => import("./pages/RRHH/Empleados"));
+const AusenciasRRHH = lazy(() => import("./pages/RRHH/Ausencias"));
+const Usuarios = lazy(() => import("./pages/RRHH/Usuarios"));
+const QRGenerator = lazy(() => import("./pages/RRHH/QRGenerator"));
+const ReportesRRHH = lazy(() => import("./pages/RRHH/Reportes"));
 
-// 🔹 Páginas Admin de área
-import HomeAdmin from "./pages/Admin/HomeAdmin";
-import AsistenciasAdmin from "./pages/Admin/AsistenciasAdmin";
-import AusenciasAdmin from "./pages/Admin/AusenciasAdmin";
-import EmpleadosAdmin from "./pages/Admin/EmpleadosAdmin";
-import ReportesAdmin from "./pages/Admin/ReportesAdmin";
+// 🔹 Páginas Admin (lazy-loaded)
+const HomeAdmin = lazy(() => import("./pages/Admin/HomeAdmin"));
+const AsistenciasAdmin = lazy(() => import("./pages/Admin/AsistenciasAdmin"));
+const AusenciasAdmin = lazy(() => import("./pages/Admin/AusenciasAdmin"));
+const EmpleadosAdmin = lazy(() => import("./pages/Admin/EmpleadosAdmin"));
+const ReportesAdmin = lazy(() => import("./pages/Admin/ReportesAdmin"));
 
-// 🔹 Páginas públicas y login
-import Scan from "./pages/Public/Scan";
-import Login from "./pages/Auth/Login";
+// 🔹 Públicas y login (lazy)
+const Scan = lazy(() => import("./pages/Public/Scan"));
+const Login = lazy(() => import("./pages/Auth/Login"));
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -72,7 +72,8 @@ export default function App() {
       {/* Navbar global según rol */}
       {user && user.rol !== "empleado" && <Navbar />}
 
-      <Routes>
+      <Suspense fallback={<div className="p-6">Cargando...</div>}>
+        <Routes>
         {/* Rutas públicas */}
         <Route path="/scan" element={<Scan />} />
         <Route
@@ -205,7 +206,8 @@ export default function App() {
           path="*"
           element={<div style={{ padding: 20 }}>Página no encontrada</div>}
         />
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

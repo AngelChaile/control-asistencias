@@ -30,9 +30,7 @@ export default function QrGenerator({ area = "", user }) {
       });
 
       const baseUrl = window.location.origin;
-      // link simplificado: sólo token
       const link = `${baseUrl}/scan?token=${encodeURIComponent(t)}&area=${encodeURIComponent(area)}`;
-
       const quickUrl = `https://quickchart.io/qr?text=${encodeURIComponent(link)}&size=400`;
 
       setToken(t);
@@ -46,17 +44,17 @@ export default function QrGenerator({ area = "", user }) {
   }
 
   return (
-    <div style={{ marginTop: 12 }}>
-      <button onClick={generarQR} disabled={loading}>
+    <div className="mt-3">
+      <button onClick={generarQR} disabled={loading} className="px-4 py-2 bg-municipio-500 text-white rounded-lg shadow">
         {loading ? "Generando..." : "Generar QR (2 min)"}
       </button>
 
       {qrLink && (
-        <div style={{ marginTop: 12 }}>
-          <p>Escaneá este QR (válido hasta {new Date(qrLink.expiresAt).toLocaleString()})</p>
-          <img src={qrLink.quickUrl} alt="QR" style={{ width: 220, height: 220 }} />
-          <p style={{ wordBreak: "break-all" }}><a href={qrLink.link} target="_blank">{qrLink.link}</a></p>
-          <p>Token: {token}</p>
+        <div className="mt-3 card p-4">
+          <p className="text-sm">Escaneá este QR (válido hasta {new Date(qrLink.expiresAt).toLocaleString()})</p>
+          <img src={qrLink.quickUrl} alt="QR" className="w-44 h-44 mt-2" />
+          <p className="break-all mt-2"><a href={qrLink.link} target="_blank" rel="noreferrer" className="text-municipio-700">{qrLink.link}</a></p>
+          <p className="text-xs mt-1">Token: {token}</p>
         </div>
       )}
     </div>
