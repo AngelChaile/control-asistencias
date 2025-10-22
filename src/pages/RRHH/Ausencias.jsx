@@ -31,43 +31,58 @@ export default function AusenciasRRHH() {
   }, [user]); */
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Ausencias</h2>
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold">Ausencias</h2>
 
-      <div style={{ marginBottom: 12 }}>
-        <label>Área: <input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Dejar vacío para ver todas" /></label>
-        <label style={{ marginLeft: 8 }}>Desde: <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></label>
-        <label style={{ marginLeft: 8 }}>Hasta: <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></label>
-        <button onClick={handleSearch} style={{ marginLeft: 8 }}>Buscar</button>
-        <ExportExcel data={result} filename={`ausencias_rrhh_${area || "all"}.xlsx`} />
+        <div className="flex flex-wrap gap-3 mt-4 items-end">
+          <div>
+            <label className="text-sm">Área</label>
+            <input className="border rounded px-3 py-2 block" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Dejar vacío para ver todas" />
+          </div>
+          <div>
+            <label className="text-sm">Desde</label>
+            <input className="border rounded px-3 py-2 block" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm">Hasta</label>
+            <input className="border rounded px-3 py-2 block" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleSearch} className="px-4 py-2 bg-municipio-500 text-white rounded">Buscar</button>
+            <ExportExcel data={result} filename={`ausencias_rrhh_${area || "all"}.xlsx`} />
+          </div>
+        </div>
+
+        {loading ? <p className="text-gray-500 mt-4">Cargando...</p> : result.length === 0 ? <p className="text-gray-500 mt-4">No hay ausencias.</p> : (
+          <div className="overflow-x-auto mt-4">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Legajo</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Nombre</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Área</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Justificado</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Observaciones</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Fecha</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {result.map((r) => (
+                  <tr key={r.id || `${r.legajo}-${r.fecha}`}>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.legajo}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.nombre} {r.apellido}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.lugarTrabajo}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.justificado ? "Sí" : "No"}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.justificativo || ""}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.fecha}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
-      {loading ? <p>Cargando...</p> : result.length === 0 ? <p>No hay ausencias.</p> : (
-        <table border="1" cellPadding="8">
-          <thead>
-            <tr>
-              <th>Legajo</th>
-              <th>Nombre</th>
-              <th>Área</th>
-              <th>Justificado</th>
-              <th>Observaciones</th>
-              <th>Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.map((r) => (
-              <tr key={r.id || `${r.legajo}-${r.fecha}`}>
-                <td>{r.legajo}</td>
-                <td>{r.nombre} {r.apellido}</td>
-                <td>{r.lugarTrabajo}</td>
-                <td>{r.justificado ? "Sí" : "No"}</td>
-                <td>{r.justificativo || ""}</td>
-                <td>{r.fecha}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
     </div>
   );
 }

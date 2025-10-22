@@ -3,9 +3,11 @@ import Scan from "../Public/Scan";
 
 export default function Fichar() {
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Fichar Asistencia</h2>
-      <Scan />
+    <div className="max-w-4xl mx-auto p-6">
+      <h2 className="text-xl font-semibold mb-4">Fichar Asistencia</h2>
+      <div className="bg-white rounded-lg shadow p-4">
+        <Scan />
+      </div>
     </div>
   );
 }

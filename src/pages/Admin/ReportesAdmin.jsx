@@ -31,48 +31,58 @@ export default function ReportesAdmin() {
   }
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Reportes</h2>
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold">Reportes</h2>
 
-      <div style={{ marginBottom: 12 }}>
-        <label>Desde: <input type="date" value={filters.desde} onChange={(e) => setFilters({ ...filters, desde: e.target.value })} /></label>
-        <label style={{ marginLeft: 8 }}>Hasta: <input type="date" value={filters.hasta} onChange={(e) => setFilters({ ...filters, hasta: e.target.value })} /></label>
-        <input placeholder="Legajo" value={filters.legajo} onChange={(e) => setFilters({ ...filters, legajo: e.target.value })} style={{ marginLeft: 8 }} />
-        <input placeholder="Nombre/Apellido" value={filters.nombre} onChange={(e) => setFilters({ ...filters, nombre: e.target.value })} style={{ marginLeft: 8 }} />
-        <button onClick={handleSearch} style={{ marginLeft: 8 }}>Buscar</button>
-        <ExportExcel data={result} filename={`reporte_${user?.lugarTrabajo || "all"}.xlsx`} />
+        <div className="flex flex-wrap gap-3 mt-4 items-center">
+          <div>
+            <label className="text-sm">Desde</label>
+            <input className="block border rounded px-3 py-2" type="date" value={filters.desde} onChange={(e) => setFilters({ ...filters, desde: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-sm">Hasta</label>
+            <input className="block border rounded px-3 py-2" type="date" value={filters.hasta} onChange={(e) => setFilters({ ...filters, hasta: e.target.value })} />
+          </div>
+          <input className="border rounded px-3 py-2" placeholder="Legajo" value={filters.legajo} onChange={(e) => setFilters({ ...filters, legajo: e.target.value })} />
+          <input className="border rounded px-3 py-2" placeholder="Nombre/Apellido" value={filters.nombre} onChange={(e) => setFilters({ ...filters, nombre: e.target.value })} />
+          <button onClick={handleSearch} className="px-4 py-2 bg-municipio-500 text-white rounded">Buscar</button>
+          <ExportExcel data={result} filename={`reporte_${user?.lugarTrabajo || "all"}.xlsx`} />
+        </div>
+
+        {loading ? <p className="text-gray-500 mt-4">Cargando...</p> : result.length === 0 ? <p className="text-gray-500 mt-4">No hay resultados.</p> : (
+          <div className="overflow-x-auto mt-4">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Legajo</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Nombre</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Apellido</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Fecha</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Hora</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Tipo</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Área</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Justificado</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {result.map((r) => (
+                  <tr key={r.id || `${r.legajo}-${r.fecha}-${r.hora}`}>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.legajo}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.nombre}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.apellido}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.fecha}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.hora}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.tipo}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.lugarTrabajo}</td>
+                    <td className="px-4 py-2 text-sm text-gray-800">{r.justificado ? "Sí" : "No"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
-      {loading ? <p>Cargando...</p> : result.length === 0 ? <p>No hay resultados.</p> : (
-        <table border="1" cellPadding="8">
-          <thead>
-            <tr>
-              <th>Legajo</th>
-              <th>Nombre</th>
-              <th>Apellido</th>
-              <th>Fecha</th>
-              <th>Hora</th>
-              <th>Tipo</th>
-              <th>Área</th>
-              <th>Justificado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.map((r) => (
-              <tr key={r.id || `${r.legajo}-${r.fecha}-${r.hora}`}>
-                <td>{r.legajo}</td>
-                <td>{r.nombre}</td>
-                <td>{r.apellido}</td>
-                <td>{r.fecha}</td>
-                <td>{r.hora}</td>
-                <td>{r.tipo}</td>
-                <td>{r.lugarTrabajo}</td>
-                <td>{r.justificado ? "Sí" : "No"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
     </div>
   );
 }

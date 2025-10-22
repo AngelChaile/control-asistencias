@@ -40,51 +40,57 @@ export default function Usuarios() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Usuarios</h2>
-      <table border="1" cellPadding="6" style={{ marginTop: 12, width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Nombre</th>
-            <th>Apellido</th>
-            <th>Legajo</th>
-            <th>Rol</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {usuarios.map(u => (
-            <tr key={u.id}>
-              <td>{u.email}</td>
-              <td>{u.nombre}</td>
-              <td>{u.apellido}</td>
-              <td>{u.legajo}</td>
-              <td>{u.rol}</td>
-              <td>
-                <button onClick={() => handleEditar(u)}>✏️</button>
-                <button onClick={() => handleEliminar(u.id)}>🗑️</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold">Usuarios</h2>
+        <div className="overflow-x-auto mt-4">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Email</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Nombre</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Apellido</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Legajo</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Rol</th>
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {usuarios.map(u => (
+                <tr key={u.id}>
+                  <td className="px-4 py-2 text-sm text-gray-800">{u.email}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">{u.nombre}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">{u.apellido}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">{u.legajo}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">{u.rol}</td>
+                  <td className="px-4 py-2 text-sm text-gray-800">
+                    <button onClick={() => handleEditar(u)} className="mr-2 px-2 py-1 bg-municipio-100 text-municipio-700 rounded">✏️</button>
+                    <button onClick={() => handleEliminar(u.id)} className="px-2 py-1 bg-red-600 text-white rounded">🗑️</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      <h3 style={{ marginTop: 20 }}>{editingId ? "Editar" : "Nuevo"} usuario</h3>
-      <form onSubmit={handleGuardar}>
-        <input placeholder="Email" value={nuevo.email} onChange={e => setNuevo({...nuevo, email: e.target.value})} required/>
-        <input placeholder="Nombre" value={nuevo.nombre} onChange={e => setNuevo({...nuevo, nombre: e.target.value})} required/>
-        <input placeholder="Apellido" value={nuevo.apellido} onChange={e => setNuevo({...nuevo, apellido: e.target.value})} required/>
-        <input placeholder="Legajo" value={nuevo.legajo} onChange={e => setNuevo({...nuevo, legajo: e.target.value})} required/>
-        <input placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={e => setNuevo({...nuevo, lugarTrabajo: e.target.value})} required/>
-        <input placeholder="Contraseña" value={nuevo.contraseña} onChange={e => setNuevo({...nuevo, contraseña: e.target.value})} required/>
-        <select value={nuevo.rol} onChange={e => setNuevo({...nuevo, rol: e.target.value})}>
-          <option value="empleado">Empleado</option>
-          <option value="admin">Admin</option>
-          <option value="rrhh">RRHH</option>
-        </select>
-        <button type="submit">{editingId ? "Guardar cambios" : "Crear usuario"}</button>
-      </form>
+        <h3 className="mt-6 text-lg font-medium">{editingId ? "Editar" : "Nuevo"} usuario</h3>
+        <form onSubmit={handleGuardar} className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input className="border rounded px-3 py-2" placeholder="Email" value={nuevo.email} onChange={e => setNuevo({...nuevo, email: e.target.value})} required/>
+          <input className="border rounded px-3 py-2" placeholder="Nombre" value={nuevo.nombre} onChange={e => setNuevo({...nuevo, nombre: e.target.value})} required/>
+          <input className="border rounded px-3 py-2" placeholder="Apellido" value={nuevo.apellido} onChange={e => setNuevo({...nuevo, apellido: e.target.value})} required/>
+          <input className="border rounded px-3 py-2" placeholder="Legajo" value={nuevo.legajo} onChange={e => setNuevo({...nuevo, legajo: e.target.value})} required/>
+          <input className="border rounded px-3 py-2" placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={e => setNuevo({...nuevo, lugarTrabajo: e.target.value})} required/>
+          <input className="border rounded px-3 py-2" placeholder="Contraseña" value={nuevo.contraseña} onChange={e => setNuevo({...nuevo, contraseña: e.target.value})} required/>
+          <select className="border rounded px-3 py-2" value={nuevo.rol} onChange={e => setNuevo({...nuevo, rol: e.target.value})}>
+            <option value="empleado">Empleado</option>
+            <option value="admin">Admin</option>
+            <option value="rrhh">RRHH</option>
+          </select>
+          <div className="flex items-center gap-2">
+            <button type="submit" className="px-4 py-2 bg-municipio-500 text-white rounded">{editingId ? "Guardar cambios" : "Crear usuario"}</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

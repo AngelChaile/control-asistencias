@@ -127,22 +127,17 @@ export default function AusenciasAdmin() {
   }
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Ausencias - Área {lugar}</h2>
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold">Ausencias - Área {lugar}</h2>
 
-      <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
-        <label>
-          Fecha:
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            style={{ marginLeft: 8 }}
-          />
-        </label>
+        <div className="flex items-center gap-4 mt-4">
+          <label className="flex items-center gap-2">
+            <span className="text-sm">Fecha:</span>
+            <input className="border rounded px-3 py-1" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+          </label>
 
-        <ExportExcel
-          data={[
+          <ExportExcel data={[
             ...faltantes.map((f) => {
               const aus = getAusenciaForDate(f.legajo, selectedDate);
               return {
@@ -156,123 +151,98 @@ export default function AusenciasAdmin() {
               };
             }),
             ...ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate),
-          ]}
-          filename={`ausencias_${lugar}_${selectedDate}.xlsx`}
-        />
+          ]} filename={`ausencias_${lugar}_${selectedDate}.xlsx`} />
+        </div>
+
+        {loading ? (
+          <p className="text-gray-500 mt-4">Cargando...</p>
+        ) : (
+          <>
+            <h3 className="mt-6 text-lg font-medium">Empleados (fecha: {selectedDate})</h3>
+            {faltantes.length === 0 ? (
+              <p className="text-gray-500 mt-2">No hay empleados sin fichar en la fecha seleccionada.</p>
+            ) : (
+              <div className="overflow-x-auto mt-3">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Legajo</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Nombre</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Apellido</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Justificado</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Justificativo</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Fecha</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {faltantes.map((e) => {
+                      const aus = getAusenciaForDate(e.legajo, selectedDate);
+                      return (
+                        <tr key={`${e.legajo}-${selectedDate}`}>
+                          <td className="px-4 py-2 text-sm text-gray-800">{e.legajo}</td>
+                          <td className="px-4 py-2 text-sm text-gray-800">{e.nombre}</td>
+                          <td className="px-4 py-2 text-sm text-gray-800">{e.apellido}</td>
+                          <td className="px-4 py-2 text-sm text-gray-800">{aus ? (aus.justificado ? "Sí" : "No") : "—"}</td>
+                          <td className="px-4 py-2 text-sm text-gray-800">{aus ? aus.justificativo || "" : ""}</td>
+                          <td className="px-4 py-2 text-sm text-gray-800">{aus ? aus.fecha : toLocaleDateStr(parseInputDateToLocal(selectedDate))}</td>
+                          <td className="px-4 py-2 text-sm text-gray-800">
+                            {edit?.legajo === e.legajo ? (
+                              <div className="flex flex-wrap gap-2 items-center">
+                                <input className="border rounded px-2 py-1" type="date" value={edit.fechaInput} onChange={(ev) => setEdit({ ...edit, fechaInput: ev.target.value })} />
+                                <input className="border rounded px-3 py-1" placeholder="Justificativo" value={edit.justificativo || ""} onChange={(ev) => setEdit({ ...edit, justificativo: ev.target.value })} />
+                                <button onClick={() => handleSaveJust(e.legajo, edit.justificativo || "", true, edit.fechaInput)} className="px-3 py-1 bg-municipio-500 text-white rounded">Guardar (Justificar)</button>
+                                <button onClick={() => handleSaveJust(e.legajo, "", false, edit.fechaInput)} className="px-3 py-1 bg-gray-200 rounded">Guardar (Sin justificar)</button>
+                                <button onClick={() => setEdit(null)} className="px-3 py-1 border rounded">Cancelar</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setEdit({ legajo: e.legajo, justificativo: aus?.justificativo || "", fechaInput: aus?.fecha ? inputDateFromLocaleStr(aus.fecha) : selectedDate })} className="px-3 py-1 bg-municipio-100 text-municipio-700 rounded">{aus ? "Editar justificativo" : "Agregar justificativo"}</button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <h3 className="mt-6 text-lg font-medium">Ausencias registradas (fecha seleccionada)</h3>
+            {ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length === 0 ? (
+              <p className="text-gray-500 mt-2">No hay ausencias registradas para la fecha seleccionada.</p>
+            ) : (
+              <div className="overflow-x-auto mt-3">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Legajo</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Nombre</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Apellido</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Área</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Justificado</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Justificativo</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).map((a) => (
+                      <tr key={a.id || `${a.legajo}-${a.fecha}`}>
+                        <td className="px-4 py-2 text-sm text-gray-800">{a.legajo}</td>
+                        <td className="px-4 py-2 text-sm text-gray-800">{a.nombre || ""}</td>
+                        <td className="px-4 py-2 text-sm text-gray-800">{a.apellido || ""}</td>
+                        <td className="px-4 py-2 text-sm text-gray-800">{a.lugarTrabajo || ""}</td>
+                        <td className="px-4 py-2 text-sm text-gray-800">{a.justificado ? "Sí" : "No"}</td>
+                        <td className="px-4 py-2 text-sm text-gray-800">{a.justificativo || ""}</td>
+                        <td className="px-4 py-2 text-sm text-gray-800">{a.fecha || ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
       </div>
-
-      {loading ? (
-        <p>Cargando...</p>
-      ) : (
-        <>
-          <h3>Empleados (fecha: {selectedDate})</h3>
-          {faltantes.length === 0 ? (
-            <p>No hay empleados sin fichar en la fecha seleccionada.</p>
-          ) : (
-            <table border="1" cellPadding="8">
-              <thead>
-                <tr>
-                  <th>Legajo</th>
-                  <th>Nombre</th>
-                  <th>Apellido</th>
-                  <th>Justificado</th>
-                  <th>Justificativo</th>
-                  <th>Fecha</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {faltantes.map((e) => {
-                  const aus = getAusenciaForDate(e.legajo, selectedDate);
-                  return (
-                    <tr key={`${e.legajo}-${selectedDate}`}>
-                      <td>{e.legajo}</td>
-                      <td>{e.nombre}</td>
-                      <td>{e.apellido}</td>
-                      <td>{aus ? (aus.justificado ? "Sí" : "No") : "—"}</td>
-                      <td>{aus ? aus.justificativo || "" : ""}</td>
-                      <td>{aus ? aus.fecha : toLocaleDateStr(parseInputDateToLocal(selectedDate))}</td>
-                      <td>
-                        {edit?.legajo === e.legajo ? (
-                          <>
-                            <input
-                              type="date"
-                              value={edit.fechaInput}
-                              onChange={(ev) => setEdit({ ...edit, fechaInput: ev.target.value })}
-                              style={{ marginRight: 6 }}
-                            />
-                            <input
-                              placeholder="Justificativo"
-                              value={edit.justificativo || ""}
-                              onChange={(ev) => setEdit({ ...edit, justificativo: ev.target.value })}
-                              style={{ marginRight: 6 }}
-                            />
-                            <button onClick={() => handleSaveJust(e.legajo, edit.justificativo || "", true, edit.fechaInput)}>
-                              Guardar (Justificar)
-                            </button>
-                            <button onClick={() => handleSaveJust(e.legajo, "", false, edit.fechaInput)} style={{ marginLeft: 4 }}>
-                              Guardar (Sin justificar)
-                            </button>
-                            <button onClick={() => setEdit(null)} style={{ marginLeft: 6 }}>
-                              Cancelar
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() =>
-                              setEdit({
-                                legajo: e.legajo,
-                                justificativo: aus?.justificativo || "",
-                                fechaInput: aus?.fecha ? inputDateFromLocaleStr(aus.fecha) : selectedDate,
-                              })
-                            }
-                          >
-                            {aus ? "Editar justificativo" : "Agregar justificativo"}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-
-          <h3 style={{ marginTop: 20 }}>Ausencias registradas (fecha seleccionada)</h3>
-          {ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length === 0 ? (
-            <p>No hay ausencias registradas para la fecha seleccionada.</p>
-          ) : (
-            <table border="1" cellPadding="8">
-              <thead>
-                <tr>
-                  <th>Legajo</th>
-                  <th>Nombre</th>
-                  <th>Apellido</th>
-                  <th>Área</th>
-                  <th>Justificado</th>
-                  <th>Justificativo</th>
-                  <th>Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ausencias
-                  .filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate)
-                  .map((a) => (
-                    <tr key={a.id || `${a.legajo}-${a.fecha}`}>
-                      <td>{a.legajo}</td>
-                      <td>{a.nombre || ""}</td>
-                      <td>{a.apellido || ""}</td>
-                      <td>{a.lugarTrabajo || ""}</td>
-                      <td>{a.justificado ? "Sí" : "No"}</td>
-                      <td>{a.justificativo || ""}</td>
-                      <td>{a.fecha || ""}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          )}
-        </>
-      )}
     </div>
   );
 }

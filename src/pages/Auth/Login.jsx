@@ -105,7 +105,7 @@ export default function Login() {
           className={`w-full py-2 rounded-lg text-white font-medium transition-colors ${
             loading
               ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-500 hover:bg-blue-600"
+              : "bg-municipio-500 hover:bg-municipio-600"
           }`}
         >
           {loading ? "Ingresando..." : "Ingresar"}

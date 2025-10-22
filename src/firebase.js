@@ -31,9 +31,25 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+let app = null;
+let auth = null;
+let db = null;
+
+try {
+  // Sólo inicializamos Firebase si existe la API key (evita fallos en dev sin .env)
+  if (firebaseConfig.apiKey) {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } else {
+    console.warn("Firebase no configurado: VITE_FIREBASE_API_KEY ausente. Firebase deshabilitado en este entorno.");
+  }
+} catch (err) {
+  console.warn("Error inicializando Firebase (deshabilitado en dev):", err && err.message ? err.message : err);
+  app = null;
+  auth = null;
+  db = null;
+}
 
 export {
   auth,

@@ -46,7 +46,7 @@ export function exportToExcel(filename, rows = []) {
 export default function ExportExcel({ data = [], filename = "report.xlsx", children }) {
   const onClick = () => exportToExcel(filename, data);
   return (
-    <button type="button" onClick={onClick} className="bg-green-600 text-white px-3 py-1 rounded">
+    <button type="button" onClick={onClick} className="bg-municipio-500 text-white px-3 py-1 rounded">
       {children || "Exportar Excel"}
     </button>
   );

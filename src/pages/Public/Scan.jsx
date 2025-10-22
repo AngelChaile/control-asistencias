@@ -111,61 +111,56 @@ export default function Scan() {
   }
 
   return (
-    <div style={{ padding: 20, maxWidth: 480, margin: "auto" }}>
-      <h2>Registro de Asistencia</h2>
-      <p>{message}</p>
+    <div className="max-w-md mx-auto p-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold">Registro de Asistencia</h2>
+        <p className="text-sm text-gray-600 mt-2">{message}</p>
 
-      {!showRegistro && (
-        <form onSubmit={handleBuscar}>
-          <label>
-            Legajo:
+        {!showRegistro && (
+          <form onSubmit={handleBuscar} className="mt-4">
+            <label className="block text-sm font-medium mb-1">Legajo</label>
             <input
+              className="w-full border rounded px-3 py-2"
               value={legajo}
               onChange={(e) => setLegajo(e.target.value)}
               disabled={bloqueado || !tokenValido}
               placeholder="Ingrese su legajo"
             />
-          </label>
-          <div style={{ marginTop: 8 }}>
-            <button type="submit" disabled={loading || !tokenValido || bloqueado}>
-              {loading ? "Buscando..." : "Buscar / Fichar"}
-            </button>
-{/*             <button type="button" onClick={() => navigate("/login")} style={{ marginLeft: 8 }}>
-              Volver al login
-            </button> */}
-          </div>
-        </form>
-      )}
+            <div className="mt-3">
+              <button type="submit" disabled={loading || !tokenValido || bloqueado} className="px-4 py-2 bg-municipio-500 text-white rounded">
+                {loading ? "Buscando..." : "Buscar / Fichar"}
+              </button>
+            </div>
+          </form>
+        )}
 
-      {empleado && (
-        <div style={{ marginTop: 16 }}>
-          <h3>{empleado.nombre} {empleado.apellido}</h3>
-          <p>Legajo: {empleado.legajo}</p>
-          <p>Lugar: {empleado.lugarTrabajo}</p>
-          <button onClick={handleRegistrarAsistencia} disabled={loading || !tokenValido || bloqueado}>
-            {loading ? "Registrando..." : "Registrar asistencia"}
-          </button>
-        </div>
-      )}
-
-      {showRegistro && (
-        <form onSubmit={handleGuardarNuevo} style={{ marginTop: 12 }}>
-          <h3>Registro de nuevo empleado</h3>
-          <input placeholder="Nombre" value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} />
-          <input placeholder="Apellido" value={nuevo.apellido} onChange={(e) => setNuevo({ ...nuevo, apellido: e.target.value })} />
-          <input placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={(e) => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
-          <input placeholder="Secretaria" value={nuevo.secretaria} onChange={(e) => setNuevo({ ...nuevo, secretaria: e.target.value })} />
-          <input placeholder="Horario" value={nuevo.horario} onChange={(e) => setNuevo({ ...nuevo, horario: e.target.value })} />
-          <div style={{ marginTop: 8 }}>
-            <button type="submit" disabled={loading || !tokenValido}>
-              {loading ? "Guardando..." : "Guardar y fichar"}
+        {empleado && (
+          <div className="mt-4">
+            <h3 className="text-lg font-medium">{empleado.nombre} {empleado.apellido}</h3>
+            <p className="text-sm text-gray-700">Legajo: {empleado.legajo}</p>
+            <p className="text-sm text-gray-700">Lugar: {empleado.lugarTrabajo}</p>
+            <button onClick={handleRegistrarAsistencia} disabled={loading || !tokenValido || bloqueado} className="mt-3 px-4 py-2 bg-municipio-500 text-white rounded">
+              {loading ? "Registrando..." : "Registrar asistencia"}
             </button>
-{/*             <button type="button" onClick={() => navigate("/login")} style={{ marginLeft: 8 }}>
-              Volver al login
-            </button> */}
           </div>
-        </form>
-      )}
+        )}
+
+        {showRegistro && (
+          <form onSubmit={handleGuardarNuevo} className="mt-4">
+            <h3 className="text-lg font-medium">Registro de nuevo empleado</h3>
+            <div className="grid grid-cols-1 gap-2 mt-2">
+              <input className="border rounded px-3 py-2" placeholder="Nombre" value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} />
+              <input className="border rounded px-3 py-2" placeholder="Apellido" value={nuevo.apellido} onChange={(e) => setNuevo({ ...nuevo, apellido: e.target.value })} />
+              <input className="border rounded px-3 py-2" placeholder="Lugar de trabajo" value={nuevo.lugarTrabajo} onChange={(e) => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} />
+              <input className="border rounded px-3 py-2" placeholder="Secretaria" value={nuevo.secretaria} onChange={(e) => setNuevo({ ...nuevo, secretaria: e.target.value })} />
+              <input className="border rounded px-3 py-2" placeholder="Horario" value={nuevo.horario} onChange={(e) => setNuevo({ ...nuevo, horario: e.target.value })} />
+            </div>
+            <div className="mt-3">
+              <button type="submit" disabled={loading || !tokenValido} className="px-4 py-2 bg-municipio-500 text-white rounded">{loading ? "Guardando..." : "Guardar y fichar"}</button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
