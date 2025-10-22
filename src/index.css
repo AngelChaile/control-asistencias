@@ -1,42 +1,80 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Rubik:wght@500;600&display=swap');
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Diseño moderno: fondo suave, tipografías y componentes */
 @layer base {
-  html, body, #root { height: 100%; }
-  body { font-family: 'Rubik', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto; background: linear-gradient(180deg,#fbfbfe 0%, #f6f7fb 60%); color: #0f172a; }
+  html, body, #root { 
+    height: 100%; 
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  
+  body {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    color: #0f172a;
+  }
 }
 
 @layer components {
-  .app-container { max-width: 88rem; margin-left: auto; margin-right: auto; padding: 2rem; }
-  .card { background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.95)); backdrop-filter: blur(6px); border-radius: .75rem; padding: 1.25rem; box-shadow: 0 10px 30px rgba(15,23,42,0.06); border: 1px solid rgba(15,23,42,0.04); }
-  .hero { background: linear-gradient(90deg, rgba(225,29,29,0.06), rgba(0,0,0,0)); padding: 1.75rem; border-radius: .75rem; }
+  /* Contenedor principal mejorado */
+  .app-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6;
+  }
 
-  /* Paleta municipio explícita */
-  .bg-municipio-50 { background-color: #fff5f5; }
-  .bg-municipio-100 { background-color: #ffecec; }
-  .bg-municipio-200 { background-color: #ffcccc; }
-  .bg-municipio-300 { background-color: #ff9a9a; }
-  .bg-municipio-400 { background-color: #ff5f5f; }
-  .bg-municipio-500 { background-color: #e11d1d; }
-  .bg-municipio-600 { background-color: #c21a1a; }
-  .bg-municipio-700 { background-color: #9b1515; }
-  .bg-municipio-800 { background-color: #7a1010; }
-  .bg-municipio-900 { background-color: #4c0a0a; }
+  /* Tarjetas modernas */
+  .card {
+    @apply bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/60;
+    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.95) 100%);
+  }
 
-  .text-municipio-500 { color: #e11d1d; }
-  .text-municipio-700 { color: #9b1515; }
-  .text-municipio-800 { color: #7a1010; }
+  /* Botones mejorados */
+  .btn-primary {
+    @apply bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 
+           text-white font-medium py-2.5 px-5 rounded-lg transition-all duration-200 
+           shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+  }
 
-  /* Controles */
-  .input-base { border: 1px solid rgba(15,23,42,0.08); padding: .6rem .75rem; border-radius: .6rem; background: #fff; }
-  .input-base:focus { outline: none; box-shadow: 0 0 0 4px rgba(225,29,29,0.06); }
-  .btn-primary { background: #e11d1d; color: #fff; padding: .6rem 1rem; border-radius: .6rem; font-weight: 600; }
-  .btn-primary:hover { background: #c21a1a; }
+  .btn-secondary {
+    @apply bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 
+           font-medium py-2.5 px-5 rounded-lg transition-all duration-200 
+           shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+  }
 
-  .muted { color: rgba(15,23,42,0.6); }
+  /* Inputs modernos */
+  .input-modern {
+    @apply w-full px-4 py-3 border border-gray-200 rounded-lg 
+           focus:ring-2 focus:ring-red-500 focus:border-transparent 
+           transition-all duration-200 bg-white/80 backdrop-blur-sm
+           placeholder-gray-400;
+  }
+
+  /* Navbar mejorado */
+  .navbar-card {
+    @apply bg-white/80 backdrop-blur-md border border-white/20 
+           shadow-lg rounded-2xl;
+  }
+
+  /* Badges y estados */
+  .badge-success {
+    @apply bg-green-100 text-green-800 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-error {
+    @apply bg-red-100 text-red-800 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
 }
 
-
+@layer utilities {
+  .text-muted {
+    @apply text-gray-600;
+  }
+  
+  .glass-effect {
+    @apply bg-white/70 backdrop-blur-md border border-white/20;
+  }
+}
