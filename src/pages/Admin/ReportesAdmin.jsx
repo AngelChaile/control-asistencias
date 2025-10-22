@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
-import { fetchAsistenciasByRange } from "../../utils/asistencia"; // adapta
+import { fetchAsistenciasByRange } from "../../utils/asistencia";
 
 export default function ReportesAdmin() {
   const { user } = useAuth();
@@ -19,7 +19,6 @@ export default function ReportesAdmin() {
     try {
       const desde = filters.desde ? new Date(filters.desde) : null;
       const hasta = filters.hasta ? new Date(filters.hasta) : null;
-      // si es admin limitar por área, si rrhh pasar null para todas las áreas
       const areaFilter = user?.rol === "admin" ? user?.lugarTrabajo : null;
       const data = await fetchAsistenciasByRange({ desde, hasta, legajo: filters.legajo, nombre: filters.nombre, area: areaFilter });
       setResult(data || []);
@@ -30,56 +29,193 @@ export default function ReportesAdmin() {
     }
   }
 
-  return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold">Reportes</h2>
+  const handleReset = () => {
+    setFilters({
+      desde: "",
+      hasta: "",
+      legajo: "",
+      nombre: "",
+    });
+    setResult([]);
+  };
 
-        <div className="flex flex-wrap gap-3 mt-4 items-center">
+  return (
+    <div className="app-container">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Reportes y Consultas</h1>
+        <p className="text-gray-600">Genera reportes personalizados de asistencias</p>
+      </div>
+
+      <div className="card p-6 space-y-6">
+        {/* Filtros de Búsqueda */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="text-sm">Desde</label>
-            <input className="block border rounded px-3 py-2" type="date" value={filters.desde} onChange={(e) => setFilters({ ...filters, desde: e.target.value })} />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Fecha desde</label>
+            <input 
+              className="input-modern" 
+              type="date" 
+              value={filters.desde} 
+              onChange={(e) => setFilters({ ...filters, desde: e.target.value })} 
+            />
           </div>
           <div>
-            <label className="text-sm">Hasta</label>
-            <input className="block border rounded px-3 py-2" type="date" value={filters.hasta} onChange={(e) => setFilters({ ...filters, hasta: e.target.value })} />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Fecha hasta</label>
+            <input 
+              className="input-modern" 
+              type="date" 
+              value={filters.hasta} 
+              onChange={(e) => setFilters({ ...filters, hasta: e.target.value })} 
+            />
           </div>
-          <input className="border rounded px-3 py-2" placeholder="Legajo" value={filters.legajo} onChange={(e) => setFilters({ ...filters, legajo: e.target.value })} />
-          <input className="border rounded px-3 py-2" placeholder="Nombre/Apellido" value={filters.nombre} onChange={(e) => setFilters({ ...filters, nombre: e.target.value })} />
-          <button onClick={handleSearch} className="px-4 py-2 bg-municipio-500 text-white rounded">Buscar</button>
-          <ExportExcel data={result} filename={`reporte_${user?.lugarTrabajo || "all"}.xlsx`} />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Legajo</label>
+            <input 
+              className="input-modern" 
+              placeholder="Filtrar por legajo..." 
+              value={filters.legajo} 
+              onChange={(e) => setFilters({ ...filters, legajo: e.target.value })} 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Nombre/Apellido</label>
+            <input 
+              className="input-modern" 
+              placeholder="Filtrar por nombre..." 
+              value={filters.nombre} 
+              onChange={(e) => setFilters({ ...filters, nombre: e.target.value })} 
+            />
+          </div>
         </div>
 
-        {loading ? <p className="text-gray-500 mt-4">Cargando...</p> : result.length === 0 ? <p className="text-gray-500 mt-4">No hay resultados.</p> : (
-          <div className="overflow-x-auto mt-4">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Legajo</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Nombre</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Apellido</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Fecha</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Hora</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Tipo</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Área</th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Justificado</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {result.map((r) => (
-                  <tr key={r.id || `${r.legajo}-${r.fecha}-${r.hora}`}>
-                    <td className="px-4 py-2 text-sm text-gray-800">{r.legajo}</td>
-                    <td className="px-4 py-2 text-sm text-gray-800">{r.nombre}</td>
-                    <td className="px-4 py-2 text-sm text-gray-800">{r.apellido}</td>
-                    <td className="px-4 py-2 text-sm text-gray-800">{r.fecha}</td>
-                    <td className="px-4 py-2 text-sm text-gray-800">{r.hora}</td>
-                    <td className="px-4 py-2 text-sm text-gray-800">{r.tipo}</td>
-                    <td className="px-4 py-2 text-sm text-gray-800">{r.lugarTrabajo}</td>
-                    <td className="px-4 py-2 text-sm text-gray-800">{r.justificado ? "Sí" : "No"}</td>
+        {/* Controles de Acción */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+          <div className="flex gap-3">
+            <button onClick={handleSearch} className="btn-primary">
+              🔍 Generar Reporte
+            </button>
+            <button onClick={handleReset} className="btn-secondary">
+              🗑️ Limpiar Filtros
+            </button>
+          </div>
+          
+          {result.length > 0 && (
+            <ExportExcel 
+              data={result} 
+              filename={`reporte_${user?.lugarTrabajo || "all"}_${filters.desde || 'inicio'}_${filters.hasta || 'fin'}.xlsx`}
+            >
+              📊 Exportar Excel
+            </ExportExcel>
+          )}
+        </div>
+
+        {/* Resultados */}
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-municipio-500"></div>
+          </div>
+        ) : result.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-6xl mb-4">📈</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Sin resultados</h3>
+            <p className="text-gray-600">
+              {filters.desde || filters.hasta || filters.legajo || filters.nombre
+                ? "No se encontraron registros con los filtros aplicados"
+                : "Utiliza los filtros para generar un reporte personalizado"
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Resumen del Reporte */}
+            <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-900">{result.length}</div>
+                <div className="text-sm text-gray-600">Total registros</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {result.filter(r => r.tipo === 'entrada').length}
+                </div>
+                <div className="text-sm text-gray-600">Entradas</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {result.filter(r => r.tipo === 'salida').length}
+                </div>
+                <div className="text-sm text-gray-600">Salidas</div>
+              </div>
+            </div>
+
+            {/* Tabla de Resultados */}
+            <div className="overflow-hidden rounded-lg border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {result.map((r) => (
+                    <tr key={r.id || `${r.legajo}-${r.fecha}-${r.hora}`} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                            <span className="text-gray-600 font-medium text-sm">
+                              {r.nombre?.[0]}{r.apellido?.[0]}
+                            </span>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {r.nombre} {r.apellido}
+                            </div>
+                            <div className="text-sm text-gray-500">Legajo: {r.legajo}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {r.fecha}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {r.hora}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          r.tipo === 'entrada' 
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {r.tipo}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {r.lugarTrabajo}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          r.justificado 
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {r.justificado ? 'Justificado' : 'Normal'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pie del Reporte */}
+            <div className="text-sm text-gray-600 text-center">
+              Reporte generado el {new Date().toLocaleDateString('es-AR')} • 
+              Mostrando {result.length} registros
+            </div>
           </div>
         )}
       </div>
