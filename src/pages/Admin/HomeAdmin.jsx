@@ -45,7 +45,7 @@ export default function HomeAdmin() {
         setStats({
           total: data.length,
           presentes: data.filter(a => a.tipo === 'entrada').length,
-          ausentes: data.filter(a => a.tipo !== 'entrada' && a.tipo !== 'salida').length
+          ausentes: 0 //Logica segun ausencias
         });
       } catch (err) {
         console.error("Error cargando asistencias:", err);
@@ -88,111 +88,23 @@ export default function HomeAdmin() {
         </div>
       </div>
 
-      {/* QR Generator Section */}
+      {/* QR Generator Section - TEXTO CENTRADO */}
       {rol !== "empleado" && (
         <div className="card p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Generador de QR</h3>
-              <p className="text-gray-600">Genera códigos QR para registrar asistencias</p>
+          {/* Header Centrado */}
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-gradient-to-r from-municipio-500 to-municipio-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-white text-2xl">📱</span>
             </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Generador de QR</h3>
+            <p className="text-gray-600 text-lg">Genera códigos QR para registrar asistencias</p>
           </div>
           <QrGenerator area={area} user={user} />
         </div>
       )}
 
-      {/* Asistencias Table */}
-{/*       <div className="card p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Registro de Asistencias</h3>
-            <p className="text-gray-600">Historial completo de registros</p>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-          </div>
-        ) : asistencias.length > 0 ? (
-          <div className="overflow-hidden rounded-lg border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Empleado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Hora
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Área
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {asistencias.map((a) => {
-                  const fecha = a.fecha?.seconds
-                    ? new Date(a.fecha.seconds * 1000).toLocaleDateString("es-AR")
-                    : a.fecha || "";
-                  const hora = a.hora?.seconds
-                    ? new Date(a.hora.seconds * 1000).toLocaleTimeString("es-AR")
-                    : a.hora || "";
-                  return (
-                    <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-                            <span className="text-gray-600 font-medium text-sm">
-                              {a.nombre?.[0]}{a.apellido?.[0]}
-                            </span>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {a.nombre} {a.apellido}
-                            </div>
-                            <div className="text-sm text-gray-500">Legajo: {a.legajo}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          a.tipo === 'entrada' 
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {a.tipo}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {fecha}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {hora}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {a.lugarTrabajo}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">📊</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No hay registros</h3>
-            <p className="text-gray-600">No se encontraron asistencias registradas.</p>
-          </div>
-        )}
-      </div> */}
+      {/* Asistencias Table (comentado) */}
+      {/* ... resto del código comentado ... */}
     </div>
   );
 }
