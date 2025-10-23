@@ -45,7 +45,7 @@ export default function HomeAdmin() {
         setStats({
           total: data.length,
           presentes: data.filter(a => a.tipo === 'entrada').length,
-          ausentes: data.filter(a => a.ausentes === true).length // Prueba para ver si funciona mostar los ausentes
+          ausentes: 0 // Este dato podría calcularse de otra manera si se dispone de la lista completa de empleados
         });
       } catch (err) {
         console.error("Error cargando asistencias:", err);

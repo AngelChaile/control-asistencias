@@ -96,12 +96,12 @@ export default function Navbar() {
                 {user.nombre}
               </div>
               <div className="text-xs text-gray-500 truncate max-w-[120px]">
-                {user.email}
+                {user.apellido}
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="btn-secondary text-sm whitespace-nowrap"
+              className="btn-secondary text-sm whitespace-nowrap cursor-pointer"
             >
               Cerrar sesión
             </button>

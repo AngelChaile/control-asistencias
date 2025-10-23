@@ -13,7 +13,7 @@ export default function Scan() {
   const [empleado, setEmpleado] = useState(null);
   const [showRegistro, setShowRegistro] = useState(false);
   const [tokenValido, setTokenValido] = useState(false);
-  const [nuevo, setNuevo] = useState({ nombre: "", apellido: "", lugarTrabajo: "" });
+  const [nuevo, setNuevo] = useState({ nombre: "", apellido: "", lugarTrabajo: "", secretaria: "", horario: "" });
   const [bloqueado, setBloqueado] = useState(false);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function Scan() {
       try {
         await validarToken(tokenParam);
         setTokenValido(true);
-        setMessage("✅ Token válido. Ingrese su legajo para continuar.");
+        setMessage("Ingrese su legajo para continuar.");
       } catch (err) {
         setTokenValido(false);
         setMessage("❌ " + (err?.message || "Token inválido o expirado."));
@@ -85,7 +85,7 @@ export default function Scan() {
     try {
       await registrarNuevoEmpleado({ legajo, ...nuevo });
       setMessage("✅ Empleado registrado. Registrando asistencia...");
-      setEmpleado({ legajo, nombre: nuevo.nombre, apellido: nuevo.apellido, lugarTrabajo: nuevo.lugarTrabajo });
+      setEmpleado({ legajo, nombre: nuevo.nombre, apellido: nuevo.apellido, lugarTrabajo: nuevo.lugarTrabajo, secretaria: nuevo.secretaria, horario: nuevo.horario });
       setShowRegistro(false);
       await handleRegistrarAsistencia();
     } catch (err) {
@@ -98,7 +98,7 @@ export default function Scan() {
 
   const handleCancelarRegistro = () => {
     setShowRegistro(false);
-    setNuevo({ nombre: "", apellido: "", lugarTrabajo: "" });
+    setNuevo({ nombre: "", apellido: "", secretaria: "", horario: "" });
     setMessage("📝 Registro cancelado. Ingrese un legajo válido.");
   };
 
@@ -259,6 +259,31 @@ export default function Scan() {
                     value={nuevo.lugarTrabajo}
                     onChange={(e) => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })}
                     placeholder="Área o departamento"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Secretaría
+                  </label>
+                  <input
+                    className="input-modern w-full"
+                    value={nuevo.secretaria}
+                    onChange={(e) => setNuevo({ ...nuevo, secretaria: e.target.value })}
+                    placeholder="Secretaría"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Horario
+                  </label>
+                  <input
+                    className="input-modern w-full"
+                    value={nuevo.horario}
+                    onChange={(e) => setNuevo({ ...nuevo, horario: e.target.value })}
+                    placeholder="Horario Ej: 08:00 - 15:00"
                   />
                 </div>
               </div>
