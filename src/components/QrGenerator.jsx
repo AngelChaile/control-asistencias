@@ -38,7 +38,7 @@ export default function QrGenerator({ area = "", user }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex items-center">
       <button 
         onClick={generarQR} 
         disabled={loading}
@@ -83,9 +83,9 @@ export default function QrGenerator({ area = "", user }) {
             >
               {qrLink.link}
             </a>
-            <p className="text-xs text-gray-500 mt-2">
+{/*             <p className="text-xs text-gray-500 mt-2">
               Token: <code className="bg-gray-100 px-1 py-0.5 rounded">{token}</code>
-            </p>
+            </p> */}
           </div>
         </div>
       )}

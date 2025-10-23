@@ -29,7 +29,7 @@ export default function Login() {
         icon: "success",
         title: "¡Bienvenido!",
         text: `Hola ${userDoc.nombre} ${userDoc.apellido}`,
-        timer: 1500,
+        timer: 800,
         showConfirmButton: false,
       });
 
