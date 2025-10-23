@@ -87,7 +87,22 @@ export default function AusenciasRRHH() {
               {result.length} ausencias encontradas
             </div>
             <ExportExcel 
-              data={result} 
+              //data={result} 
+                       data={[
+              result.map((f) => {
+                const aus = getAusenciaForDate(f.legajo, selectedDate);
+                return {
+                  legajo: f.legajo,
+                  nombre: f.nombre,
+                  apellido: f.apellido,
+                  lugarTrabajo: f.lugarTrabajo,
+                  articulo: aus?.justificativo || null,
+                  //justificado: aus?.justificado ? "SI" : "NO",
+                  fecha: aus?.fecha || toLocaleDateStr(parseInputDateToLocal(selectedDate)),
+                };
+              }),
+              ...ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate),
+            ]}
               filename={`ausencias_rrhh_${area || "all"}_${desde || 'inicio'}_${hasta || 'fin'}.xlsx`}
             >
               📊 Exportar Excel
