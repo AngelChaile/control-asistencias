@@ -245,35 +245,47 @@ export async function fetchAsistenciasByRange({ desde = null, hasta = null, lega
  * - Busca en colección "ausencias" si existe, si no devuelve vacío.
  */
 export async function fetchAusenciasByRange({ desde = null, hasta = null, area = null } = {}) {
-  // si no existe colección "ausencias" esta función asume que hay docs en esa colección
   const constraints = [];
   if (area) constraints.push(where("lugarTrabajo", "==", area));
   const q = query(collection(db, "ausencias"), ...constraints);
+
   try {
     const snap = await getDocs(q);
     const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    // filtrar por fecha si se pasa rango (asumiendo campo fecha en formato dd/mm/yyyy o createdAt)
-    if (desde || hasta) {
-      const desdeTs = desde ? desde.getTime() : null;
-      const hastaTs = hasta ? hasta.getTime() : null;
-      return rows.filter((r) => {
-        let t = 0;
-        if (r.createdAt?.seconds) t = r.createdAt.seconds * 1000;
-        else if (r.fecha) {
-          const parts = String(r.fecha).split("/");
-          if (parts.length === 3) {
-            const [d, m, y] = parts.map(Number);
-            t = new Date(y, m - 1, d).getTime();
-          }
+
+    // si no hay rango, devolver todo
+    if (!desde && !hasta) return rows;
+
+    // normalizar fechas (inicio de día / fin de día)
+    const desdeTs = desde ? new Date(desde.getFullYear(), desde.getMonth(), desde.getDate()).getTime() : null;
+    const hastaTs = hasta
+      ? new Date(hasta.getFullYear(), hasta.getMonth(), hasta.getDate()).getTime() + 24 * 3600 * 1000 - 1
+      : null;
+
+    return rows.filter((r) => {
+      let t = null;
+
+      // preferir fecha (dd/mm/yyyy) cuando exista
+      if (r.fecha && typeof r.fecha === "string") {
+        const parts = r.fecha.split("/");
+        if (parts.length === 3) {
+          const [d, m, y] = parts.map(Number);
+          t = new Date(y, m - 1, d).getTime();
         }
-        if (desdeTs && t < desdeTs) return false;
-        if (hastaTs && t > hastaTs + 24 * 3600 * 1000 - 1) return false;
-        return true;
-      });
-    }
-    return rows;
+      }
+
+      // si no hay 'fecha' fiable, usar createdAt si está
+      if (t === null && r.createdAt?.seconds) {
+        t = r.createdAt.seconds * 1000;
+      }
+
+      // si no podemos obtener tiempo, excluir
+      if (t === null) return false;
+      if (desdeTs && t < desdeTs) return false;
+      if (hastaTs && t > hastaTs) return false;
+      return true;
+    });
   } catch (err) {
-    // si la colección no existe o error -> devolver []
     console.warn("fetchAusenciasByRange:", err);
     return [];
   }
