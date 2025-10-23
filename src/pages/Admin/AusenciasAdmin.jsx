@@ -133,7 +133,7 @@ export default function AusenciasAdmin() {
                   apellido: f.apellido,
                   lugarTrabajo: f.lugarTrabajo,
                   justificativo: aus?.justificativo || null,
-                  justificado: aus?.justificado || false,
+                  justificado: aus?.justificado ? "SI" : "NO",
                   fecha: aus?.fecha || toLocaleDateStr(parseInputDateToLocal(selectedDate)),
                 };
               }),
@@ -155,7 +155,7 @@ export default function AusenciasAdmin() {
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Empleados sin registro ({faltantes.length})
+                  Empleados sin registro de asistencia ({faltantes.length})
                 </h3>
                 <span className="text-sm text-gray-500">
                   Fecha: {selectedDate}
@@ -274,16 +274,16 @@ export default function AusenciasAdmin() {
               )}
             </section>
 
-            {/* Sección de Ausencias Registradas */}
+            {/* Sección de Ausencias Registradas Enviadas a RRHH */}
             <section>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Ausencias registradas ({ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length})
+                Ausencias Enviadas a Recursos Humanos ({ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length})
               </h3>
 
               {ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length === 0 ? (
                 <div className="text-center py-8 card bg-gray-50">
                   <div className="text-gray-400 text-4xl mb-2">📝</div>
-                  <p className="text-gray-600">No hay ausencias registradas para esta fecha</p>
+                  <p className="text-gray-600">No hay ausencias enviadas para esta fecha</p>
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-lg border border-gray-200">

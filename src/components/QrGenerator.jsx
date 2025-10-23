@@ -38,7 +38,7 @@ export default function QrGenerator({ area = "", user }) {
   }
 
   return (
-    <div className="space-y-4 flex items-center">
+    <div className="space-y-4 flex">
       <button 
         onClick={generarQR} 
         disabled={loading}

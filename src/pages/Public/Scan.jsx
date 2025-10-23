@@ -67,7 +67,7 @@ export default function Scan() {
       const res = await registrarAsistenciaPorLegajo(empleado.legajo, tokenParam);
       setMessage(`✅ Asistencia registrada: ${res.tipo} a las ${res.hora}`);
       setBloqueado(true);
-      setTimeout(() => navigate("/gracias"), 1500);
+      setTimeout(() => setMessage("Gracias"), 3000);
     } catch (err) {
       console.error(err);
       setMessage("❌ " + (err?.message || "Error al registrar la asistencia."));
