@@ -322,7 +322,7 @@ export default function Scan() {
               <div className="text-green-600 text-4xl mb-2">✅</div>
               <h3 className="font-semibold text-green-800 mb-1">¡Asistencia Registrada!</h3>
               <p className="text-sm text-green-700">
-                Redirigiendo a la página de confirmación...
+                Ya puede cerrar esta ventana.
               </p>
             </div>
           )}
