@@ -3,6 +3,13 @@ import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
 import { fetchAusenciasByRange } from "../../utils/asistencia";
 
+// helper: parsear "yyyy-mm-dd" a Date local (sin shift UTC)
+function parseInputDateToLocal(isoYmd) {
+  if (!isoYmd) return null;
+  const [y, m, d] = String(isoYmd).split("-");
+  return new Date(Number(y), Number(m) - 1, Number(d));
+}
+
 export default function AusenciasRRHH() {
   const { user } = useAuth();
   const [area, setArea] = useState("");
@@ -14,8 +21,10 @@ export default function AusenciasRRHH() {
   async function handleSearch() {
     setLoading(true);
     try {
-      const desdeD = desde ? new Date(desde) : null;
-      const hastaD = hasta ? new Date(hasta) : null;
+      // convertir strings YYYY-MM-DD a Date local (evita restar un día)
+      const desdeD = desde ? parseInputDateToLocal(desde) : null;
+      const hastaD = hasta ? parseInputDateToLocal(hasta) : null;
+
       const data = await fetchAusenciasByRange({ desde: desdeD, hasta: hastaD, area: area || null });
       setResult(data || []);
     } catch (err) {
