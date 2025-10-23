@@ -5,10 +5,18 @@ import { fetchEmpleadosByLugarTrabajo } from "../../utils/usuarios";
 import { saveAusenciaJustificacion } from "../../utils/ausencias";
 import { fetchAsistenciasByDate, fetchAusenciasByRange } from "../../utils/asistencia";
 
-// Helpers de fecha (manteniendo los mismos)
-function toLocaleDateStr(date) {
-  if (!(date instanceof Date)) return null;
-  return date.toLocaleDateString("es-AR");
+// helpers de fecha (sin shift UTC)
+function parseInputDateToLocal(isoYmd) {
+  if (!isoYmd) return new Date();
+  const [y, m, d] = String(isoYmd).split("-");
+  return new Date(Number(y), Number(m) - 1, Number(d));
+}
+function toLocaleDateStr(dateObj) {
+  if (!(dateObj instanceof Date)) return "";
+  const d = dateObj.getDate().toString().padStart(2, "0");
+  const m = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+  const y = dateObj.getFullYear().toString();
+  return `${d}/${m}/${y}`;
 }
 function inputDateFromLocaleStr(fechaStr) {
   if (!fechaStr) return "";
@@ -20,38 +28,37 @@ function inputDateFromLocaleStr(fechaStr) {
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
-function parseInputDateToLocal(isoYmd) {
-  if (!isoYmd) return new Date();
-  const [y, m, d] = String(isoYmd).split("-");
-  return new Date(Number(y), Number(m) - 1, Number(d));
-}
 
 export default function AusenciasAdmin() {
   const { user } = useAuth();
   const lugar = user?.lugarTrabajo || "";
-  const [selectedDate, setSelectedDate] = useState(todayInputValue());
+
+  const [selectedDate, setSelectedDate] = useState(todayInputValue()); // YYYY-MM-DD
   const [empleados, setEmpleados] = useState([]);
   const [asistencias, setAsistencias] = useState([]);
   const [ausencias, setAusencias] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [edit, setEdit] = useState(null);
+  const [edit, setEdit] = useState(null); // { legajo, justificativo, fechaInput }
 
+  // carga inicial / cada vez que cambia lugar o fecha seleccionada
   useEffect(() => {
     async function load() {
       if (!lugar) return;
       setLoading(true);
       try {
         const fechaDate = parseInputDateToLocal(selectedDate);
-        const emp = await fetchEmpleadosByLugarTrabajo(lugar);
+
+        const [emp, asist, aus] = await Promise.all([
+          fetchEmpleadosByLugarTrabajo(lugar),
+          fetchAsistenciasByDate(fechaDate, lugar),
+          fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar }),
+        ]);
+
         setEmpleados(emp || []);
-
-        const asist = await fetchAsistenciasByDate(fechaDate, lugar);
         setAsistencias(asist || []);
-
-        const aus = await fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar });
         setAusencias(aus || []);
       } catch (err) {
-        console.error(err);
+        console.error("AusenciasAdmin load error:", err);
       } finally {
         setLoading(false);
       }
@@ -59,22 +66,26 @@ export default function AusenciasAdmin() {
     load();
   }, [lugar, selectedDate]);
 
+  // empleados que NO ficharon en la fecha seleccionada (se muestran aunque tengan ausencia)
   const faltantes = empleados.filter(
     (e) => !asistencias.some((a) => String(a.legajo) === String(e.legajo))
   );
 
+  // obtiene ausencia del legajo para la fecha seleccionada usando normalización
   function getAusenciaForDate(legajo, fechaInput = selectedDate) {
-    return ausencias.find((au) => {
-      if (String(au.legajo) !== String(legajo)) return false;
-      if (!au.fecha) return false;
-      const auInput = inputDateFromLocaleStr(au.fecha);
-      return auInput === fechaInput;
-    });
+    const target = parseInputDateToLocal(fechaInput);
+    const targetStr = toLocaleDateStr(target); // dd/mm/yyyy
+    return ausencias.find((au) => String(au.legajo) === String(legajo) && String(au.fecha) === targetStr);
   }
 
+  // guardar/actualizar justificativo para la fecha seleccionada o la que pase el admin
   async function handleSaveJust(legajo, justificativo, justificar = true, fechaInput = selectedDate) {
     try {
+      console.log("DEBUG: handleSaveJust called", { legajo, justificativo, justificar, fechaInput });
+
       const fechaDate = parseInputDateToLocal(fechaInput);
+
+      // llamar al upsert de ausencias (la función busca y completa nombre/apellido/lugarTrabajo)
       const saved = await saveAusenciaJustificacion({
         legajo,
         fecha: fechaDate,
@@ -82,17 +93,28 @@ export default function AusenciasAdmin() {
         justificar,
       });
 
-      setEdit(null);
-      setAusencias((prev) => {
-        const fechaStr = typeof saved.fecha === "string" ? saved.fecha : toLocaleDateStr(fechaDate);
-        const filtered = prev.filter(
-          (p) => !(String(p.legajo) === String(legajo) && String(p.fecha) === String(fechaStr))
-        );
-        return [...filtered, { ...saved }];
-      });
+      console.log("DEBUG: saveAusenciaJustificacion returned:", JSON.stringify(saved, null, 2));
 
-      const ausReload = await fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar });
-      setAusencias(ausReload || []);
+      setEdit(null);
+
+      // Forzar recarga de ausencias para la fecha exacta desde BD (asegura consistencia)
+      try {
+        const ausReload = await fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar });
+        console.log("DEBUG: ausencias reloaded from BD:", JSON.stringify(ausReload || [], null, 2));
+        setAusencias(ausReload || []);
+      } catch (err) {
+        console.warn("No se pudo recargar ausencias desde BD:", err);
+        // fallback: actualizar estado local con el objeto retornado
+        setAusencias((prev) => {
+          const fechaStr = typeof saved.fecha === "string" ? saved.fecha : toLocaleDateStr(fechaDate);
+          const filtered = prev.filter(
+            (p) => !(String(p.legajo) === String(legajo) && String(p.fecha) === String(fechaStr))
+          );
+          return [...filtered, { ...saved }];
+        });
+      }
+
+      // recargar asistencias para la fecha (opc)
       const asist = await fetchAsistenciasByDate(fechaDate, lugar);
       setAsistencias(asist || []);
     } catch (err) {
@@ -100,247 +122,157 @@ export default function AusenciasAdmin() {
     }
   }
 
+  // render
   return (
-    <div className="app-container">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Ausencias</h1>
-        <p className="text-gray-600">Control y justificación de faltas - Área {lugar}</p>
+    <div style={{ padding: 16 }}>
+      <h2>Ausencias - Área {lugar}</h2>
+
+      <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
+        <label>
+          Fecha:
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            style={{ marginLeft: 8 }}
+          />
+        </label>
+
+        <ExportExcel
+          data={[
+            ...faltantes.map((f) => {
+              const aus = getAusenciaForDate(f.legajo, selectedDate);
+              return {
+                legajo: f.legajo,
+                nombre: f.nombre,
+                apellido: f.apellido,
+                lugarTrabajo: f.lugarTrabajo,
+                justificativo: aus?.justificativo || null,
+                justificado: aus?.justificado || false,
+                fecha: aus?.fecha || toLocaleDateStr(parseInputDateToLocal(selectedDate)),
+              };
+            }),
+            ...ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate),
+          ]}
+          filename={`ausencias_${lugar}_${selectedDate}.xlsx`}
+        />
       </div>
 
-      <div className="card p-6 space-y-6">
-        {/* Filtros y Controles */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de consulta</label>
-              <input 
-                className="input-modern" 
-                type="date" 
-                value={selectedDate} 
-                onChange={(e) => setSelectedDate(e.target.value)} 
-              />
-            </div>
-          </div>
-          
-          <ExportExcel 
-            data={[
-              ...faltantes.map((f) => {
-                const aus = getAusenciaForDate(f.legajo, selectedDate);
-                return {
-                  legajo: f.legajo,
-                  nombre: f.nombre,
-                  apellido: f.apellido,
-                  lugarTrabajo: f.lugarTrabajo,
-                  justificativo: aus?.justificativo || null,
-                  justificado: aus?.justificado ? "SI" : "NO",
-                  fecha: aus?.fecha || toLocaleDateStr(parseInputDateToLocal(selectedDate)),
-                };
-              }),
-              ...ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate),
-            ]} 
-            filename={`ausencias_${lugar}_${selectedDate}.xlsx`}
-          >
-            📊 Exportar Excel
-          </ExportExcel>
-        </div>
+      {loading ? (
+        <p>Cargando...</p>
+      ) : (
+        <>
+          <h3>Empleados (fecha: {selectedDate})</h3>
 
-        {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-municipio-500"></div>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {/* Sección de Empleados Faltantes */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Empleados sin registro de asistencia ({faltantes.length})
-                </h3>
-                <span className="text-sm text-gray-500">
-                  Fecha: {selectedDate}
-                </span>
-              </div>
+          {faltantes.length === 0 ? (
+            <p>No hay empleados sin fichar en la fecha seleccionada.</p>
+          ) : (
+            <table border="1" cellPadding="8">
+              <thead>
+                <tr>
+                  <th>Legajo</th>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  <th>Justificado</th>
+                  <th>Justificativo</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {faltantes.map((e) => {
+                  const aus = getAusenciaForDate(e.legajo, selectedDate);
+                  return (
+                    <tr key={`${e.legajo}-${selectedDate}`}>
+                      <td>{e.legajo}</td>
+                      <td>{e.nombre}</td>
+                      <td>{e.apellido}</td>
+                      <td>{aus ? (aus.justificado ? "Sí" : "No") : "—"}</td>
+                      <td>{aus ? aus.justificativo || "" : ""}</td>
+                      <td>{aus ? aus.fecha : toLocaleDateStr(parseInputDateToLocal(selectedDate))}</td>
+                      <td>
+                        {edit?.legajo === e.legajo ? (
+                          <>
+                            <input
+                              type="date"
+                              value={edit.fechaInput}
+                              onChange={(ev) => setEdit({ ...edit, fechaInput: ev.target.value })}
+                              style={{ marginRight: 6 }}
+                            />
+                            <input
+                              placeholder="Justificativo"
+                              value={edit.justificativo || ""}
+                              onChange={(ev) => setEdit({ ...edit, justificativo: ev.target.value })}
+                              style={{ marginRight: 6 }}
+                            />
+                            <button onClick={() => handleSaveJust(e.legajo, edit.justificativo || "", true, edit.fechaInput)}>
+                              Guardar (Justificar)
+                            </button>
+                            <button onClick={() => handleSaveJust(e.legajo, "", false, edit.fechaInput)} style={{ marginLeft: 4 }}>
+                              Guardar (Sin justificar)
+                            </button>
+                            <button onClick={() => setEdit(null)} style={{ marginLeft: 6 }}>
+                              Cancelar
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              setEdit({
+                                legajo: e.legajo,
+                                justificativo: getAusenciaForDate(e.legajo, selectedDate)?.justificativo || "",
+                                fechaInput: getAusenciaForDate(e.legajo, selectedDate)
+                                  ? inputDateFromLocaleStr(getAusenciaForDate(e.legajo, selectedDate).fecha)
+                                  : selectedDate,
+                              })
+                            }
+                          >
+                            {getAusenciaForDate(e.legajo, selectedDate) ? "Editar justificativo" : "Agregar justificativo"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
 
-              {faltantes.length === 0 ? (
-                <div className="text-center py-8 card bg-gray-50">
-                  <div className="text-gray-400 text-4xl mb-2">✅</div>
-                  <p className="text-gray-600">Todos los empleados han registrado su asistencia</p>
-                </div>
-              ) : (
-                <div className="overflow-hidden rounded-lg border border-gray-200">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Justificación</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {faltantes.map((e) => {
-                        const aus = getAusenciaForDate(e.legajo, selectedDate);
-                        return (
-                          <tr key={`${e.legajo}-${selectedDate}`} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-orange-100 to-orange-200 rounded-full flex items-center justify-center">
-                                  <span className="text-orange-600 font-medium text-sm">
-                                    {e.nombre?.[0]}{e.apellido?.[0]}
-                                  </span>
-                                </div>
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {e.nombre} {e.apellido}
-                                  </div>
-                                  <div className="text-sm text-gray-500">Legajo: {e.legajo}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                aus?.justificado 
-                                  ? 'bg-green-100 text-green-800'
-                                  : aus
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {aus?.justificado ? 'Justificado' : aus ? 'Sin justificar' : 'Pendiente'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
-                              {aus?.justificativo || (
-                                <span className="text-gray-400">Sin justificación</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              {edit?.legajo === e.legajo ? (
-                                <div className="flex flex-col gap-2">
-                                  <div className="flex gap-2">
-                                    <input 
-                                      className="input-modern flex-1 text-sm" 
-                                      type="date" 
-                                      value={edit.fechaInput} 
-                                      onChange={(ev) => setEdit({ ...edit, fechaInput: ev.target.value })} 
-                                    />
-                                    <input 
-                                      className="input-modern flex-1 text-sm" 
-                                      placeholder="Motivo de ausencia..." 
-                                      value={edit.justificativo || ""} 
-                                      onChange={(ev) => setEdit({ ...edit, justificativo: ev.target.value })} 
-                                    />
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <button 
-                                      onClick={() => handleSaveJust(e.legajo, edit.justificativo || "", true, edit.fechaInput)} 
-                                      className="btn-primary text-sm px-3 py-1"
-                                    >
-                                      ✅ Justificar
-                                    </button>
-                                    <button 
-                                      onClick={() => handleSaveJust(e.legajo, "", false, edit.fechaInput)} 
-                                      className="btn-secondary text-sm px-3 py-1"
-                                    >
-                                      ❌ Sin justificar
-                                    </button>
-                                    <button 
-                                      onClick={() => setEdit(null)} 
-                                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
-                                    >
-                                      Cancelar
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <button 
-                                  onClick={() => setEdit({ 
-                                    legajo: e.legajo, 
-                                    justificativo: aus?.justificativo || "", 
-                                    fechaInput: aus?.fecha ? inputDateFromLocaleStr(aus.fecha) : selectedDate 
-                                  })} 
-                                  className="btn-primary text-sm px-3 py-1"
-                                >
-                                  {aus ? '✏️ Editar' : '📝 Justificar'}
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-
-            {/* Sección de Ausencias Registradas Enviadas a RRHH */}
-            <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Ausencias Enviadas a Recursos Humanos ({ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length})
-              </h3>
-
-              {ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length === 0 ? (
-                <div className="text-center py-8 card bg-gray-50">
-                  <div className="text-gray-400 text-4xl mb-2">📝</div>
-                  <p className="text-gray-600">No hay ausencias enviadas para esta fecha</p>
-                </div>
-              ) : (
-                <div className="overflow-hidden rounded-lg border border-gray-200">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Justificación</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).map((a) => (
-                        <tr key={a.id || `${a.legajo}-${a.fecha}`} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-                                <span className="text-gray-600 font-medium text-sm">
-                                  {a.nombre?.[0]}{a.apellido?.[0]}
-                                </span>
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {a.nombre} {a.apellido}
-                                </div>
-                                <div className="text-sm text-gray-500">Legajo: {a.legajo}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              a.justificado 
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {a.justificado ? 'Justificado' : 'Sin justificar'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
-                            {a.justificativo || (
-                              <span className="text-gray-400">Sin justificación</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {a.fecha}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          </div>
-        )}
-      </div>
+          <h3 style={{ marginTop: 20 }}>Ausencias registradas (fecha seleccionada)</h3>
+          {ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length === 0 ? (
+            <p>No hay ausencias registradas para la fecha seleccionada.</p>
+          ) : (
+            <table border="1" cellPadding="8">
+              <thead>
+                <tr>
+                  <th>Legajo</th>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  <th>Área</th>
+                  <th>Justificado</th>
+                  <th>Justificativo</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ausencias
+                  .filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate)
+                  .map((a) => (
+                    <tr key={a.id || `${a.legajo}-${a.fecha}`}>
+                      <td>{a.legajo}</td>
+                      <td>{a.nombre || ""}</td>
+                      <td>{a.apellido || ""}</td>
+                      <td>{a.lugarTrabajo || ""}</td>
+                      <td>{a.justificado ? "Sí" : "No"}</td>
+                      <td>{a.justificativo || ""}</td>
+                      <td>{a.fecha || ""}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          )}
+        </>
+      )}
     </div>
   );
 }
