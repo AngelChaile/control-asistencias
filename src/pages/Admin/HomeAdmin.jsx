@@ -45,7 +45,7 @@ export default function HomeAdmin() {
         setStats({
           total: data.length,
           presentes: data.filter(a => a.tipo === 'entrada').length,
-          ausentes: 0 // Esto debería calcularse según tu lógica de negocio
+          ausentes: data.filter(a => a.ausentes === true).length // Prueba para ver si funciona mostar los ausentes
         });
       } catch (err) {
         console.error("Error cargando asistencias:", err);
@@ -102,7 +102,7 @@ export default function HomeAdmin() {
       )}
 
       {/* Asistencias Table */}
-      <div className="card p-6">
+{/*       <div className="card p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Registro de Asistencias</h3>
@@ -192,7 +192,7 @@ export default function HomeAdmin() {
             <p className="text-gray-600">No se encontraron asistencias registradas.</p>
           </div>
         )}
-      </div>
+      </div> */}
     </div>
   );
 }
