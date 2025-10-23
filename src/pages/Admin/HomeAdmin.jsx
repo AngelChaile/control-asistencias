@@ -90,9 +90,9 @@ export default function HomeAdmin() {
 
       {/* QR Generator Section */}
       {rol !== "empleado" && (
-        <div className="card p-6 mb-8">
+        <div className="card p-6 mb-8 flex justify-between">
           <div className="flex items-center justify-between mb-4">
-            <div>
+            <div className="flex items-center justify-center space-x-2">
               <h3 className="text-lg font-semibold text-gray-900">Generador de QR</h3>
               <p className="text-gray-600">Genera códigos QR para registrar asistencias</p>
             </div>
