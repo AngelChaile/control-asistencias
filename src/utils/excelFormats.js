@@ -35,6 +35,7 @@ export function formatRRHHAsistencias(rows = []) {
     Legajo: safe(r.legajo),
     Nombre: safe(r.nombre),
     Apellido: safe(r.apellido),
+    Tipo: safe(r.tipo), // entrada / salida
     "Hora Fecha": `${safe(r.hora)} ${safe(r.fecha)}`.trim(),
     Secretaria: safe(pickSecretaria(r)),
     "Lugar de Trabajo": safe(pickLugar(r)),
@@ -58,6 +59,7 @@ export function formatAdminAsistencias(rows = []) {
     Legajo: safe(r.legajo),
     Nombre: safe(r.nombre),
     Apellido: safe(r.apellido),
+    Tipo: safe(r.tipo), // agrego Tipo para Admin también
     Hora: safe(r.hora),
     Fecha: safe(r.fecha),
   }));

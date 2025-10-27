@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
-import { fetchAusenciasByRange } from "../../utils/asistencia";
 import { formatRRHHAusencias } from "../../utils/excelFormats";
+import { fetchAusenciasByRange } from "../../utils/asistencia";
 
 // helper: parsear "yyyy-mm-dd" a Date local (sin shift UTC)
 function parseInputDateToLocal(isoYmd) {
@@ -41,6 +41,11 @@ export default function AusenciasRRHH() {
     setHasta("");
     setResult([]);
   };
+
+  // al renderizar ExportExcel (donde exportas `result`):
+  const desdePart = desde || "";
+  const hastaPart = hasta || "";
+  const filename = `ausencias_rrhh_${area || "all"}_${desdePart}_${hastaPart}.xlsx`;
 
   return (
     <div className="app-container">
@@ -98,7 +103,7 @@ export default function AusenciasRRHH() {
             </div>
             <ExportExcel 
               data={formatRRHHAusencias(result)} 
-              filename={`ausencias_rrhh_${area || "all"}_${desde || 'inicio'}_${hasta || 'fin'}.xlsx`}
+              filename={filename}
               
             >
               📊 Exportar Excel

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
 import { fetchAsistenciasByRange } from "../../utils/asistencia";
-import { formatAdminAsistencias } from "../../utils/excelFormats";
+import { formatAdminAsistencias, formatRRHHAsistencias } from "../../utils/excelFormats";
 
 export default function ReportesAdmin() {
   const { user } = useAuth();
@@ -39,6 +39,11 @@ export default function ReportesAdmin() {
     });
     setResult([]);
   };
+
+  const exportData = user?.rol === "rrhh" ? formatRRHHAsistencias(result) : formatAdminAsistencias(result);
+  const filename = user?.rol === "rrhh"
+    ? `asistencias_rrhh_${user?.lugarTrabajo || "all"}_${filters.desde || "inicio"}_${filters.hasta || "fin"}.xlsx`
+    : `asistencias_admin_${user?.lugarTrabajo || "all"}_${filters.desde || "inicio"}_${filters.hasta || "fin"}.xlsx`;
 
   return (
     <div className="app-container">
@@ -101,10 +106,7 @@ export default function ReportesAdmin() {
           </div>
           
           {result.length > 0 && (
-            <ExportExcel 
-              data={formatAdminAsistencias(result)} 
-              filename={`asistencias_admin_${user?.lugarTrabajo || "all"}_${filters.desde || 'inicio'}_${filters.hasta || 'fin'}.xlsx`}
-            >
+            <ExportExcel data={exportData} filename={filename}>
               📊 Exportar Excel
             </ExportExcel>
           )}
