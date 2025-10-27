@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
+import { formatAdminAsistencias } from "../../utils/excelFormats";
 import { fetchAsistenciasToday, fetchAsistenciasByFilters } from "../../utils/asistencia";
 
 export default function AsistenciasAdmin() {
@@ -66,7 +67,7 @@ export default function AsistenciasAdmin() {
             </div>
           </div>
           <ExportExcel 
-            data={filtered()} 
+            data={formatAdminAsistencias(asistencias)} 
             filename={`asistencias_hoy_${user?.lugarTrabajo || "all"}.xlsx`}
           >
             📊 Exportar Excel

@@ -8,14 +8,36 @@ function safe(v) {
   return v === undefined || v === null ? "" : v;
 }
 
+// helper para intentar diferentes nombres de campo
+function pickSecretaria(r) {
+  return (
+    r.secretaria ||
+    r.secretaria_admin ||
+    r.secretariaAdmin ||
+    r.secretary ||
+    (r.empleado && (r.empleado.secretaria || r.empleado.secretaria_admin)) ||
+    ""
+  );
+}
+function pickLugar(r) {
+  return (
+    r.lugarTrabajo ||
+    r.lugar ||
+    r.area ||
+    r.lugar_de_trabajo ||
+    (r.empleado && (r.empleado.lugarTrabajo || r.empleado.lugar)) ||
+    ""
+  );
+}
+
 export function formatRRHHAsistencias(rows = []) {
   return rows.map((r) => ({
     Legajo: safe(r.legajo),
     Nombre: safe(r.nombre),
     Apellido: safe(r.apellido),
     "Hora Fecha": `${safe(r.hora)} ${safe(r.fecha)}`.trim(),
-    Secretaria: safe(r.secretaria) || safe(r.secretaria_admin) || "",
-    "Lugar de Trabajo": safe(r.lugarTrabajo) || safe(r.lugar) || "",
+    Secretaria: safe(pickSecretaria(r)),
+    "Lugar de Trabajo": safe(pickLugar(r)),
   }));
 }
 
@@ -26,8 +48,8 @@ export function formatRRHHAusencias(rows = []) {
     Apellido: safe(r.apellido),
     Justificativo: safe(r.justificativo),
     Fecha: safe(r.fecha),
-    Secretaria: safe(r.secretaria) || "",
-    "Lugar de Trabajo": safe(r.lugarTrabajo) || safe(r.lugar) || "",
+    Secretaria: safe(pickSecretaria(r)),
+    "Lugar de Trabajo": safe(pickLugar(r)),
   }));
 }
 
