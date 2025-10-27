@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
+import { formatAdminAusencias } from "../../utils/excelFormats";
 import { fetchEmpleadosByLugarTrabajo } from "../../utils/usuarios";
 import { saveAusenciaJustificacion } from "../../utils/ausencias";
 import { fetchAsistenciasByDate, fetchAusenciasByRange } from "../../utils/asistencia";
@@ -118,6 +119,24 @@ export default function AusenciasAdmin() {
     }
   }
 
+  const exportRows = [
+    // faltantes mapeados a la forma esperada por AdminAusencias (si quieres incluir columnas de justificativo fecha)
+    ...formatAdminAusencias(
+      faltantes.map((f) => {
+        const aus = getAusenciaForDate(f.legajo, selectedDate);
+        return {
+          legajo: f.legajo,
+          nombre: f.nombre,
+          apellido: f.apellido,
+          justificativo: aus?.justificativo || "",
+          fecha: aus?.fecha || toLocaleDateStr(parseInputDateToLocal(selectedDate)),
+        };
+      })
+    ),
+    // además las ausencias ya registradas (filtradas por fecha seleccionada)
+    ...formatAdminAusencias(ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate)),
+  ];
+
   return (
     <div className="app-container">
       {/* Header */}
@@ -142,22 +161,8 @@ export default function AusenciasAdmin() {
           </div>
           
           <ExportExcel 
-            data={[
-              ...faltantes.map((f) => {
-                const aus = getAusenciaForDate(f.legajo, selectedDate);
-                return {
-                  legajo: f.legajo,
-                  nombre: f.nombre,
-                  apellido: f.apellido,
-                  lugarTrabajo: f.lugarTrabajo,
-                  justificativo: aus?.justificativo || null,
-                  justificado: aus?.justificado ? "SI" : "NO",
-                  fecha: aus?.fecha || toLocaleDateStr(parseInputDateToLocal(selectedDate)),
-                };
-              }),
-              ...ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate),
-            ]} 
-            filename={`ausencias_${lugar}_${selectedDate}.xlsx`}
+            data={exportRows} 
+            filename={`ausencias_admin_${lugar}_${selectedDate}.xlsx`}
           >
             📊 Exportar Excel
           </ExportExcel>
@@ -173,7 +178,7 @@ export default function AusenciasAdmin() {
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Empleados sin registro de asistencia ({faltantes.length})
+                  Empleados que aun no escanearon el QR para registrar su asistencia ({faltantes.length})
                 </h3>
                 <span className="text-sm text-gray-500">
                   Fecha: {selectedDate}
@@ -203,7 +208,7 @@ export default function AusenciasAdmin() {
                           <tr key={`${e.legajo}-${selectedDate}`} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-orange-100 to-orange-200 rounded-full flex items-center justify-center">
+                                <div className="shrink-0 h-10 w-10 bg-gradient-to-r from-orange-100 to-orange-200 rounded-full flex items-center justify-center">
                                   <span className="text-orange-600 font-medium text-sm">
                                     {e.nombre?.[0]}{e.apellido?.[0]}
                                   </span>
@@ -295,7 +300,7 @@ export default function AusenciasAdmin() {
             {/* Sección de Ausencias Registradas */}
             <section>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Ausencias Enviadas a Recursos Humanos ({ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length})
+                Ausencias enviadas a Recursos Humanos ({ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length})
               </h3>
 
               {ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length === 0 ? (
@@ -319,7 +324,7 @@ export default function AusenciasAdmin() {
                         <tr key={a.id || `${a.legajo}-${a.fecha}`} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                              <div className="shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
                                 <span className="text-gray-600 font-medium text-sm">
                                   {a.nombre?.[0]}{a.apellido?.[0]}
                                 </span>

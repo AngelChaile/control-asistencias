@@ -101,7 +101,7 @@ export default function AsistenciasAdmin() {
                   <tr key={a.id || `${a.legajo}-${a.fecha}-${a.hora}`} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                        <div className="shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
                           <span className="text-gray-600 font-medium text-sm">
                             {a.nombre?.[0]}{a.apellido?.[0]}
                           </span>

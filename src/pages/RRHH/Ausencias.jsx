@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
 import { fetchAusenciasByRange } from "../../utils/asistencia";
+import { formatRRHHAusencias } from "../../utils/excelFormats";
 
 // helper: parsear "yyyy-mm-dd" a Date local (sin shift UTC)
 function parseInputDateToLocal(isoYmd) {
@@ -96,8 +97,8 @@ export default function AusenciasRRHH() {
               {result.length} ausencias encontradas
             </div>
             <ExportExcel 
-              data={result} 
-              filename={`ausencias_rrhh_${area || "all"}_${desde || 'inicio'}_${hasta || 'fin'}.xlsx`}
+              data={formatRRHHAusencias(result)} 
+              filename={`ausencias_rrhh_${area || "all"}_${desde || ""}_${hasta || ""}.xlsx`}
             >
               📊 Exportar Excel
             </ExportExcel>
@@ -139,7 +140,7 @@ export default function AusenciasRRHH() {
                   <tr key={r.id || `${r.legajo}-${r.fecha}`} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-orange-100 to-orange-200 rounded-full flex items-center justify-center">
+                        <div className="shrink-0 h-10 w-10 bg-gradient-to-r from-orange-100 to-orange-200 rounded-full flex items-center justify-center">
                           <span className="text-orange-600 font-medium text-sm">
                             {r.nombre?.[0]}{r.apellido?.[0]}
                           </span>

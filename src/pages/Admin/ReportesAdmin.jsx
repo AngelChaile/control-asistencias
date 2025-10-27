@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
 import { fetchAsistenciasByRange } from "../../utils/asistencia";
+import { formatAdminAsistencias } from "../../utils/excelFormats";
 
 export default function ReportesAdmin() {
   const { user } = useAuth();
@@ -101,8 +102,8 @@ export default function ReportesAdmin() {
           
           {result.length > 0 && (
             <ExportExcel 
-              data={result} 
-              filename={`reporte_${user?.lugarTrabajo || "all"}_${filters.desde || 'inicio'}_${filters.hasta || 'fin'}.xlsx`}
+              data={formatAdminAsistencias(result)} 
+              filename={`asistencias_admin_${user?.lugarTrabajo || "all"}_${filters.desde || 'inicio'}_${filters.hasta || 'fin'}.xlsx`}
             >
               📊 Exportar Excel
             </ExportExcel>
@@ -165,7 +166,7 @@ export default function ReportesAdmin() {
                     <tr key={r.id || `${r.legajo}-${r.fecha}-${r.hora}`} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                          <div className="shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
                             <span className="text-gray-600 font-medium text-sm">
                               {r.nombre?.[0]}{r.apellido?.[0]}
                             </span>
