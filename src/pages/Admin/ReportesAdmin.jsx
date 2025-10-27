@@ -138,7 +138,7 @@ export default function ReportesAdmin() {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {result.filter(r => r.tipo === 'ENTRADA').length} {console.log(result)}
+                  {result.filter(r => r.tipo === 'ENTRADA').length}
                 </div>
                 <div className="text-sm text-gray-600">Entradas</div>
               </div>

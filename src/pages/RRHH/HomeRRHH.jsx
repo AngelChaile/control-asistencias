@@ -60,7 +60,7 @@ export default function HomeRRHH() {
         </div>
         
         <div className="card p-6 text-center">
-          <div className="text-2xl font-bold text-green-600 mb-2">{stats.presentes}</div>
+          <div className="text-2xl font-bold text-green-600 mb-2">{stats.presentes} {console.log(stats)}</div>
           <div className="text-gray-600">Entradas Registradas</div>
           <div className="w-12 h-1 bg-green-500 rounded mx-auto mt-3"></div>
         </div>
@@ -161,7 +161,7 @@ export default function HomeRRHH() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        a.tipo === 'entrada' 
+                        a.tipo === 'ENTRADA' 
                           ? 'bg-green-100 text-green-800'
                           : 'bg-blue-100 text-blue-800'
                       }`}>

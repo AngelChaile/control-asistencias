@@ -103,7 +103,7 @@ export default function AusenciasRRHH() {
             </div>
             <ExportExcel 
               data={formatRRHHAusencias(result)} 
-              filename={`ausencias_rrhh_${area || "all"}_${desdeD}_${hastaD}.xlsx`}
+              filename={`ausencias_rrhh_${area || "Desde"}_${desdeD}_al_${hastaD}.xlsx`}
               
             >
               📊 Exportar Excel
