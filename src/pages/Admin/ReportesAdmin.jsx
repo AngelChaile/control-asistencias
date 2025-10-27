@@ -138,13 +138,13 @@ export default function ReportesAdmin() {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {result.filter(r => r.tipo === 'entrada').length} {console.log(result)}
+                  {result.filter(r => r.tipo === 'ENTRADA').length} {console.log(result)}
                 </div>
                 <div className="text-sm text-gray-600">Entradas</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {result.filter(r => r.tipo === 'salida').length}
+                  {result.filter(r => r.tipo === 'SALIDA').length}
                 </div>
                 <div className="text-sm text-gray-600">Salidas</div>
               </div>
@@ -189,7 +189,7 @@ export default function ReportesAdmin() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          r.tipo === 'entrada' 
+                          r.tipo === 'ENTRADA' 
                             ? 'bg-green-100 text-green-800'
                             : 'bg-blue-100 text-blue-800'
                         }`}>
