@@ -1,7 +1,7 @@
 import React from "react";
 import ReportesAdmin from "../Admin/ReportesAdmin";
-import ExportExcel from "../../components/ExportExcel";
-import { formatRRHHAsistencias } from "../../utils/excelFormats";
+//import ExportExcel from "../../components/ExportExcel";
+//import { formatRRHHAsistencias } from "../../utils/excelFormats"; <---- Parece q no se usan
 
 /**
  * RRHH Reportes: mismo componente que Admin pero RRHH puede ver todas las áreas.
