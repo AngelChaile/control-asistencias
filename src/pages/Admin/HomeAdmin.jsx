@@ -10,7 +10,7 @@ export default function HomeAdmin() {
   const [asistencias, setAsistencias] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
-    total: 0,
+    totalEmpleados: 0,
     presentes: 0,
     ausentes: 0
   });
@@ -21,31 +21,57 @@ export default function HomeAdmin() {
   useEffect(() => {
     if (!user) return;
 
-    async function fetchAsistencias() {
+    async function fetchData() {
       setLoading(true);
       try {
-        let q;
+        // cargar asistencias (para lista / detalle)
+        let qAll;
         if (rol === "rrhh") {
-          q = query(collection(db, "asistencias"));
+          qAll = query(collection(db, "asistencias"));
         } else if (rol === "admin" && area) {
-          q = query(
-            collection(db, "asistencias"),
-            where("lugarTrabajo", "==", area)
-          );
+          qAll = query(collection(db, "asistencias"), where("lugarTrabajo", "==", area));
         } else {
           setLoading(false);
           return;
         }
+        const snapAll = await getDocs(qAll);
+        const dataAll = snapAll.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setAsistencias(dataAll);
 
-        const snap = await getDocs(q);
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setAsistencias(data);
-        
-        // Calcular estadísticas simples
+        // Estadísticas reales:
+        // 1) total empleados (consultar colección empleados por area)
+        let totalEmpleados = 0;
+        if (rol === "rrhh") {
+          const qEmp = query(collection(db, "empleados"));
+          const snapEmp = await getDocs(qEmp);
+          totalEmpleados = snapEmp.size;
+        } else if (rol === "admin" && area) {
+          const qEmp = query(collection(db, "empleados"), where("lugarTrabajo", "==", area));
+          const snapEmp = await getDocs(qEmp);
+          totalEmpleados = snapEmp.size;
+        }
+
+        // 2) presentes hoy: asistentes de hoy (tipo ENTRADA) únicos por legajo
+        const todayStr = new Date().toLocaleDateString("es-AR");
+        const qToday = rol === "rrhh"
+          ? query(collection(db, "asistencias"), where("fecha", "==", todayStr))
+          : query(collection(db, "asistencias"), where("lugarTrabajo", "==", area), where("fecha", "==", todayStr));
+        const snapToday = await getDocs(qToday);
+        const todayRows = snapToday.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+        const presentesLegajos = new Set(
+          todayRows
+            .filter(r => String(r.tipo || "").toLowerCase() === "entrada")
+            .map(r => String(r.legajo || ""))
+            .filter(Boolean)
+        );
+        const presentes = presentesLegajos.size;
+        const ausentes = Math.max(0, totalEmpleados - presentes);
+
         setStats({
-          total: data.length,
-          presentes: data.filter(a => a.tipo === 'ENTRADA').length,
-          ausentes: data.filter(a => a.tipo !== 'ENTRADA').length,
+          totalEmpleados,
+          presentes,
+          ausentes
         });
       } catch (err) {
         console.error("Error cargando asistencias:", err);
@@ -54,7 +80,7 @@ export default function HomeAdmin() {
       }
     }
 
-    fetchAsistencias();
+    fetchData();
   }, [user, rol, area]);
 
   return (
@@ -70,17 +96,17 @@ export default function HomeAdmin() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="card p-6 text-center">
-          <div className="text-2xl font-bold text-gray-900 mb-2">{stats.total}</div>
+          <div className="text-2xl font-bold text-gray-900 mb-2">{stats.totalEmpleados}</div>
           <div className="text-gray-600">Total Empleados</div>
           <div className="w-12 h-1 bg-blue-500 rounded mx-auto mt-3"></div>
         </div>
-        
+
         <div className="card p-6 text-center">
           <div className="text-2xl font-bold text-green-600 mb-2">{stats.presentes}</div>
-          <div className="text-gray-600">Presentes Hoy</div>
+          <div className="text-gray-600">Presentes Hoy (Entradas)</div>
           <div className="w-12 h-1 bg-green-500 rounded mx-auto mt-3"></div>
         </div>
-        
+
         <div className="card p-6 text-center">
           <div className="text-2xl font-bold text-red-600 mb-2">{stats.ausentes}</div>
           <div className="text-gray-600">Ausentes Hoy</div>

@@ -8,7 +8,8 @@ export default function HomeRRHH() {
   const [stats, setStats] = useState({
     total: 0,
     areas: 0,
-    presentes: 0
+    entradas: 0,
+    salidas: 0
   });
 
   useEffect(() => {
@@ -17,15 +18,17 @@ export default function HomeRRHH() {
       try {
         const rows = await fetchAsistenciasToday();
         setAsistencias(rows || []);
-        
-        // Calcular estadísticas
-        const areasUnicas = new Set(rows.map(a => a.lugarTrabajo)).size;
-        const presentes = rows.filter(a => a.tipo === 'entrada').length;
-        
+
+        // Normalizar y contar entradas/salidas (case-insensitive)
+        const entradas = (rows || []).filter(a => String(a.tipo || "").toLowerCase() === "entrada").length;
+        const salidas = (rows || []).filter(a => String(a.tipo || "").toLowerCase() === "salida").length;
+        const areasUnicas = new Set((rows || []).map(a => a.lugarTrabajo || "").filter(Boolean)).size;
+
         setStats({
-          total: rows.length,
+          total: (rows || []).length,
           areas: areasUnicas,
-          presentes: presentes
+          entradas,
+          salidas
         });
       } catch (err) {
         console.error(err);
@@ -53,14 +56,14 @@ export default function HomeRRHH() {
 
       {/* Tarjetas de Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-{/*         <div className="card p-6 text-center">
-          <div className="text-2xl font-bold text-gray-900 mb-2">{stats.total}</div>
-          <div className="text-gray-600">Total Registros Hoy</div>
+        <div className="card p-6 text-center">
+          <div className="text-2xl font-bold text-gray-900 mb-2">{stats.salidas}</div>
+          <div className="text-gray-600">Salidas Registradas</div>
           <div className="w-12 h-1 bg-blue-500 rounded mx-auto mt-3"></div>
-        </div> */}
+        </div>
         
         <div className="card p-6 text-center">
-          <div className="text-2xl font-bold text-green-600 mb-2">{stats.presentes}</div>
+          <div className="text-2xl font-bold text-green-600 mb-2">{stats.entradas}</div>
           <div className="text-gray-600">Entradas Registradas</div>
           <div className="w-12 h-1 bg-green-500 rounded mx-auto mt-3"></div>
         </div>
