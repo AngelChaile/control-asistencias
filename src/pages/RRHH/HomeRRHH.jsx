@@ -53,14 +53,14 @@ export default function HomeRRHH() {
 
       {/* Tarjetas de Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="card p-6 text-center">
+{/*         <div className="card p-6 text-center">
           <div className="text-2xl font-bold text-gray-900 mb-2">{stats.total}</div>
           <div className="text-gray-600">Total Registros Hoy</div>
           <div className="w-12 h-1 bg-blue-500 rounded mx-auto mt-3"></div>
-        </div>
+        </div> */}
         
         <div className="card p-6 text-center">
-          <div className="text-2xl font-bold text-green-600 mb-2">{stats.presentes} {console.log(stats)}</div>
+          <div className="text-2xl font-bold text-green-600 mb-2">{stats.presentes}</div>
           <div className="text-gray-600">Entradas Registradas</div>
           <div className="w-12 h-1 bg-green-500 rounded mx-auto mt-3"></div>
         </div>

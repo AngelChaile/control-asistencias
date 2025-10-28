@@ -71,7 +71,7 @@ export default function HomeAdmin() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="card p-6 text-center">
           <div className="text-2xl font-bold text-gray-900 mb-2">{stats.total}</div>
-          <div className="text-gray-600">Total Asistencias</div>
+          <div className="text-gray-600">Total Empleados</div>
           <div className="w-12 h-1 bg-blue-500 rounded mx-auto mt-3"></div>
         </div>
         
