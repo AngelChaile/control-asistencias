@@ -131,12 +131,41 @@ export default function AusenciasAdmin() {
     );
   }
 
-  // preparar filas de export: SOLO ausencias enviadas a RRHH para la fecha seleccionada
-  const ausenciasEnviadasParaFecha = ausencias.filter(
-    (a) => inputDateFromLocaleStr(a.fecha) === selectedDate && isEnviadaARRHH(a)
-  );
+  // preparar filas de export: desduplicar por legajo y mantener sólo:
+  // - ausencias justificadas, o
+  // - ausencias cuyo legajo aparece una sola vez (sin duplicados)
+  const ausenciasParaFecha = ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate);
 
-  const exportRows = formatAdminAusencias(ausenciasEnviadasParaFecha);
+  // agrupar por legajo
+  const grupos = ausenciasParaFecha.reduce((acc, a) => {
+    const key = String(a.legajo || "");
+    acc[key] = acc[key] || [];
+    acc[key].push(a);
+    return acc;
+  }, {});
+
+  // seleccionar un representante por legajo:
+  const seleccionadas = Object.values(grupos).map((grupo) => {
+    if (grupo.length === 1) return grupo[0];
+    // si hay alguna justificadas, elegir la primera justificada
+    const just = grupo.find((g) => !!g.justificado);
+    if (just) return just;
+    // sino elegir la más reciente por createdAt/updatedAt
+    grupo.sort((a, b) => {
+      const at = a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0;
+      const bt = b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0;
+      return bt - at;
+    });
+    return grupo[0];
+  });
+
+  // filtrar según la regla: incluir si es justificada o si no había duplicados originalmente
+  const filteredForExport = seleccionadas.filter((item) => {
+    const groupSize = (grupos[String(item.legajo || "")] || []).length;
+    return !!item.justificado || groupSize === 1;
+  });
+
+  const exportRows = formatAdminAusencias(filteredForExport);
 
   return (
     <div className="app-container">
