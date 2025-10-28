@@ -51,7 +51,7 @@ export default function AusenciasAdmin() {
 
         const [emp, asist, aus] = await Promise.all([
           fetchEmpleadosByLugarTrabajo(lugar),
-          fetchAsistenciasByDate(fechaDate, lugar),
+          fetchAsistenciasBy
           fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar }),
         ]);
 
@@ -119,23 +119,24 @@ export default function AusenciasAdmin() {
     }
   }
 
-  const exportRows = [
-    // faltantes mapeados a la forma esperada por AdminAusencias (si quieres incluir columnas de justificativo fecha)
-    ...formatAdminAusencias(
-      faltantes.map((f) => {
-        const aus = getAusenciaForDate(f.legajo, selectedDate);
-        return {
-          legajo: f.legajo,
-          nombre: f.nombre,
-          apellido: f.apellido,
-          justificativo: aus?.justificativo || "",
-          fecha: aus?.fecha || toLocaleDateStr(parseInputDateToLocal(selectedDate)),
-        };
-      })
-    ),
-    // además las ausencias ya registradas (filtradas por fecha seleccionada)
-    ...formatAdminAusencias(ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate)),
-  ];
+  // helper que detecta si una ausencia fue "enviada a RRHH"
+  function isEnviadaARRHH(a) {
+    return !!(
+      a?.enviada === true ||
+      a?.enviado === true ||
+      a?.enviadaRRHH === true ||
+      a?.enviadoRRHH === true ||
+      a?.sentToRRHH === true ||
+      (typeof a?.status === "string" && a.status.toLowerCase() === "enviada")
+    );
+  }
+
+  // preparar filas de export: SOLO ausencias enviadas a RRHH para la fecha seleccionada
+  const ausenciasEnviadasParaFecha = ausencias.filter(
+    (a) => inputDateFromLocaleStr(a.fecha) === selectedDate && isEnviadaARRHH(a)
+  );
+
+  const exportRows = formatAdminAusencias(ausenciasEnviadasParaFecha);
 
   return (
     <div className="app-container">
@@ -160,12 +161,12 @@ export default function AusenciasAdmin() {
             </div>
           </div>
           
-          <ExportExcel 
-            data={exportRows} 
-            filename={`ausencias_admin_${lugar}_${selectedDate}.xlsx`}
-          >
-            📊 Exportar Excel
-          </ExportExcel>
+          <div style={{ marginBottom: 12 }}>
+            <ExportExcel
+              data={exportRows}
+              filename={`ausencias_enviadas_admin_${lugar}_${selectedDate}.xlsx`}
+            />
+          </div>
         </div>
 
         {loading ? (

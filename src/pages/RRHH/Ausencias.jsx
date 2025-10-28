@@ -82,7 +82,7 @@ export default function AusenciasRRHH() {
               className="input-modern"
               value={area}
               onChange={(e) => setArea(e.target.value)}
-              placeholder="Dejar vacío para ver todas (no distingue may/mín)"
+              placeholder="Dejar vacío para ver todas"
             />
           </div>
           <div>
