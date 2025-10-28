@@ -120,7 +120,7 @@ export default function AusenciasAdmin() {
   }
 
   // helper que detecta si una ausencia fue "enviada a RRHH"
-  function isEnviadaARRHH(a) {
+/*   function isEnviadaARRHH(a) {
     return !!(
       a?.enviada === true ||
       a?.enviado === true ||
@@ -129,7 +129,7 @@ export default function AusenciasAdmin() {
       a?.sentToRRHH === true ||
       (typeof a?.status === "string" && a.status.toLowerCase() === "enviada")
     );
-  }
+  } */ //Probar si no se rompe nada quitando esta funcion q no se usa**********
 
   // preparar filas de export: desduplicar por legajo y mantener sólo:
   // - ausencias justificadas, o
@@ -193,7 +193,7 @@ export default function AusenciasAdmin() {
           <div style={{ marginBottom: 12 }}>
             <ExportExcel
               data={exportRows}
-              filename={`ausencias_enviadas_admin_${lugar}_${selectedDate}.xlsx`}
+              filename={`ausencias_${lugar}_${selectedDate}.xlsx`}
             />
           </div>
         </div>
