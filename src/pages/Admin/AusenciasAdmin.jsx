@@ -182,7 +182,7 @@ export default function AusenciasAdmin() {
           <div style={{ marginBottom: 12 }}>
             <ExportExcel
               data={exportRows}
-              filename={`ausencias_${lugar}_${selectedDate}.xlsx`}
+              filename={`ausencias_${lugar}_${toLocaleDateStr(parseInputDateToLocal(selectedDate)).replace(/\//g, "-")}.xlsx`}
             />
           </div>
         </div>
@@ -200,7 +200,7 @@ export default function AusenciasAdmin() {
                   Empleados que aun no escanearon el QR para registrar su asistencia ({faltantes.length})
                 </h3>
                 <span className="text-sm text-gray-500">
-                  Fecha: {selectedDate}
+                  Fecha: {toLocaleDateStr(parseInputDateToLocal(selectedDate)).replace(/\//g, "-")}
                 </span>
               </div>
 
@@ -210,9 +210,9 @@ export default function AusenciasAdmin() {
                   <p className="text-gray-600">Todos los empleados han registrado su asistencia</p>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-gray-200">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 900 }}>
+                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
@@ -328,9 +328,9 @@ export default function AusenciasAdmin() {
                   <p className="text-gray-600">No hay ausencias enviadas para esta fecha</p>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-gray-200">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 900 }}>
+                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>

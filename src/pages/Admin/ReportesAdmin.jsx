@@ -11,6 +11,7 @@ export default function ReportesAdmin() {
     hasta: "",
     legajo: "",
     nombre: "",
+    area: "", // nuevo: filtro por area para RRHH
   });
   const [result, setResult] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -20,8 +21,15 @@ export default function ReportesAdmin() {
     try {
       const desde = filters.desde ? new Date(filters.desde) : null;
       const hasta = filters.hasta ? new Date(filters.hasta) : null;
-      const areaFilter = user?.rol === "admin" ? user?.lugarTrabajo : null;
-      const data = await fetchAsistenciasByRange({ desde, hasta, legajo: filters.legajo, nombre: filters.nombre, area: areaFilter });
+      // admin fija su área; rrhh usa el filtro elegido (o null para todas)
+      const areaFilter = user?.rol === "admin" ? user?.lugarTrabajo : (filters.area ? filters.area : null);
+      const data = await fetchAsistenciasByRange({
+        desde,
+        hasta,
+        legajo: filters.legajo,
+        nombre: filters.nombre,
+        area: areaFilter,
+      });
       setResult(data || []);
     } catch (err) {
       console.error(err);
@@ -36,6 +44,7 @@ export default function ReportesAdmin() {
       hasta: "",
       legajo: "",
       nombre: "",
+      area: "", // nuevo: reiniciar filtro de área
     });
     setResult([]);
   };
@@ -90,6 +99,15 @@ export default function ReportesAdmin() {
               placeholder="Filtrar por nombre..." 
               value={filters.nombre} 
               onChange={(e) => setFilters({ ...filters, nombre: e.target.value })} 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Área</label>
+            <input
+              className="input-modern"
+              value={filters.area}
+              onChange={(e) => setFilters((s) => ({ ...s, area: e.target.value }))}
+              placeholder={user?.rol === "admin" ? (user?.lugarTrabajo || "") : "Filtrar por área (RRHH) — dejar vacío = todas"}
             />
           </div>
         </div>
