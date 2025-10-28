@@ -51,7 +51,7 @@ export default function AusenciasAdmin() {
 
         const [emp, asist, aus] = await Promise.all([
           fetchEmpleadosByLugarTrabajo(lugar),
-          fetchAsistenciasBy
+          fetchAsistenciasByDate(fechaDate, lugar), // probando correccion
           fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar }),
         ]);
 
