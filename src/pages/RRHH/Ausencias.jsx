@@ -45,7 +45,8 @@ export default function AusenciasRRHH() {
   // al renderizar ExportExcel (donde exportas `result`):
   const desdePart = desde || "";
   const hastaPart = hasta || "";
-  const filename = `ausencias_rrhh_${area || "all"}_${desdePart}_${hastaPart}.xlsx`;
+  // filename usa las cadenas del input (YYYY-MM-DD) para evitar variables fuera de scope
+  const filename = `ausencias_rrhh_${area || "all"}_${desdePart}_al_${hastaPart}.xlsx`;
 
   return (
     <div className="app-container">
@@ -101,10 +102,9 @@ export default function AusenciasRRHH() {
             <div className="text-sm text-gray-600">
               {result.length} ausencias encontradas
             </div>
-            <ExportExcel 
-              data={formatRRHHAusencias(result)} 
-              filename={`ausencias_rrhh_${area || "Desde"}_${desdeD}_al_${hastaD}.xlsx`}
-              
+            <ExportExcel
+              data={formatRRHHAusencias(result)}
+              filename={filename}
             >
               📊 Exportar Excel
             </ExportExcel>
