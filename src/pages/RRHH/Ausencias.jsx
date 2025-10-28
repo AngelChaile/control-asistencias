@@ -14,6 +14,7 @@ function parseInputDateToLocal(isoYmd) {
 export default function AusenciasRRHH() {
   const { user } = useAuth();
   const [area, setArea] = useState("");
+  const [legajo, setLegajo] = useState(""); // nuevo: buscar por legajo
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [result, setResult] = useState([]);
@@ -26,8 +27,23 @@ export default function AusenciasRRHH() {
       const desdeD = desde ? parseInputDateToLocal(desde) : null;
       const hastaD = hasta ? parseInputDateToLocal(hasta) : null;
 
-      const data = await fetchAusenciasByRange({ desde: desdeD, hasta: hastaD, area: area || null });
-      setResult(data || []);
+      // Traer ausencias por rango (no filtrar por área en servidor para soportar búsqueda case-insensitive)
+      const data = await fetchAusenciasByRange({ desde: desdeD, hasta: hastaD, area: null });
+      let rows = data || [];
+
+      // filtro por área (case-insensitive, contiene)
+      if (area && area.trim()) {
+        const needle = area.trim().toLowerCase();
+        rows = rows.filter((r) => (r.lugarTrabajo || "").toLowerCase().includes(needle));
+      }
+
+      // filtro por legajo (contiene)
+      if (legajo && String(legajo).trim()) {
+        const lj = String(legajo).trim();
+        rows = rows.filter((r) => String(r.legajo || "").includes(lj));
+      }
+
+      setResult(rows);
     } catch (err) {
       console.error(err);
     } finally {
@@ -37,6 +53,7 @@ export default function AusenciasRRHH() {
 
   const handleReset = () => {
     setArea("");
+    setLegajo("");
     setDesde("");
     setHasta("");
     setResult([]);
@@ -58,32 +75,41 @@ export default function AusenciasRRHH() {
 
       <div className="card p-6 space-y-6">
         {/* Filtros de Búsqueda */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Área específica</label>
-            <input 
-              className="input-modern" 
-              value={area} 
-              onChange={(e) => setArea(e.target.value)} 
-              placeholder="Dejar vacío para todas" 
+            <input
+              className="input-modern"
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+              placeholder="Dejar vacío para ver todas (no distingue may/mín)"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Legajo</label>
+            <input
+              className="input-modern"
+              value={legajo}
+              onChange={(e) => setLegajo(e.target.value)}
+              placeholder="Buscar por legajo (parcial permitido)"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Fecha desde</label>
-            <input 
-              className="input-modern" 
-              type="date" 
-              value={desde} 
-              onChange={(e) => setDesde(e.target.value)} 
+            <input
+              className="input-modern"
+              type="date"
+              value={desde}
+              onChange={(e) => setDesde(e.target.value)}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Fecha hasta</label>
-            <input 
-              className="input-modern" 
-              type="date" 
-              value={hasta} 
-              onChange={(e) => setHasta(e.target.value)} 
+            <input
+              className="input-modern"
+              type="date"
+              value={hasta}
+              onChange={(e) => setHasta(e.target.value)}
             />
           </div>
           <div className="flex items-end gap-2">

@@ -68,7 +68,7 @@ export default function AsistenciasAdmin() {
           </div>
           <ExportExcel 
             data={formatAdminAsistencias(asistencias)} 
-            filename={`asistencias_hoy_${new Date().toISOString().slice(0, 10)}_${user?.lugarTrabajo || "all"}.xlsx`}
+            filename={`asistencias_${user?.lugarTrabajo}_${new Date().toISOString().slice(0, 10)}.xlsx`}
           >
             📊 Exportar Excel
           </ExportExcel>

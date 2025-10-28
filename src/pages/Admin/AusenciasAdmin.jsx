@@ -297,7 +297,7 @@ export default function AusenciasAdmin() {
               )}
             </section>
 
-            {/* Sección de Ausencias Registradas */}
+            {/* Sección de Ausencias Enviadas a RRHH */}
             <section>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Ausencias enviadas a Recursos Humanos ({ausencias.filter((a) => inputDateFromLocaleStr(a.fecha) === selectedDate).length})
