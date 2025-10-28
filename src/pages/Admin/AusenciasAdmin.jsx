@@ -119,17 +119,6 @@ export default function AusenciasAdmin() {
     }
   }
 
-  // helper que detecta si una ausencia fue "enviada a RRHH"
-/*   function isEnviadaARRHH(a) {
-    return !!(
-      a?.enviada === true ||
-      a?.enviado === true ||
-      a?.enviadaRRHH === true ||
-      a?.enviadoRRHH === true ||
-      a?.sentToRRHH === true ||
-      (typeof a?.status === "string" && a.status.toLowerCase() === "enviada")
-    );
-  } */ //Probar si no se rompe nada quitando esta funcion q no se usa**********
 
   // preparar filas de export: desduplicar por legajo y mantener sólo:
   // - ausencias justificadas, o

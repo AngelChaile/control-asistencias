@@ -91,7 +91,7 @@ export default function AusenciasRRHH() {
               className="input-modern"
               value={legajo}
               onChange={(e) => setLegajo(e.target.value)}
-              placeholder="Buscar por legajo (parcial permitido)"
+              placeholder="Buscar por legajo"
             />
           </div>
           <div>

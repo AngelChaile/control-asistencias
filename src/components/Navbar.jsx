@@ -62,7 +62,7 @@ export default function Navbar() {
               <div className="hidden sm:block">
                 <div className="text-lg font-semibold text-gray-900 leading-tight">Control de Asistencias</div>
                 <div className="text-xs text-gray-500 capitalize leading-tight">
-                  {user.rol} • {user.lugarTrabajo || 'Municipio'}
+                  {user.nombre} {user.apellido} • {user.lugarTrabajo || 'Municipio'}
                 </div>
               </div>
             </div>
@@ -91,14 +91,14 @@ export default function Navbar() {
 
           {/* User & Logout - Desktop */}
           <div className="hidden lg:flex items-center space-x-4">
-            <div className="text-right">
+{/*             <div className="text-right">
               <div className="text-sm font-medium text-gray-900 truncate max-w-[120px]">
                 {user.nombre}
               </div>
               <div className="text-xs text-gray-500 truncate max-w-[120px]">
                 {user.apellido}
               </div>
-            </div>
+            </div> */}
             <button
               onClick={handleLogout}
               className="btn-secondary text-sm whitespace-nowrap cursor-pointer"

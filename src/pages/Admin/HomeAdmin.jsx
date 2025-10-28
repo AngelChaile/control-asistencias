@@ -44,8 +44,8 @@ export default function HomeAdmin() {
         // Calcular estadísticas simples
         setStats({
           total: data.length,
-          presentes: data.filter(a => a.tipo === 'entrada').length,
-          ausentes: 0 //Logica segun ausencias
+          presentes: data.filter(a => a.tipo === 'ENTRADA').length,
+          ausentes: data.filter(a => a.tipo !== 'ENTRADA').length,
         });
       } catch (err) {
         console.error("Error cargando asistencias:", err);
@@ -102,9 +102,6 @@ export default function HomeAdmin() {
           <QrGenerator area={area} user={user} />
         </div>
       )}
-
-      {/* Asistencias Table (comentado) */}
-      {/* ... resto del código comentado ... */}
     </div>
   );
 }
