@@ -42,8 +42,8 @@ export default function ReportesAdmin() {
 
   const exportData = user?.rol === "rrhh" ? formatRRHHAsistencias(result) : formatAdminAsistencias(result);
   const filename = user?.rol === "rrhh"
-    ? `asistencias_rrhh_${user?.lugarTrabajo || "all"}_${filters.desde || "inicio"}_${filters.hasta || "fin"}.xlsx`
-    : `asistencias_admin_${user?.lugarTrabajo || "all"}_${filters.desde || "inicio"}_${filters.hasta || "fin"}.xlsx`;
+    ? `asistencias_admin_${user?.lugarTrabajo || "all"}_${filters.desde || "inicio"}_al_${filters.hasta || "fin"}.xlsx`
+    : `asistencias_admin_${user?.lugarTrabajo || "all"}_${filters.desde || "inicio"}_al_${filters.hasta || "fin"}.xlsx`;
 
   return (
     <div className="app-container">

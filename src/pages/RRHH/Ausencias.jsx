@@ -46,7 +46,7 @@ export default function AusenciasRRHH() {
   const desdePart = desde || "";
   const hastaPart = hasta || "";
   // filename usa las cadenas del input (YYYY-MM-DD) para evitar variables fuera de scope
-  const filename = `ausencias_rrhh_${area || "all"}_${desdePart}_al_${hastaPart}.xlsx`;
+  const filename = `ausencias_admin_${area || "desde"}_${desdePart}_hasta_${hastaPart}.xlsx`;
 
   return (
     <div className="app-container">
