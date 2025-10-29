@@ -330,3 +330,30 @@ export async function fetchAsistenciasPage({ desde = null, hasta = null, area = 
   const lastDoc = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
   return { rows, lastDoc };
 }
+
+/**
+ * fetchAsistenciasTodayPage({ area, pageSize = 50, cursorDoc = null })
+ * - Trae asistencias paginadas SOLO del día actual
+ */
+export async function fetchAsistenciasTodayPage({ area = null, pageSize = 50, cursorDoc = null } = {}) {
+  const fechaStr = new Date().toLocaleDateString("es-AR");
+  
+  const constraints = [
+    where("fecha", "==", fechaStr)
+  ];
+  
+  if (area) constraints.push(where("lugarTrabajo", "==", area));
+  
+  // Ordenar por hora descendente para ver los más recientes primero
+  constraints.push(orderBy("hora", "desc"));
+  constraints.push(limit(pageSize));
+
+  const qArgs = [collection(db, "asistencias"), ...constraints];
+  const q = cursorDoc ? query(...qArgs, startAfter(cursorDoc)) : query(...qArgs);
+
+  const snap = await getDocs(q);
+  const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const lastDoc = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+  
+  return { rows, lastDoc };
+}
