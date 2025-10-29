@@ -133,7 +133,6 @@ export default function QrGenerator({ area = "", user }) {
             
             <div class="info">
               <div><strong>Válido hasta:</strong> <span class="expires">${new Date(qrLink.expiresAt).toLocaleString('es-AR')}</span></div>
-              <div style="margin-top: 8px;"><strong>Token:</strong> ${token}</div>
             </div>
             
             <div class="instructions">
