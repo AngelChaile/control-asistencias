@@ -238,13 +238,13 @@ export default function QrGenerator({ area = "", user }) {
               <span>Imprimir QR</span>
             </button>
             
-            <button 
+{/*             <button 
               onClick={copiarEnlace}
               className="btn-secondary flex items-center justify-center space-x-2 py-3 px-6"
             >
               <span>📋</span>
               <span>Copiar Enlace</span>
-            </button>
+            </button> */}
           </div>
           
           {/* Información adicional */}
@@ -262,12 +262,12 @@ export default function QrGenerator({ area = "", user }) {
             </div>
             
             {/* Token para referencia */}
-            <div className="p-3 bg-gray-100 rounded-lg">
+{/*             <div className="p-3 bg-gray-100 rounded-lg">
               <p className="text-xs text-gray-600 font-medium mb-1">Token de referencia:</p>
               <code className="text-xs bg-white px-2 py-1 rounded border border-gray-300 font-mono">
                 {token}
               </code>
-            </div>
+            </div> */}
 
             {/* Instrucciones */}
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">

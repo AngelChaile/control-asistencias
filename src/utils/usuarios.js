@@ -9,7 +9,10 @@ import {
   query,
   where,
   addDoc,
-  updateDoc
+  updateDoc,
+  orderBy,
+  limit,
+  startAfter
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
 
@@ -119,4 +122,23 @@ export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), ju
     console.error("saveAusenciaJustificacion error:", err);
     throw err;
   }
+}
+
+/**
+ * fetchEmpleadosPage({ lugar, pageSize = 100, cursorDoc = null })
+ * - devuelve { rows: [], lastDoc } para paginar con startAfter(lastDoc)
+ */
+export async function fetchEmpleadosPage({ lugar = null, pageSize = 100, cursorDoc = null } = {}) {
+  const constraints = [];
+  if (lugar) constraints.push(where("lugarTrabajo", "==", lugar));
+  constraints.push(orderBy("legajo"));
+  constraints.push(limit(pageSize));
+
+  const qArgs = [collection(db, "empleados"), ...constraints];
+  const q = cursorDoc ? query(...qArgs, startAfter(cursorDoc)) : query(...qArgs);
+
+  const snap = await getDocs(q);
+  const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const lastDoc = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+  return { rows, lastDoc };
 }

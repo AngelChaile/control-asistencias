@@ -9,6 +9,9 @@ import {
   where,
   serverTimestamp,
   updateDoc,
+  orderBy,
+  limit,
+  startAfter,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -306,4 +309,24 @@ export async function fetchAsistenciasByFilters(filters = {}) {
  */
 export async function fetchAusenciasByArea(area) {
   return fetchAusenciasByRange({ area });
+}
+
+/**
+ * fetchAsistenciasPage({ desde, hasta, area, pageSize = 200, cursorDoc = null })
+ * - trae asistencias paginadas; filtrar por area en servidor si existe
+ */
+export async function fetchAsistenciasPage({ desde = null, hasta = null, area = null, pageSize = 200, cursorDoc = null } = {}) {
+  const constraints = [];
+  if (area) constraints.push(where("lugarTrabajo", "==", area));
+  // ordenar por createdAt (si está) o por fecha/hora; ajustar según esquema
+  constraints.push(orderBy("createdAt", "desc"));
+  constraints.push(limit(pageSize));
+
+  const qArgs = [collection(db, "asistencias"), ...constraints];
+  const q = cursorDoc ? query(...qArgs, startAfter(cursorDoc)) : query(...qArgs);
+
+  const snap = await getDocs(q);
+  const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const lastDoc = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+  return { rows, lastDoc };
 }
