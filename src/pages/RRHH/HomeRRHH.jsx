@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { fetchAsistenciasToday } from "../../utils/asistencia";
+import { fetchAsistenciasToday, fetchAsistenciasPage } from "../../utils/asistencia";
 
 export default function HomeRRHH() {
   const [asistencias, setAsistencias] = useState([]);
@@ -11,15 +11,21 @@ export default function HomeRRHH() {
     entradas: 0,
     salidas: 0
   });
+  
+  // Estados para paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(50); // Ajusta según necesidad
+  const [hasMore, setHasMore] = useState(true);
+  const [lastDoc, setLastDoc] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
 
+  // Cargar estadísticas (sin paginación - solo conteos)
   useEffect(() => {
     (async () => {
-      setLoading(true);
       try {
         const rows = await fetchAsistenciasToday();
-        setAsistencias(rows || []);
-
-        // Normalizar y contar entradas/salidas (case-insensitive)
+        
+        // Estadísticas sin paginación
         const entradas = (rows || []).filter(a => String(a.tipo || "").toLowerCase() === "entrada").length;
         const salidas = (rows || []).filter(a => String(a.tipo || "").toLowerCase() === "salida").length;
         const areasUnicas = new Set((rows || []).map(a => a.lugarTrabajo || "").filter(Boolean)).size;
@@ -30,14 +36,59 @@ export default function HomeRRHH() {
           entradas,
           salidas
         });
+        
+        setTotalCount((rows || []).length);
       } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+        console.error("Error cargando estadísticas:", err);
       }
     })();
   }, []);
 
+  // Cargar datos paginados
+  const loadAsistencias = async (page = 1, reset = false) => {
+    setLoading(true);
+    try {
+      const { rows, lastDoc: newLastDoc } = await fetchAsistenciasPage({
+        pageSize: itemsPerPage,
+        cursorDoc: reset ? null : lastDoc
+      });
+
+      if (reset) {
+        setAsistencias(rows);
+      } else {
+        setAsistencias(prev => [...prev, ...rows]);
+      }
+
+      setLastDoc(newLastDoc);
+      setHasMore(rows.length === itemsPerPage);
+      setCurrentPage(page);
+    } catch (err) {
+      console.error("Error cargando asistencias:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar primera página al montar
+  useEffect(() => {
+    loadAsistencias(1, true);
+  }, []);
+
+  // Función para cargar más datos
+  const loadMore = () => {
+    if (!loading && hasMore) {
+      loadAsistencias(currentPage + 1, false);
+    }
+  };
+
+  // Función para recargar desde el inicio
+  const reloadData = () => {
+    setLastDoc(null);
+    setHasMore(true);
+    loadAsistencias(1, true);
+  };
+
+  // Aplicar filtros al cliente (para pocos datos) o implementar filtros en servidor
   const filtered = asistencias.filter((a) => {
     return (
       (filter.legajo === "" || String(a.legajo).includes(filter.legajo)) &&
@@ -82,8 +133,17 @@ export default function HomeRRHH() {
             <h3 className="text-lg font-semibold text-gray-900">Asistencias del Día</h3>
             <p className="text-gray-600">Registros de entrada y salida</p>
           </div>
-          <div className="text-sm text-gray-600">
-            {filtered.length} de {asistencias.length} registros
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600">
+              Mostrando {filtered.length} de {asistencias.length} cargados • Total: {totalCount}
+            </div>
+            <button 
+              onClick={reloadData}
+              disabled={loading}
+              className="btn-secondary text-sm px-3 py-1"
+            >
+              🔄 Actualizar
+            </button>
           </div>
         </div>
 
@@ -119,63 +179,92 @@ export default function HomeRRHH() {
         </div>
 
         {/* Tabla de Resultados */}
-        {loading ? (
+        {loading && asistencias.length === 0 ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-municipio-500"></div>
           </div>
         ) : filtered.length > 0 ? (
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 900 }}>
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filtered.map((a) => (
-                  <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-                          <span className="text-gray-600 font-medium text-sm">
-                            {a.nombre?.[0]}{a.apellido?.[0]}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {a.nombre} {a.apellido}
-                          </div>
-                          <div className="text-sm text-gray-500">Legajo: {a.legajo}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {a.lugarTrabajo}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {a.hora}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {a.fecha}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        a.tipo === 'ENTRADA' 
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {a.tipo}
-                      </span>
-                    </td>
+          <>
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 900 }}>
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filtered.map((a) => (
+                    <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                            <span className="text-gray-600 font-medium text-sm">
+                              {a.nombre?.[0]}{a.apellido?.[0]}
+                            </span>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {a.nombre} {a.apellido}
+                            </div>
+                            <div className="text-sm text-gray-500">Legajo: {a.legajo}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {a.lugarTrabajo}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {a.hora}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {a.fecha}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          a.tipo === 'ENTRADA' 
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {a.tipo}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Botón de cargar más */}
+            {hasMore && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={loadMore}
+                  disabled={loading}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Cargando...
+                    </>
+                  ) : (
+                    '📥 Cargar más registros'
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Indicador de fin de datos */}
+            {!hasMore && asistencias.length > 0 && (
+              <div className="text-center mt-4 text-gray-500 text-sm">
+                ✅ Se han cargado todos los registros
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-12">
             <div className="text-gray-400 text-6xl mb-4">📊</div>
