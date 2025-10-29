@@ -14,7 +14,7 @@ export default function HomeRRHH() {
   
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5); // Ajusta según necesidad (tenia 50)
+  const [itemsPerPage] = useState(50); // Ajusta según necesidad 
   const [hasMore, setHasMore] = useState(true);
   const [lastDoc, setLastDoc] = useState(null);
   const [totalCount, setTotalCount] = useState(0);

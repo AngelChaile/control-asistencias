@@ -117,7 +117,7 @@ export default function AsistenciasAdmin() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        a.tipo === 'entrada' 
+                        a.tipo === 'ENTRADA' 
                           ? 'bg-green-100 text-green-800'
                           : 'bg-blue-100 text-blue-800'
                       }`}>
