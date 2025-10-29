@@ -335,7 +335,7 @@ export async function fetchAsistenciasPage({ desde = null, hasta = null, area = 
  * fetchAsistenciasTodayPage({ area, pageSize = 50, cursorDoc = null })
  * - Trae asistencias paginadas SOLO del día actual
  */
-export async function fetchAsistenciasTodayPage({ area = null, pageSize = 5, cursorDoc = null } = {}) {
+export async function fetchAsistenciasTodayPage({ area = null, pageSize = 50, cursorDoc = null } = {}) {
   const fechaStr = new Date().toLocaleDateString("es-AR");
   
   const constraints = [
