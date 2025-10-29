@@ -124,8 +124,8 @@ export default function HomeRRHH() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-municipio-500"></div>
           </div>
         ) : filtered.length > 0 ? (
-          <div className="overflow-hidden rounded-lg border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto rounded-lg border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 900 }}>
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
@@ -140,7 +140,7 @@ export default function HomeRRHH() {
                   <tr key={a.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                        <div className="shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
                           <span className="text-gray-600 font-medium text-sm">
                             {a.nombre?.[0]}{a.apellido?.[0]}
                           </span>

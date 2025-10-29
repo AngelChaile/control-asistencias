@@ -234,8 +234,8 @@ export default function Usuarios() {
               <p className="text-gray-600">Comienza creando el primer usuario del sistema</p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 900 }}>
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
@@ -250,7 +250,7 @@ export default function Usuarios() {
                     <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
+                          <div className={`shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
                             u.rol === 'admin' ? 'bg-red-100' :
                             u.rol === 'rrhh' ? 'bg-purple-100' :
                             'bg-blue-100'
