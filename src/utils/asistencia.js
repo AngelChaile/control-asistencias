@@ -230,7 +230,6 @@ export async function fetchAsistenciasByRange({ desde = null, hasta = null, lega
   // Normalizar filtros (trim + lowercase)
   const legajoNormalized = legajo ? legajo.trim().toLowerCase() : "";
   const nombreNormalized = nombre ? nombre.trim().toLowerCase() : "";
-  const areaNormalized = area ? area.trim().toLowerCase() : "";
 
   const filtered = rows.filter((r) => {
     const t = toTime(r);
@@ -248,13 +247,7 @@ export async function fetchAsistenciasByRange({ desde = null, hasta = null, lega
       const fullName = `${r.nombre || ""} ${r.apellido || ""}`.toLowerCase().trim();
       if (!fullName.includes(nombreNormalized)) return false;
     }
-
-    // Filtro por área (case-insensitive y sin espacios)
-    if (areaNormalized) {
-      const areaRecord = String(r.area || "").toLowerCase();
-      if (!areaRecord.includes(areaNormalized)) return false;
-    }
-
+    
     return true;
   });
 
