@@ -202,6 +202,7 @@ export async function fetchAsistenciasToday(area = null) {
 /**
  * fetchAsistenciasByRange({ desde: Date|null, hasta: Date|null, legajo: string|null, nombre: string|null, area: string|null })
  * - realiza la consulta básica y filtra en cliente por fecha, legajo y nombre/apellido
+ * - MEJORADO: búsqueda case-insensitive y que ignore espacios al inicio/final
  */
 export async function fetchAsistenciasByRange({ desde = null, hasta = null, legajo = "", nombre = "", area = null } = {}) {
   const constraints = [];
@@ -226,15 +227,27 @@ export async function fetchAsistenciasByRange({ desde = null, hasta = null, lega
   const desdeTs = desde ? desde.getTime() : null;
   const hastaTs = hasta ? hasta.getTime() : null;
 
+  // Normalizar filtros (trim + lowercase)
+  const legajoNormalized = legajo ? legajo.trim().toLowerCase() : "";
+  const nombreNormalized = nombre ? nombre.trim().toLowerCase() : "";
+
   const filtered = rows.filter((r) => {
     const t = toTime(r);
     if (desdeTs && t < desdeTs) return false;
     if (hastaTs && t > hastaTs + 24 * 3600 * 1000 - 1) return false; // incluir hasta día completo
-    if (legajo && String(r.legajo).indexOf(String(legajo)) === -1) return false;
-    if (nombre) {
-      const full = `${r.nombre || ""} ${r.apellido || ""}`.toLowerCase();
-      if (!full.includes(nombre.toLowerCase())) return false;
+    
+    // Filtro por legajo (case-insensitive y sin espacios)
+    if (legajoNormalized) {
+      const legajoRecord = String(r.legajo || "").toLowerCase();
+      if (!legajoRecord.includes(legajoNormalized)) return false;
     }
+    
+    // Filtro por nombre/apellido (case-insensitive y sin espacios)
+    if (nombreNormalized) {
+      const fullName = `${r.nombre || ""} ${r.apellido || ""}`.toLowerCase().trim();
+      if (!fullName.includes(nombreNormalized)) return false;
+    }
+    
     return true;
   });
 

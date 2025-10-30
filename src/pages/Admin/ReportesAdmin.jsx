@@ -16,18 +16,33 @@ export default function ReportesAdmin() {
   const [result, setResult] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Función para normalizar filtros (trim + preparar para búsqueda)
+  const normalizeFilters = (filters) => {
+    return {
+      ...filters,
+      legajo: filters.legajo.trim(),
+      nombre: filters.nombre.trim(),
+      area: filters.area.trim()
+    };
+  };
+
   async function handleSearch() {
     setLoading(true);
     try {
       const desde = filters.desde ? new Date(filters.desde) : null;
       const hasta = filters.hasta ? new Date(filters.hasta) : null;
+      
+      // Normalizar filtros antes de enviar
+      const normalizedFilters = normalizeFilters(filters);
+      
       // admin fija su área; rrhh usa el filtro elegido (o null para todas)
-      const areaFilter = user?.rol === "admin" ? user?.lugarTrabajo : (filters.area ? filters.area : null);
+      const areaFilter = user?.rol === "admin" ? user?.lugarTrabajo : (normalizedFilters.area ? normalizedFilters.area : null);
+      
       const data = await fetchAsistenciasByRange({
         desde,
         hasta,
-        legajo: filters.legajo,
-        nombre: filters.nombre,
+        legajo: normalizedFilters.legajo,
+        nombre: normalizedFilters.nombre,
         area: areaFilter,
       });
       setResult(data || []);
@@ -47,6 +62,14 @@ export default function ReportesAdmin() {
       area: "", // nuevo: reiniciar filtro de área
     });
     setResult([]);
+  };
+
+  // Función para manejar cambios en inputs con trim automático
+  const handleInputChange = (field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const exportData = user?.rol === "rrhh" ? formatRRHHAsistencias(result) : formatAdminAsistencias(result);
@@ -71,7 +94,7 @@ export default function ReportesAdmin() {
               className="input-modern" 
               type="date" 
               value={filters.desde} 
-              onChange={(e) => setFilters({ ...filters, desde: e.target.value })} 
+              onChange={(e) => handleInputChange('desde', e.target.value)} 
             />
           </div>
           <div>
@@ -80,7 +103,7 @@ export default function ReportesAdmin() {
               className="input-modern" 
               type="date" 
               value={filters.hasta} 
-              onChange={(e) => setFilters({ ...filters, hasta: e.target.value })} 
+              onChange={(e) => handleInputChange('hasta', e.target.value)} 
             />
           </div>
           <div>
@@ -89,7 +112,8 @@ export default function ReportesAdmin() {
               className="input-modern" 
               placeholder="Filtrar por legajo..." 
               value={filters.legajo} 
-              onChange={(e) => setFilters({ ...filters, legajo: e.target.value })} 
+              onChange={(e) => handleInputChange('legajo', e.target.value)}
+              onBlur={(e) => handleInputChange('legajo', e.target.value.trim())} // Trim al perder foco
             />
           </div>
           <div>
@@ -98,7 +122,8 @@ export default function ReportesAdmin() {
               className="input-modern" 
               placeholder="Filtrar por nombre..." 
               value={filters.nombre} 
-              onChange={(e) => setFilters({ ...filters, nombre: e.target.value })} 
+              onChange={(e) => handleInputChange('nombre', e.target.value)}
+              onBlur={(e) => handleInputChange('nombre', e.target.value.trim())} // Trim al perder foco
             />
           </div>
           
@@ -111,7 +136,8 @@ export default function ReportesAdmin() {
               <input
                 className="input-modern"
                 value={filters.area}
-                onChange={(e) => setFilters((s) => ({ ...s, area: e.target.value }))}
+                onChange={(e) => handleInputChange('area', e.target.value)}
+                onBlur={(e) => handleInputChange('area', e.target.value.trim())} // Trim al perder foco
                 placeholder="Filtrar por área - vacío = todas"
               />
             </div>
@@ -129,6 +155,11 @@ export default function ReportesAdmin() {
             </div>
           </div>
         )}
+
+        {/* Información de búsqueda mejorada */}
+        <div className="text-sm text-gray-600">
+          💡 <strong>Búsqueda mejorada:</strong> No distingue mayúsculas/minúsculas y ignora espacios al final
+        </div>
 
         {/* Controles de Acción */}
         <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
@@ -148,7 +179,7 @@ export default function ReportesAdmin() {
           )}
         </div>
 
-        {/* Resultados */}
+        {/* Resto del código permanece igual */}
         {loading ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-municipio-500"></div>
