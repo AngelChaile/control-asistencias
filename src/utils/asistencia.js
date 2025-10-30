@@ -201,12 +201,13 @@ export async function fetchAsistenciasToday(area = null) {
 
 /**
  * fetchAsistenciasByRange({ desde: Date|null, hasta: Date|null, legajo: string|null, nombre: string|null, area: string|null })
- * - realiza la consulta básica y filtra en cliente por fecha, legajo y nombre/apellido
- * - MEJORADO: búsqueda case-insensitive y que ignore espacios al inicio/final
+ * - realiza la consulta básica y filtra en cliente por fecha, legajo, nombre/apellido y área
+ * - MEJORADO: búsqueda case-insensitive para todos los campos y que ignore espacios
  */
 export async function fetchAsistenciasByRange({ desde = null, hasta = null, legajo = "", nombre = "", area = null } = {}) {
+  // QUITAMOS el filtro de área del servidor para hacerlo case-insensitive en el cliente
   const constraints = [];
-  if (area) constraints.push(where("lugarTrabajo", "==", area));
+  // if (area) constraints.push(where("lugarTrabajo", "==", area)); // ← ELIMINADO
   const q = query(collection(db, "asistencias"), ...constraints);
   const snap = await getDocs(q);
   const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -230,6 +231,7 @@ export async function fetchAsistenciasByRange({ desde = null, hasta = null, lega
   // Normalizar filtros (trim + lowercase)
   const legajoNormalized = legajo ? legajo.trim().toLowerCase() : "";
   const nombreNormalized = nombre ? nombre.trim().toLowerCase() : "";
+  const areaNormalized = area ? area.trim().toLowerCase() : "";
 
   const filtered = rows.filter((r) => {
     const t = toTime(r);
@@ -246,6 +248,12 @@ export async function fetchAsistenciasByRange({ desde = null, hasta = null, lega
     if (nombreNormalized) {
       const fullName = `${r.nombre || ""} ${r.apellido || ""}`.toLowerCase().trim();
       if (!fullName.includes(nombreNormalized)) return false;
+    }
+    
+    // Filtro por área (case-insensitive y sin espacios) - AHORA EN CLIENTE
+    if (areaNormalized) {
+      const areaRecord = String(r.lugarTrabajo || "").toLowerCase();
+      if (!areaRecord.includes(areaNormalized)) return false;
     }
     
     return true;

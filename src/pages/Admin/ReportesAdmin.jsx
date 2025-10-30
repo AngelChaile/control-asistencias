@@ -26,32 +26,33 @@ export default function ReportesAdmin() {
     };
   };
 
-  async function handleSearch() {
-    setLoading(true);
-    try {
-      const desde = filters.desde ? new Date(filters.desde) : null;
-      const hasta = filters.hasta ? new Date(filters.hasta) : null;
-      
-      // Normalizar filtros antes de enviar
-      const normalizedFilters = normalizeFilters(filters);
-      
-      // admin fija su área; rrhh usa el filtro elegido (o null para todas)
-      const areaFilter = user?.rol === "admin" ? user?.lugarTrabajo : (normalizedFilters.area ? normalizedFilters.area : null);
-      
-      const data = await fetchAsistenciasByRange({
-        desde,
-        hasta,
-        legajo: normalizedFilters.legajo,
-        nombre: normalizedFilters.nombre,
-        area: areaFilter,
-      });
-      setResult(data || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+async function handleSearch() {
+  setLoading(true);
+  try {
+    const desde = filters.desde ? new Date(filters.desde) : null;
+    const hasta = filters.hasta ? new Date(filters.hasta) : null;
+    
+    // Normalizar filtros antes de enviar
+    const normalizedFilters = normalizeFilters(filters);
+    
+    // Para admin: usar su área automáticamente (sin filtro en el input)
+    // Para RRHH: enviar el área del filtro (puede estar vacío para todas)
+    const areaFilter = user?.rol === "admin" ? user?.lugarTrabajo : normalizedFilters.area;
+    
+    const data = await fetchAsistenciasByRange({
+      desde,
+      hasta,
+      legajo: normalizedFilters.legajo,
+      nombre: normalizedFilters.nombre,
+      area: areaFilter, // Ahora se filtra case-insensitive en el cliente
+    });
+    setResult(data || []);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
   }
+}
 
   const handleReset = () => {
     setFilters({
@@ -155,11 +156,6 @@ export default function ReportesAdmin() {
             </div>
           </div>
         )}
-
-        {/* Información de búsqueda mejorada */}
-        <div className="text-sm text-gray-600">
-          💡 <strong>Búsqueda mejorada:</strong> No distingue mayúsculas/minúsculas y ignora espacios al final
-        </div>
 
         {/* Controles de Acción */}
         <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
