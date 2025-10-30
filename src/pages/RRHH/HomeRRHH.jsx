@@ -13,20 +13,18 @@ export default function HomeRRHH() {
   });
   
   // Estados para paginación
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50); // Ajusta según necesidad 
+  const [itemsPerPage] = useState(5); // Para testing
   const [hasMore, setHasMore] = useState(true);
   const [lastDoc, setLastDoc] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
-  const [initialLoad, setInitialLoad] = useState(true);
 
-  // Cargar estadísticas (sin paginación - solo conteos del día actual)
+  // Cargar estadísticas (sin paginación - solo conteos)
   useEffect(() => {
     (async () => {
       try {
         const rows = await fetchAsistenciasToday();
         
-        // Estadísticas del día actual
+        // Estadísticas sin paginación
         const entradas = (rows || []).filter(a => String(a.tipo || "").toLowerCase() === "entrada").length;
         const salidas = (rows || []).filter(a => String(a.tipo || "").toLowerCase() === "salida").length;
         const areasUnicas = new Set((rows || []).map(a => a.lugarTrabajo || "").filter(Boolean)).size;
@@ -45,10 +43,8 @@ export default function HomeRRHH() {
     })();
   }, []);
 
-  // Cargar datos paginados del día actual
+  // Cargar datos paginados
   const loadAsistencias = async (reset = false) => {
-    if (loading) return;
-    
     setLoading(true);
     try {
       const { rows, lastDoc: newLastDoc } = await fetchAsistenciasTodayPage({
@@ -56,19 +52,14 @@ export default function HomeRRHH() {
         cursorDoc: reset ? null : lastDoc
       });
 
-      if (reset || initialLoad) {
+      if (reset) {
         setAsistencias(rows);
-        setInitialLoad(false);
       } else {
         setAsistencias(prev => [...prev, ...rows]);
       }
 
       setLastDoc(newLastDoc);
       setHasMore(rows.length === itemsPerPage);
-      
-      if (!reset) {
-        setCurrentPage(prev => prev + 1);
-      }
     } catch (err) {
       console.error("Error cargando asistencias:", err);
     } finally {
@@ -92,11 +83,10 @@ export default function HomeRRHH() {
   const reloadData = () => {
     setLastDoc(null);
     setHasMore(true);
-    setCurrentPage(1);
     loadAsistencias(true);
   };
 
-  // Aplicar filtros al cliente
+  // Aplicar filtros al cliente (para pocos datos)
   const filtered = asistencias.filter((a) => {
     return (
       (filter.legajo === "" || String(a.legajo).includes(filter.legajo)) &&
@@ -105,23 +95,12 @@ export default function HomeRRHH() {
     );
   });
 
-  // Mostrar fecha actual
-  const fechaActual = new Date().toLocaleDateString("es-AR", {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-
   return (
     <div className="app-container">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Panel de Recursos Humanos</h1>
         <p className="text-gray-600">Gestión integral de personal y asistencias</p>
-        <div className="mt-2 text-sm text-gray-500 bg-gray-100 inline-block px-3 py-1 rounded-full">
-          📅 {fechaActual}
-        </div>
       </div>
 
       {/* Tarjetas de Estadísticas */}
@@ -150,18 +129,18 @@ export default function HomeRRHH() {
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Asistencias del Día</h3>
-            <p className="text-gray-600">Registros de entrada y salida - Hoy</p>
+            <p className="text-gray-600">Registros de entrada y salida</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-600">
-              Mostrando {filtered.length} de {asistencias.length} cargados • Total hoy: {totalCount}
+              {filtered.length} de {asistencias.length} cargados • Total: {totalCount}
             </div>
             <button 
               onClick={reloadData}
               disabled={loading}
-              className="btn-secondary text-sm px-3 py-1 disabled:opacity-50"
+              className="btn-secondary text-sm px-3 py-1"
             >
-              {loading ? "⏳" : "🔄"} Actualizar
+              🔄 Actualizar
             </button>
           </div>
         </div>
@@ -201,7 +180,6 @@ export default function HomeRRHH() {
         {loading && asistencias.length === 0 ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-municipio-500"></div>
-            <span className="ml-3 text-gray-600">Cargando asistencias del día...</span>
           </div>
         ) : filtered.length > 0 ? (
           <>
@@ -264,7 +242,7 @@ export default function HomeRRHH() {
                 <button
                   onClick={loadMore}
                   disabled={loading}
-                  className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                  className="btn-primary flex items-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -281,14 +259,14 @@ export default function HomeRRHH() {
             {/* Indicador de fin de datos */}
             {!hasMore && asistencias.length > 0 && (
               <div className="text-center mt-4 text-gray-500 text-sm">
-                ✅ Se han cargado todos los registros del día
+                ✅ Se han cargado todos los registros
               </div>
             )}
           </>
         ) : (
           <div className="text-center py-12">
             <div className="text-gray-400 text-6xl mb-4">📊</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No hay registros hoy</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No hay registros</h3>
             <p className="text-gray-600">
               {asistencias.length === 0 
                 ? "No se han registrado asistencias para hoy" 
