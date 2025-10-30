@@ -64,7 +64,7 @@ export default function ReportesAdmin() {
 
       <div className="card p-6 space-y-6">
         {/* Filtros de Búsqueda */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className={`grid grid-cols-1 gap-4 ${user?.rol === "rrhh" ? "md:grid-cols-2 lg:grid-cols-5" : "md:grid-cols-2 lg:grid-cols-4"}`}>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Fecha desde</label>
             <input 
@@ -101,16 +101,34 @@ export default function ReportesAdmin() {
               onChange={(e) => setFilters({ ...filters, nombre: e.target.value })} 
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Área</label>
-            <input
-              className="input-modern"
-              value={filters.area}
-              onChange={(e) => setFilters((s) => ({ ...s, area: e.target.value }))}
-              placeholder={user?.rol === "admin" ? (user?.lugarTrabajo || "") : "Filtrar por área (RRHH) — dejar vacío = todas"}
-            />
-          </div>
+          
+          {/* Solo mostrar filtro de área para RRHH */}
+          {user?.rol === "rrhh" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Área <span className="text-gray-400 text-xs">(RRHH)</span>
+              </label>
+              <input
+                className="input-modern"
+                value={filters.area}
+                onChange={(e) => setFilters((s) => ({ ...s, area: e.target.value }))}
+                placeholder="Filtrar por área - vacío = todas"
+              />
+            </div>
+          )}
         </div>
+
+        {/* Información del área para Admin */}
+        {user?.rol === "admin" && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center text-blue-800">
+              <span className="text-sm">📋</span>
+              <span className="ml-2 text-sm font-medium">
+                Mostrando reportes del área: <strong>{user?.lugarTrabajo || "Sin área asignada"}</strong>
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Controles de Acción */}
         <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
@@ -140,7 +158,7 @@ export default function ReportesAdmin() {
             <div className="text-gray-400 text-6xl mb-4">📈</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Sin resultados</h3>
             <p className="text-gray-600">
-              {filters.desde || filters.hasta || filters.legajo || filters.nombre
+              {filters.desde || filters.hasta || filters.legajo || filters.nombre || (user?.rol === "rrhh" && filters.area)
                 ? "No se encontraron registros con los filtros aplicados"
                 : "Utiliza los filtros para generar un reporte personalizado"
               }
@@ -166,6 +184,14 @@ export default function ReportesAdmin() {
                 </div>
                 <div className="text-sm text-gray-600">Salidas</div>
               </div>
+              {user?.rol === "rrhh" && (
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {new Set(result.map(r => r.lugarTrabajo)).size}
+                  </div>
+                  <div className="text-sm text-gray-600">Áreas diferentes</div>
+                </div>
+              )}
             </div>
 
             {/* Tabla de Resultados */}
@@ -236,6 +262,7 @@ export default function ReportesAdmin() {
             <div className="text-sm text-gray-600 text-center">
               Reporte generado el {new Date().toLocaleDateString('es-AR')} • 
               Mostrando {result.length} registros
+              {user?.rol === "admin" && ` • Área: ${user?.lugarTrabajo}`}
             </div>
           </div>
         )}
