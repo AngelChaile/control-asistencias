@@ -6,7 +6,7 @@ import { fetchEmpleadosByLugarTrabajo } from "../../utils/usuarios";
 import { saveAusenciaJustificacion } from "../../utils/ausencias";
 import { fetchAsistenciasByDate, fetchAusenciasByRange } from "../../utils/asistencia";
 
-// helpers de fecha (sin shift UTC) - MANTENIENDO TUS CORRECCIONES
+// helpers de fecha (sin shift UTC)
 function parseInputDateToLocal(isoYmd) {
   if (!isoYmd) return new Date();
   const [y, m, d] = String(isoYmd).split("-");
@@ -170,15 +170,15 @@ export default function AusenciasAdmin() {
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de consulta</label>
-              <input 
-                className="input-modern" 
-                type="date" 
-                value={selectedDate} 
-                onChange={(e) => setSelectedDate(e.target.value)} 
+              <input
+                className="input-modern"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
               />
             </div>
           </div>
-          
+
           <div style={{ marginBottom: 12 }}>
             <ExportExcel
               data={exportRows}
@@ -212,7 +212,7 @@ export default function AusenciasAdmin() {
               ) : (
                 <div className="overflow-x-auto rounded-lg border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 900 }}>
-                     <thead className="bg-gray-50">
+                    <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
@@ -241,13 +241,12 @@ export default function AusenciasAdmin() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                aus?.justificado 
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${aus?.justificado
                                   ? 'bg-green-100 text-green-800'
                                   : aus
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}>
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
                                 {aus?.justificado ? 'Justificado' : aus ? 'Sin justificar' : 'Pendiente'}
                               </span>
                             </td>
@@ -260,47 +259,48 @@ export default function AusenciasAdmin() {
                               {edit?.legajo === e.legajo ? (
                                 <div className="flex flex-col gap-2">
                                   <div className="flex gap-2">
-                                    <input 
-                                      className="input-modern flex-1 text-sm" 
-                                      type="date" 
-                                      value={edit.fechaInput} 
-                                      onChange={(ev) => setEdit({ ...edit, fechaInput: ev.target.value })} 
+                                    <input
+                                      className="input-modern flex-1 text-sm"
+                                      type="date"
+                                      value={edit.fechaInput}
+                                      onChange={(ev) => setEdit({ ...edit, fechaInput: ev.target.value })}
                                     />
-                                    <input 
-                                      className="input-modern flex-1 text-sm" 
-                                      placeholder="Motivo de ausencia..." 
-                                      value={edit.justificativo || ""} 
-                                      onChange={(ev) => setEdit({ ...edit, justificativo: ev.target.value })} 
+                                    <input
+                                      className="input-modern flex-1 text-sm"
+                                      placeholder="Motivo de ausencia..."
+                                      value={edit.justificativo || ""}
+                                      onChange={(ev) => setEdit({ ...edit, justificativo: ev.target.value })}
                                     />
                                   </div>
                                   <div className="flex gap-2">
-                                    <button 
-                                      onClick={() => handleSaveJust(e.legajo, edit.justificativo || "", true, edit.fechaInput)} 
+                                    <button
+                                      onClick={() => handleSaveJust(e.legajo, edit.justificativo || "", true, edit.fechaInput)}
                                       className="btn-primary text-sm px-3 py-1"
                                     >
                                       ✅ Justificar
                                     </button>
-                                    <button 
-                                      onClick={() => handleSaveJust(e.legajo, "", false, edit.fechaInput)} 
-                                      className="btn-secondary text-sm px-3 py-1"
+                                    <button
+                                      onClick={() => handleSaveJust(e.legajo, "", false, edit.fechaInput)}
+                                      disabled={loading}
+                                      className="btn-secondary text-sm px-3 py-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       ❌ Sin justificar
                                     </button>
-                                    <button 
-                                      onClick={() => setEdit(null)} 
-                                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                                    <button
+                                      onClick={() => setEdit(null)}
+                                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer"
                                     >
                                       Cancelar
                                     </button>
                                   </div>
                                 </div>
                               ) : (
-                                <button 
-                                  onClick={() => setEdit({ 
-                                    legajo: e.legajo, 
-                                    justificativo: aus?.justificativo || "", 
-                                    fechaInput: aus?.fecha ? inputDateFromLocaleStr(aus.fecha) : selectedDate 
-                                  })} 
+                                <button
+                                  onClick={() => setEdit({
+                                    legajo: e.legajo,
+                                    justificativo: aus?.justificativo || "",
+                                    fechaInput: aus?.fecha ? inputDateFromLocaleStr(aus.fecha) : selectedDate
+                                  })}
                                   className="btn-primary text-sm px-3 py-1"
                                 >
                                   {aus ? '✏️ Editar' : '📝 Justificar'}
@@ -330,7 +330,7 @@ export default function AusenciasAdmin() {
               ) : (
                 <div className="overflow-x-auto rounded-lg border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 900 }}>
-                     <thead className="bg-gray-50">
+                    <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
@@ -357,11 +357,10 @@ export default function AusenciasAdmin() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              a.justificado 
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${a.justificado
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-red-100 text-red-800'
-                            }`}>
+                              }`}>
                               {a.justificado ? 'Justificado' : 'Sin justificar'}
                             </span>
                           </td>

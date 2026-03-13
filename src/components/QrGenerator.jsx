@@ -197,7 +197,7 @@ export default function QrGenerator({ area = "", user }) {
           ) : (
             <div className="flex items-center justify-center space-x-2">
               <span>🎯</span>
-              <span>Generar QR (5 minutos)</span>
+              <span>Generar QR</span>
             </div>
           )}
         </button>
@@ -232,7 +232,7 @@ export default function QrGenerator({ area = "", user }) {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               onClick={imprimirQR}
-              className="btn-primary flex items-center justify-center space-x-2 py-3 px-6"
+              className="btn-primary flex items-center justify-center space-x-2 py-3 px-6 cursor-pointer"
             >
               <span>🖨️</span>
               <span>Imprimir QR</span>

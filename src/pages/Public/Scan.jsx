@@ -331,7 +331,7 @@ export default function Scan() {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-xs text-gray-500">
-            Sistema de Asistencias • Municipalidad
+            Sistema de Asistencias • Municipalidad de Morón
           </p>
         </div>
       </div>

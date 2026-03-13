@@ -67,6 +67,7 @@ body {
   border-radius: 0.6rem;
   font-weight: 600;
   transition: all 0.2s;
+  cursor: pointer;
 }
 
 .btn-primary:hover {
