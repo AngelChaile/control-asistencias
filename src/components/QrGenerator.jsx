@@ -12,7 +12,7 @@ export default function QrGenerator({ area = "", user }) {
     setLoading(true);
     try {
       const t = makeToken();
-      const validMs = 1000 * 60 * 2; // 2 minutos
+      const validMs = 1000 * 60 * 20; // 20 minutos
       const expiresAt = new Date(Date.now() + validMs).toISOString();
 
       await addDoc(collection(db, "tokens"), {
@@ -39,7 +39,7 @@ export default function QrGenerator({ area = "", user }) {
 
   const imprimirQR = () => {
     if (!qrLink) return;
-    
+
     const ventanaImpresion = window.open('', '_blank');
     ventanaImpresion.document.write(`
       <!DOCTYPE html>
@@ -123,7 +123,7 @@ export default function QrGenerator({ area = "", user }) {
           <div class="print-container">
             <div class="header">
               <div class="title">Sistema de Asistencias</div>
-              <div class="subtitle">Municipalidad</div>
+              <div class="subtitle">Municipalidad de Morón</div>
               ${area ? `<div class="area">Área: ${area}</div>` : ''}
             </div>
             
@@ -150,9 +150,9 @@ export default function QrGenerator({ area = "", user }) {
         </body>
       </html>
     `);
-    
+
     ventanaImpresion.document.close();
-    
+
     // Esperar a que la imagen cargue antes de imprimir
     setTimeout(() => {
       ventanaImpresion.print();
@@ -163,7 +163,7 @@ export default function QrGenerator({ area = "", user }) {
 
   const copiarEnlace = async () => {
     if (!qrLink) return;
-    
+
     try {
       await navigator.clipboard.writeText(qrLink.link);
       alert('✅ Enlace copiado al portapapeles');
@@ -183,10 +183,11 @@ export default function QrGenerator({ area = "", user }) {
     <div className="space-y-6">
       {/* Contenedor del botón - Siempre centrado */}
       <div className="flex justify-center">
-        <button 
-          onClick={generarQR} 
+        <button
+          onClick={generarQR}
           disabled={loading}
-          className="btn-primary w-full sm:w-auto px-8 py-3 text-base"
+          className={`btn-primary w-full sm:w-auto px-8 py-3 text-base ${loading ? 'cursor-wait opacity-75' : 'cursor-pointer hover:cursor-pointer'
+            }`}
         >
           {loading ? (
             <div className="flex items-center justify-center">
@@ -196,7 +197,7 @@ export default function QrGenerator({ area = "", user }) {
           ) : (
             <div className="flex items-center justify-center space-x-2">
               <span>🎯</span>
-              <span>Generar QR (2 minutos)</span>
+              <span>Generar QR (5 minutos)</span>
             </div>
           )}
         </button>
@@ -215,13 +216,13 @@ export default function QrGenerator({ area = "", user }) {
               Válido hasta: <span className="font-medium">{new Date(qrLink.expiresAt).toLocaleString('es-AR')}</span>
             </p>
           </div>
-          
+
           {/* Imagen del QR */}
           <div className="flex justify-center">
             <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-300 hover:shadow-md">
-              <img 
-                src={qrLink.quickUrl} 
-                alt="Código QR para registro de asistencia" 
+              <img
+                src={qrLink.quickUrl}
+                alt="Código QR para registro de asistencia"
                 className="w-64 h-64 sm:w-72 sm:h-72"
               />
             </div>
@@ -229,15 +230,15 @@ export default function QrGenerator({ area = "", user }) {
 
           {/* Botones de Acción */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button 
+            <button
               onClick={imprimirQR}
               className="btn-primary flex items-center justify-center space-x-2 py-3 px-6"
             >
               <span>🖨️</span>
               <span>Imprimir QR</span>
             </button>
-            
-{/*             <button 
+
+            {/*             <button 
               onClick={copiarEnlace}
               className="btn-secondary flex items-center justify-center space-x-2 py-3 px-6"
             >
@@ -245,23 +246,23 @@ export default function QrGenerator({ area = "", user }) {
               <span>Copiar Enlace</span>
             </button> */}
           </div>
-          
+
           {/* Información adicional */}
           <div className="text-center space-y-4">
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">Enlace directo para escanear:</p>
-              <a 
-                href={qrLink.link} 
-                target="_blank" 
+              <a
+                href={qrLink.link}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-municipio-600 hover:text-municipio-700 text-sm break-all inline-block max-w-full px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
               >
                 {qrLink.link}
               </a>
             </div>
-            
+
             {/* Token para referencia */}
-{/*             <div className="p-3 bg-gray-100 rounded-lg">
+            {/*             <div className="p-3 bg-gray-100 rounded-lg">
               <p className="text-xs text-gray-600 font-medium mb-1">Token de referencia:</p>
               <code className="text-xs bg-white px-2 py-1 rounded border border-gray-300 font-mono">
                 {token}
@@ -272,9 +273,9 @@ export default function QrGenerator({ area = "", user }) {
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm text-blue-800 font-medium mb-1">📱 ¿Cómo usar este QR?</p>
               <p className="text-xs text-blue-700">
-                1. Muestre este código en pantalla o imprímalo<br/>
-                2. Los empleados escanean con su celular<br/>
-                3. Ingresan su legajo para registrar asistencia<br/>
+                1. Muestre este código en pantalla o imprímalo<br />
+                2. Los empleados escanean con su celular<br />
+                3. Ingresan su legajo para registrar asistencia<br />
                 4. El sistema confirma el registro automáticamente
               </p>
             </div>
@@ -286,8 +287,8 @@ export default function QrGenerator({ area = "", user }) {
       {!qrLink && !loading && (
         <div className="text-center py-8">
           <div className="text-gray-400 text-4xl mb-3">📱</div>
-          <p className="text-gray-600">Presione el botón para generar un código QR</p>
-          <p className="text-sm text-gray-500 mt-1">Cada QR es válido por 2 minutos</p>
+          <p className="text-gray-600">Presione el botón rojo para generar un código QR</p>
+          <p className="text-sm text-gray-500 mt-1">Cada QR es válido por 20 minutos</p>
         </div>
       )}
     </div>

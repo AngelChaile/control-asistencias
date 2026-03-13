@@ -119,9 +119,9 @@ export default function HomeAdmin() {
         <div className="card p-6 mb-8">
           {/* Header Centrado */}
           <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-r from-municipio-500 to-municipio-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+{/*             <div className="w-16 h-16 bg-gradient-to-r from-municipio-500 to-municipio-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="text-white text-2xl">📱</span>
-            </div>
+            </div> */}
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Generador de QR</h3>
             <p className="text-gray-600 text-lg">Genera códigos QR para registrar asistencias</p>
           </div>

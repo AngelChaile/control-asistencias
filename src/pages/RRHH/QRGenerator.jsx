@@ -14,7 +14,7 @@ export default function QRPage() {
       </div>
 
       <div className="card p-6">
-        <div className="text-center mb-6">
+{/*         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-gradient-to-r from-municipio-500 to-municipio-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-white text-2xl">📱</span>
           </div>
@@ -22,7 +22,7 @@ export default function QRPage() {
           <p className="text-gray-600 mt-1">
             Cada código QR es válido por 2 minutos y puede ser escaneado desde cualquier dispositivo
           </p>
-        </div>
+        </div> */}
 
         <QrGenerator user={user} />
       </div>
