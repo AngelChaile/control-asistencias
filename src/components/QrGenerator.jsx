@@ -12,7 +12,7 @@ export default function QrGenerator({ area = "", user }) {
     setLoading(true);
     try {
       const t = makeToken();
-      const validMs = 1000 * 60 * 20; // 20 minutos
+      const validMs = 1000 * 60 * 60 * 24 * 120; // 4 meses (120 días)
       const expiresAt = new Date(Date.now() + validMs).toISOString();
 
       await addDoc(collection(db, "tokens"), {
@@ -288,7 +288,7 @@ export default function QrGenerator({ area = "", user }) {
         <div className="text-center py-8">
           <div className="text-gray-400 text-4xl mb-3">📱</div>
           <p className="text-gray-600">Presione el botón rojo para generar un código QR</p>
-          <p className="text-sm text-gray-500 mt-1">Cada QR es válido por 20 minutos</p>
+          <p className="text-sm text-gray-500 mt-1">Cada QR es válido por al menos 4 meses</p>
         </div>
       )}
     </div>
