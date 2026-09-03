@@ -2,28 +2,55 @@ import React, { useEffect, useState } from "react";
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from "../../firebase";
 import ExportExcel from "../../components/ExportExcel";
 import { fetchEmpleadosPage, fetchAllEmpleados, fetchEmpleadosByLugarTrabajo } from "../../utils/usuarios";
+import { fetchAllAreas, searchAreas } from "../../utils/areas";
 
 export default function Empleados() {
   const [empleados, setEmpleados] = useState([]);
+  const [areas, setAreas] = useState([]);
+  const [areasFiltradas, setAreasFiltradas] = useState([]);
+  const [busquedaArea, setBusquedaArea] = useState("");
+  const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [filter, setFilter] = useState({ legajo: "", nombre: "", area: "" });
-  const [nuevo, setNuevo] = useState({ 
-    legajo: "", 
-    nombre: "", 
-    apellido: "", 
-    lugarTrabajo: "", 
-    secretaria: "", 
-    horario: "" 
-  });
-  const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
-  // paginación
+  const [nuevo, setNuevo] = useState({
+    legajo: "",
+    nombre: "",
+    apellido: "",
+    documento: "",
+    email: "",
+    telefono: "",
+    lugarTrabajo: "",
+    secretaria: "",
+    horario: "",
+    categoria: "",
+    funcion: "",
+    particion: "municipal",
+    tipoCargo: "permanente",
+    area: null,
+    fechaIngreso: "",
+    estado: "activo",
+    activo: true,
+    rol: "empleado"
+  });
+
+  // Paginación
   const [lastDoc, setLastDoc] = useState(null);
   const [hasMore, setHasMore] = useState(true);
   const PAGE_SIZE = 200;
 
+  // Cargar áreas
   useEffect(() => {
-    // carga inicial: no trae todo a la vez, carga primera página
+    const loadAreas = async () => {
+      const data = await fetchAllAreas();
+      setAreas(data);
+      setAreasFiltradas(data);
+    };
+    loadAreas();
+  }, []);
+
+  useEffect(() => {
     loadFirstPage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -59,13 +86,9 @@ export default function Empleados() {
     }
   }
 
-  // Buscar: si hay legajo hacemos consulta exacta al servidor (rápida)
-  // si hay area hacemos paginado por area (resetea y carga desde servidor)
-  // si sólo nombre -> se filtra client-side sobre las páginas ya cargadas
   async function handleSearch() {
     setLoading(true);
     try {
-      // legajo exacto: servidor
       if (filter.legajo && filter.legajo.trim()) {
         const q = query(collection(db, "empleados"), where("legajo", "==", String(filter.legajo).trim()));
         const snap = await getDocs(q);
@@ -76,13 +99,11 @@ export default function Empleados() {
         return;
       }
 
-      // filtrar por área: cargar primera página para esa área
       if (filter.area && filter.area.trim()) {
         await loadFirstPage({ area: filter.area.trim() });
         return;
       }
 
-      // sin filtro legajo/area: cargar primera página general
       await loadFirstPage({ area: null });
     } catch (err) {
       console.error("handleSearch empleados:", err);
@@ -96,30 +117,51 @@ export default function Empleados() {
     loadFirstPage({ area: null });
   }
 
-  // Guardar / editar / eliminar (sin cambios en lógica)
   async function handleGuardar(e) {
     e.preventDefault();
     try {
-      const payload = { ...nuevo };
+      const payload = { 
+        ...nuevo,
+        area: nuevo.area || null
+      };
+      
       if (editingId) {
         await updateDoc(doc(db, "empleados", editingId), payload);
         setEditingId(null);
       } else {
         await addDoc(collection(db, "empleados"), payload);
       }
-      setNuevo({ 
-        legajo: "", 
-        nombre: "", 
-        apellido: "", 
-        lugarTrabajo: "", 
-        secretaria: "", 
-        horario: "" 
-      });
-      // tras guardar recargar la primera página (mantener filtros de área si aplican)
+      
+      resetForm();
       await loadFirstPage({ area: filter.area || null });
     } catch (err) {
       console.error(err);
     }
+  }
+
+  function resetForm() {
+    setNuevo({
+      legajo: "",
+      nombre: "",
+      apellido: "",
+      documento: "",
+      email: "",
+      telefono: "",
+      lugarTrabajo: "",
+      secretaria: "",
+      horario: "",
+      categoria: "",
+      funcion: "",
+      particion: "municipal",
+      tipoCargo: "permanente",
+      area: null,
+      fechaIngreso: "",
+      estado: "activo",
+      activo: true,
+      rol: "empleado"
+    });
+    setBusquedaArea("");
+    setEditingId(null);
   }
 
   function handleEditar(emp) {
@@ -128,45 +170,138 @@ export default function Empleados() {
       legajo: emp.legajo || "",
       nombre: emp.nombre || "",
       apellido: emp.apellido || "",
+      documento: emp.documento || "",
+      email: emp.email || "",
+      telefono: emp.telefono || "",
       lugarTrabajo: emp.lugarTrabajo || "",
       secretaria: emp.secretaria || "",
       horario: emp.horario || "",
+      categoria: emp.categoria || "",
+      funcion: emp.funcion || "",
+      particion: emp.particion || "municipal",
+      tipoCargo: emp.tipoCargo || "permanente",
+      area: emp.area || null,
+      fechaIngreso: emp.fechaIngreso || "",
+      estado: emp.estado || "activo",
+      activo: emp.activo !== undefined ? emp.activo : true,
+      rol: emp.rol || "empleado"
     });
+    
+    if (emp.area) {
+      setBusquedaArea(emp.area.nombre);
+    }
   }
 
   async function handleEliminar(id) {
     if (!window.confirm("¿Estás seguro de eliminar este empleado?")) return;
     try {
       await deleteDoc(doc(db, "empleados", id));
-      // refrescar página actual
       await loadFirstPage({ area: filter.area || null });
     } catch (err) {
       console.error(err);
     }
   }
 
-  // Filtrado por nombre se aplica client-side sobre las filas cargadas
+  // Funciones de área
+  const handleBusquedaArea = async (text) => {
+    setBusquedaArea(text);
+    if (text.length > 1) {
+      const resultados = await searchAreas(text);
+      setAreasFiltradas(resultados);
+      setMostrarDropdown(true);
+    } else {
+      setAreasFiltradas(areas);
+      setMostrarDropdown(false);
+    }
+  };
+
+  const seleccionarArea = (area) => {
+    setNuevo({
+      ...nuevo,
+      area: {
+        id: area.id,
+        nombre: area.nombre,
+        ruta: area.ruta || area.nombre
+      }
+    });
+    setBusquedaArea(area.nombre);
+    setMostrarDropdown(false);
+  };
+
+  // Filtro cliente-side
   const filtered = empleados.filter(e =>
     (filter.legajo === "" || String(e.legajo).includes(filter.legajo)) &&
     (filter.nombre === "" || `${e.nombre} ${e.apellido}`.toLowerCase().includes(filter.nombre.toLowerCase())) &&
     (filter.area === "" || (e.lugarTrabajo || "").toLowerCase().includes(filter.area.toLowerCase()))
   );
 
+  // Opciones para selectores
+  const categorias = [
+    "ADMINISTRATIVO CAT 4 35 HS",
+    "ADMINISTRATIVO CAT 5 35 HS",
+    "ADMINISTRATIVO CAT 6 35 HS",
+    "OBRERO CAT 5 40 HS",
+    "OBRERO CAT 6 40 HS",
+    "TECNICO CAT 7 35 HS",
+    "TECNICO CAT 9 35 HS",
+    "PROFESIONAL CAT 9 35 HS",
+  ];
+
+  const funciones = [
+    "Administrativo",
+    "Técnico",
+    "Cajero",
+    "Pintor",
+    "Electricista",
+    "Plomero",
+    "Limpieza",
+    "Sepulturero",
+    "Docente",
+    "Enfermero",
+    "Analista Funcional",
+    "Desarrollador de Software",
+    "Soporte Técnico",
+    "Oficial Albañil",
+    "Ayudante Albañil",
+    "Selección de Personal"
+  ];
+
+  const particiones = [
+    { value: "municipal", label: "CARRERA MUNICIPAL" },
+    { value: "docente", label: "CARRERA DOCENTE" },
+    { value: "medico", label: "CARRERA MÉDICA" }
+  ];
+
+  const tiposCargo = [
+    { value: "permanente", label: "Planta Permanente" },
+    { value: "temporario", label: "Temporario" },
+    { value: "contratado", label: "Contratado" },
+    { value: "pasantia", label: "Pasantía" }
+  ];
+
+  const estados = [
+    { value: "activo", label: "Activo" },
+    { value: "inactivo", label: "Inactivo" },
+    { value: "traspaso_pendiente", label: "Traspaso Pendiente" },
+    { value: "traspaso_aprobado", label: "Traspaso Aprobado" }
+  ];
+
   return (
     <div className="app-container">
-      {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Empleados</h1>
         <p className="text-gray-600">Administración completa del personal municipal</p>
       </div>
 
       <div className="space-y-6">
-        {/* Formulario de Nuevo/Editar Empleado */}
+        {/* Formulario */}
         <div className="card p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {editingId ? "✏️ Editar Empleado" : "👥 Agregar Nuevo Empleado"}
           </h3>
+          
           <form onSubmit={handleGuardar} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Datos Personales */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Legajo *</label>
               <input 
@@ -198,19 +333,40 @@ export default function Empleados() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Lugar de Trabajo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Documento</label>
               <input 
                 className="input-modern" 
-                placeholder="Área o departamento" 
-                value={nuevo.lugarTrabajo} 
-                onChange={(e) => setNuevo({ ...nuevo, lugarTrabajo: e.target.value })} 
+                placeholder="Número de documento" 
+                value={nuevo.documento} 
+                onChange={(e) => setNuevo({ ...nuevo, documento: e.target.value })} 
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input 
+                className="input-modern" 
+                type="email"
+                placeholder="email@municipio.com" 
+                value={nuevo.email} 
+                onChange={(e) => setNuevo({ ...nuevo, email: e.target.value })} 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+              <input 
+                className="input-modern" 
+                placeholder="Teléfono de contacto" 
+                value={nuevo.telefono} 
+                onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value })} 
+              />
+            </div>
+
+            {/* Datos Laborales */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Secretaría</label>
               <input 
                 className="input-modern" 
-                placeholder="Secretaría o dirección" 
+                placeholder="Secretaría o departamento" 
                 value={nuevo.secretaria} 
                 onChange={(e) => setNuevo({ ...nuevo, secretaria: e.target.value })} 
               />
@@ -224,24 +380,126 @@ export default function Empleados() {
                 onChange={(e) => setNuevo({ ...nuevo, horario: e.target.value })} 
               />
             </div>
-            <div className="flex items-end gap-2 md:col-span-2 lg:col-span-3">
+
+            {/* Área */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Área *</label>
+              <input
+                className="input-modern"
+                placeholder="Buscar área..."
+                value={busquedaArea}
+                onChange={(e) => handleBusquedaArea(e.target.value)}
+                onFocus={() => setMostrarDropdown(true)}
+                onBlur={() => setTimeout(() => setMostrarDropdown(false), 200)}
+                required={!nuevo.area}
+              />
+              {mostrarDropdown && areasFiltradas.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {areasFiltradas.map((area) => (
+                    <button
+                      key={area.id}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm"
+                      onMouseDown={() => seleccionarArea(area)}
+                    >
+                      <div className="font-medium">{area.nombre}</div>
+                      <div className="text-xs text-gray-500">{area.id}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {nuevo.area && (
+                <div className="mt-2 text-xs text-green-600">
+                  ✅ {nuevo.area.nombre}
+                </div>
+              )}
+            </div>
+
+            {/* Categoría y Función */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
+              <select
+                className="input-modern"
+                value={nuevo.categoria}
+                onChange={(e) => setNuevo({ ...nuevo, categoria: e.target.value })}
+              >
+                <option value="">Seleccionar categoría...</option>
+                {categorias.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Función</label>
+              <select
+                className="input-modern"
+                value={nuevo.funcion}
+                onChange={(e) => setNuevo({ ...nuevo, funcion: e.target.value })}
+              >
+                <option value="">Seleccionar función...</option>
+                {funciones.map(func => (
+                  <option key={func} value={func}>{func}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Partición y Tipo de Cargo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Partición</label>
+              <select
+                className="input-modern"
+                value={nuevo.particion}
+                onChange={(e) => setNuevo({ ...nuevo, particion: e.target.value })}
+              >
+                {particiones.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Cargo</label>
+              <select
+                className="input-modern"
+                value={nuevo.tipoCargo}
+                onChange={(e) => setNuevo({ ...nuevo, tipoCargo: e.target.value })}
+              >
+                {tiposCargo.map(tc => (
+                  <option key={tc.value} value={tc.value}>{tc.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Fecha y Estado */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Ingreso</label>
+              <input 
+                className="input-modern" 
+                type="date"
+                value={nuevo.fechaIngreso} 
+                onChange={(e) => setNuevo({ ...nuevo, fechaIngreso: e.target.value })} 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <select
+                className="input-modern"
+                value={nuevo.estado}
+                onChange={(e) => setNuevo({ ...nuevo, estado: e.target.value })}
+              >
+                {estados.map(est => (
+                  <option key={est.value} value={est.value}>{est.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Botones */}
+            <div className="flex items-end gap-2 col-span-1 md:col-span-2 lg:col-span-3">
               <button type="submit" className="btn-primary flex-1">
                 {editingId ? "💾 Guardar Cambios" : "➕ Crear Empleado"}
               </button>
               {editingId && (
                 <button 
                   type="button" 
-                  onClick={() => { 
-                    setEditingId(null); 
-                    setNuevo({ 
-                      legajo: "", 
-                      nombre: "", 
-                      apellido: "", 
-                      lugarTrabajo: "", 
-                      secretaria: "", 
-                      horario: "" 
-                    }); 
-                  }} 
+                  onClick={resetForm} 
                   className="btn-secondary px-4 py-2"
                 >
                   Cancelar
@@ -322,13 +580,14 @@ export default function Empleados() {
           ) : (
             <>
               <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 900 }}>
+                <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 1100 }}>
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Secretaría</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Horario</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Función</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                     </tr>
                   </thead>
@@ -351,13 +610,26 @@ export default function Empleados() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {emp.lugarTrabajo || <span className="text-gray-400">—</span>}
+                          {emp.area?.nombre || emp.lugarTrabajo || "-"}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {emp.secretaria || <span className="text-gray-400">—</span>}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {emp.categoria || "-"}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {emp.horario || <span className="text-gray-400">—</span>}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {emp.funcion || "-"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            emp.estado === 'activo' 
+                              ? 'bg-green-100 text-green-800'
+                              : emp.estado === 'inactivo'
+                              ? 'bg-red-100 text-red-800'
+                              : emp.estado === 'traspaso_pendiente'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {emp.estado || "activo"}
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex gap-2">
@@ -383,7 +655,7 @@ export default function Empleados() {
 
               <div className="mt-4 flex items-center justify-between">
                 <div className="text-sm text-gray-600">
-                  Mostrando {filtered.length} de {/* total known loaded */ empleados.length} empleados cargados
+                  Mostrando {filtered.length} de {empleados.length} empleados cargados
                 </div>
                 <div>
                   {hasMore ? (
@@ -391,7 +663,7 @@ export default function Empleados() {
                       Cargar más
                     </button>
                   ) : (
-                    <button onClick={() => {/* opcional: cargar todo o indicar fin */}} className="btn-secondary px-4 py-2" disabled>
+                    <button className="btn-secondary px-4 py-2" disabled>
                       No hay más
                     </button>
                   )}
@@ -399,7 +671,6 @@ export default function Empleados() {
               </div>
             </>
           )}
-
         </div>
       </div>
     </div>
