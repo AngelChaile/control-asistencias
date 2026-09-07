@@ -18,6 +18,10 @@ export default function Navbar() {
       { name: "QR", path: "/rrhh/qr", icon: "📱" },
       { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
       { name: "Usuarios", path: "/rrhh/usuarios", icon: "👤" },
+      // 🟢 NUEVAS OPCIONES PARA TRASPASOS - RRHH
+      { name: "📊 Análisis", path: "/rrhh/dashboard-analisis", icon: "📊" },
+      { name: "📋 Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
+      { name: "👥 Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
     ],
     admin: [
       { name: "Inicio", path: "/admin", icon: "🏠" },
@@ -25,6 +29,9 @@ export default function Navbar() {
       { name: "Asistencias", path: "/admin/asistencias", icon: "✅" },
       { name: "Ausencias", path: "/admin/ausencias", icon: "📅" },
       { name: "Reportes", path: "/admin/reportes", icon: "📊" },
+      // 🟢 NUEVAS OPCIONES PARA TRASPASOS - ADMIN
+      { name: "📝 Solicitar", path: "/admin/solicitar-traspaso", icon: "📝" },
+      { name: "📋 Mis Solicitudes", path: "/admin/mis-solicitudes", icon: "📋" },
     ],
   };
 
@@ -91,14 +98,6 @@ export default function Navbar() {
 
           {/* User & Logout - Desktop */}
           <div className="hidden lg:flex items-center space-x-4">
-{/*             <div className="text-right">
-              <div className="text-sm font-medium text-gray-900 truncate max-w-[120px]">
-                {user.nombre}
-              </div>
-              <div className="text-xs text-gray-500 truncate max-w-[120px]">
-                {user.apellido}
-              </div>
-            </div> */}
             <button
               onClick={handleLogout}
               className="btn-secondary text-sm whitespace-nowrap cursor-pointer"
