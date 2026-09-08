@@ -1,9 +1,13 @@
-// src/pages/RRHH/GestionSolicitudes.jsx - CORREGIDO
-
+// src/pages/RRHH/GestionSolicitudes.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { db, collection, getDocs, query, where, orderBy, updateDoc, doc } from '../../firebase';
-import { aprobarSolicitudRRHH, rechazarSolicitud } from '../../utils/traspasos';
+import { db, collection, getDocs, query, where } from '../../firebase';
+import { 
+  aprobarSolicitudRRHH, 
+  aprobarSolicitudSubsecretaria, 
+  rechazarSolicitud,
+  ejecutarTraspaso
+} from '../../utils/traspasos';
 import Swal from 'sweetalert2';
 
 export default function GestionSolicitudes() {
@@ -23,7 +27,6 @@ export default function GestionSolicitudes() {
     try {
       let q;
       if (filtro === 'todas') {
-        // Sin orderBy para evitar problemas de índice
         q = collection(db, 'solicitudes_traspaso');
       } else {
         q = query(
@@ -34,7 +37,6 @@ export default function GestionSolicitudes() {
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Ordenar manualmente por fecha (más reciente primero)
       data.sort((a, b) => {
         const fechaA = a.createdAt?.toDate?.() || new Date(a.createdAt);
         const fechaB = b.createdAt?.toDate?.() || new Date(b.createdAt);
@@ -45,28 +47,16 @@ export default function GestionSolicitudes() {
     } catch (error) {
       console.error('Error cargando solicitudes:', error);
       setError(error.message);
-      
-      // Si es error de índice, mostrar enlace
-      if (error.message.includes('index')) {
-        const link = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
-        if (link) {
-          Swal.fire({
-            icon: 'warning',
-            title: 'Índice requerido',
-            html: `Necesitas crear un índice en Firestore. <br><a href="${link[0]}" target="_blank" class="text-blue-600 underline">Haz clic aquí para crearlo</a>`,
-            confirmButtonText: 'Entendido'
-          });
-        }
-      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAprobar = async (solicitudId) => {
+  // ✅ Aprobar RRHH
+  const handleAprobarRRHH = async (solicitudId) => {
     const result = await Swal.fire({
       title: '✅ ¿Aprobar esta solicitud?',
-      text: 'El empleado será traspasado al área destino',
+      text: 'El empleado será traspasado al área destino. Esta aprobación pasará a Subsecretaría.',
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Sí, aprobar',
@@ -76,7 +66,7 @@ export default function GestionSolicitudes() {
     if (result.isConfirmed) {
       try {
         await aprobarSolicitudRRHH(solicitudId);
-        Swal.fire('✅ Aprobado', 'La solicitud ha sido aprobada por RRHH', 'success');
+        Swal.fire('✅ Aprobado', 'La solicitud ha sido aprobada por RRHH. Esperando Subsecretaría.', 'success');
         cargarSolicitudes();
       } catch (error) {
         Swal.fire('❌ Error', 'No se pudo aprobar la solicitud', 'error');
@@ -84,6 +74,33 @@ export default function GestionSolicitudes() {
     }
   };
 
+  // ✅ Aprobar Subsecretaría
+  const handleAprobarSubsecretaria = async (solicitudId) => {
+    const result = await Swal.fire({
+      title: '✅ ¿Aprobar definitivamente esta solicitud?',
+      text: 'Esta acción finalizará el traspaso del empleado.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, aprobar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await aprobarSolicitudSubsecretaria(solicitudId);
+        Swal.fire('✅ Aprobado', 'La solicitud ha sido aprobada por Subsecretaría. El traspaso se ejecutará.', 'success');
+        
+        // Ejecutar el traspaso automáticamente
+        await ejecutarTraspaso(solicitudId);
+        Swal.fire('✅ Traspaso ejecutado', 'El empleado ha sido traspasado exitosamente.', 'success');
+        cargarSolicitudes();
+      } catch (error) {
+        Swal.fire('❌ Error', 'No se pudo aprobar la solicitud', 'error');
+      }
+    }
+  };
+
+  // ❌ Rechazar
   const handleRechazar = async (solicitudId) => {
     const { value: motivo } = await Swal.fire({
       title: 'Motivo del rechazo',
@@ -133,6 +150,12 @@ export default function GestionSolicitudes() {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">📋 Gestión de Solicitudes de Traspaso</h1>
         <p className="text-gray-600">Administra las solicitudes de traspaso de personal</p>
+        {user?.rol === 'subsecretario' && (
+          <p className="text-sm text-blue-600 mt-2">👑 Aprobación final - Subsecretaría</p>
+        )}
+        {user?.rol === 'rrhh' && (
+          <p className="text-sm text-blue-600 mt-2">📋 Primera aprobación - RRHH</p>
+        )}
       </div>
 
       {/* Filtros */}
@@ -192,6 +215,11 @@ export default function GestionSolicitudes() {
                     <span className="text-xs text-gray-500">
                       👤 {solicitud.creadoPor || 'Desconocido'}
                     </span>
+                    {solicitud.creadorNombre && (
+                      <span className="text-xs text-gray-500">
+                        📝 {solicitud.creadorNombre}
+                      </span>
+                    )}
                   </div>
 
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -224,15 +252,17 @@ export default function GestionSolicitudes() {
                   </div>
                 </div>
 
-                {/* Acciones según rol y estado */}
-                <div className="flex flex-col gap-2 min-w-[150px]">
+                {/* ACCIONES SEGÚN ROL Y ESTADO */}
+                <div className="flex flex-col gap-2 min-w-[180px]">
+                  
+                  {/* 🔵 RRHH: Solo ve solicitudes pendientes */}
                   {solicitud.estado === 'pendiente' && user?.rol === 'rrhh' && (
                     <>
                       <button
-                        onClick={() => handleAprobar(solicitud.id)}
-                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm w-full"
+                        onClick={() => handleAprobarRRHH(solicitud.id)}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm w-full"
                       >
-                        ✅ Aprobar
+                        ✅ Aprobar (RRHH)
                       </button>
                       <button
                         onClick={() => handleRechazar(solicitud.id)}
@@ -243,15 +273,40 @@ export default function GestionSolicitudes() {
                     </>
                   )}
 
-                  {solicitud.estado === 'rrhh_aprobado' && user?.rol === 'rrhh' && (
-                    <span className="text-sm text-blue-600 font-medium text-center">
-                      ⏳ Esperando aprobación de Subsecretaría
+                  {/* 🟢 SUB SECRETARIO: Ve solicitudes aprobadas por RRHH */}
+                  {solicitud.estado === 'rrhh_aprobado' && user?.rol === 'subsecretario' && (
+                    <>
+                      <button
+                        onClick={() => handleAprobarSubsecretaria(solicitud.id)}
+                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm w-full"
+                      >
+                        ✅ Aprobar (Subsecretaría)
+                      </button>
+                      <button
+                        onClick={() => handleRechazar(solicitud.id)}
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm w-full"
+                      >
+                        ❌ Rechazar
+                      </button>
+                    </>
+                  )}
+
+                  {/* Estados informativos */}
+                  {solicitud.estado === 'pendiente' && user?.rol === 'subsecretario' && (
+                    <span className="text-sm text-yellow-600 font-medium text-center">
+                      ⏳ Esperando aprobación de RRHH
                     </span>
                   )}
 
-                  {solicitud.estado === 'subsecretaria_aprobado' && user?.rol === 'rrhh' && (
+                  {solicitud.estado === 'rrhh_aprobado' && user?.rol === 'rrhh' && (
+                    <span className="text-sm text-blue-600 font-medium text-center">
+                      ⏳ Enviado a Subsecretaría
+                    </span>
+                  )}
+
+                  {solicitud.estado === 'subsecretaria_aprobado' && (
                     <span className="text-sm text-green-600 font-medium text-center">
-                      ✅ Aprobado - Pendiente de ejecución
+                      ✅ Aprobado - Traspaso completado
                     </span>
                   )}
 

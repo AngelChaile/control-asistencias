@@ -19,9 +19,19 @@ export default function Navbar() {
       { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
       { name: "Usuarios", path: "/rrhh/usuarios", icon: "👤" },
       // 🟢 NUEVAS OPCIONES PARA TRASPASOS - RRHH
-      { name: "📊 Análisis", path: "/rrhh/dashboard-analisis", icon: "📊" },
-      { name: "📋 Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
-      { name: "👥 Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
+      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🤔" },
+      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
+      { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
+    ],
+     subsecretario: [   // ← NUEVO
+      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
+      { name: "Dashboard", path: "/rrhh/dashboard-analisis", icon: "📊" },
+      { name: "Empleados", path: "/rrhh/empleados", icon: "👥" },
+      { name: "Ausencias", path: "/rrhh/ausencias", icon: "📅" },
+      { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
+      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🤔" },
+      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
+      { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
     ],
     admin: [
       { name: "Inicio", path: "/admin", icon: "🏠" },
@@ -30,8 +40,8 @@ export default function Navbar() {
       { name: "Ausencias", path: "/admin/ausencias", icon: "📅" },
       { name: "Reportes", path: "/admin/reportes", icon: "📊" },
       // 🟢 NUEVAS OPCIONES PARA TRASPASOS - ADMIN
-      { name: "📝 Solicitar", path: "/admin/solicitar-traspaso", icon: "📝" },
-      { name: "📋 Mis Solicitudes", path: "/admin/mis-solicitudes", icon: "📋" },
+      { name: "Solicitar", path: "/admin/solicitar-traspaso", icon: "📝" },
+      { name: "Mis Solicitudes", path: "/admin/mis-solicitudes", icon: "📋" },
     ],
   };
 

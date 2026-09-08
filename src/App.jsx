@@ -93,20 +93,23 @@ export default function App() {
           />
 
           {/* Redirección raíz según rol */}
-          <Route
-            path="/"
-            element={
-              !user ? (
-                <Navigate to="/login" replace />
-              ) : user.rol === "rrhh" ? (
-                <Navigate to="/rrhh" replace />
-              ) : user.rol === "admin" ? (
-                <Navigate to="/admin" replace />
-              ) : (
-                <Navigate to="/scan" replace />
-              )
-            }
-          />
+
+<Route
+  path="/"
+  element={
+    !user ? (
+      <Navigate to="/login" replace />
+    ) : user.rol === "rrhh" ? (
+      <Navigate to="/rrhh" replace />
+    ) : user.rol === "subsecretario" ? (
+      <Navigate to="/rrhh/gestion-solicitudes" replace />  // ← NUEVO
+    ) : user.rol === "admin" ? (
+      <Navigate to="/admin" replace />
+    ) : (
+      <Navigate to="/scan" replace />
+    )
+  }
+/>
 
           {/* ===========================
                🔹 RUTAS RRHH

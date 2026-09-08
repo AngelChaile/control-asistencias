@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db, collection, addDoc, getDocs, query, where } from '../../firebase';
 import { fetchAllAreas, searchAreas } from '../../utils/areas';
+import { crearSolicitudTraspaso } from '../../utils/traspasos';
+import Swal from 'sweetalert2';
 
 export default function SolicitudTraspaso() {
   const { user } = useAuth();
@@ -14,6 +16,7 @@ export default function SolicitudTraspaso() {
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
   const [busquedaEmpleado, setBusquedaEmpleado] = useState('');
+  const [solicitudEnviada, setSolicitudEnviada] = useState(false);
 
   const [solicitud, setSolicitud] = useState({
     empleado: null,
@@ -21,26 +24,29 @@ export default function SolicitudTraspaso() {
     motivo: '',
     tipoTraspaso: 'interna',
     observaciones: '',
-    firmaEncargado: null,
-    firmaEmpleado: null
+    creadoPor: user?.email || '',
+    creadorNombre: `${user?.nombre || ''} ${user?.apellido || ''}`,
+    areaOrigen: null
   });
 
   useEffect(() => {
     cargarDatos();
+    // Verificar si hay legajo en la URL (desde EmpleadosDisponibles)
+    const params = new URLSearchParams(window.location.search);
+    const legajo = params.get('legajo');
+    if (legajo) {
+      buscarEmpleadoPorLegajo(legajo);
+    }
   }, []);
 
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      // Cargar áreas
       const areasData = await fetchAllAreas();
       setAreas(areasData);
       setAreasFiltradas(areasData);
 
-      // Cargar empleados del área del usuario
-      const empSnapshot = await getDocs(
-        query(collection(db, 'empleados'), where('lugarTrabajo', '==', user?.lugarTrabajo || ''))
-      );
+      const empSnapshot = await getDocs(collection(db, 'empleados'));
       const empleadosData = empSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setEmpleados(empleadosData);
     } catch (error) {
@@ -50,10 +56,23 @@ export default function SolicitudTraspaso() {
     }
   };
 
+  const buscarEmpleadoPorLegajo = async (legajo) => {
+    try {
+      const empSnapshot = await getDocs(
+        query(collection(db, 'empleados'), where('legajo', '==', legajo))
+      );
+      if (!empSnapshot.empty) {
+        const emp = { id: empSnapshot.docs[0].id, ...empSnapshot.docs[0].data() };
+        seleccionarEmpleado(emp);
+      }
+    } catch (error) {
+      console.error('Error buscando empleado:', error);
+    }
+  };
+
   const buscarEmpleado = async (text) => {
     setBusquedaEmpleado(text);
     if (text.length > 1) {
-      // Buscar en todos los empleados (no solo del área)
       const empSnapshot = await getDocs(collection(db, 'empleados'));
       const resultados = empSnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -63,51 +82,90 @@ export default function SolicitudTraspaso() {
         );
       setEmpleados(resultados);
     } else {
-      // Mostrar solo los del área
-      const empSnapshot = await getDocs(
-        query(collection(db, 'empleados'), where('lugarTrabajo', '==', user?.lugarTrabajo || ''))
-      );
+      const empSnapshot = await getDocs(collection(db, 'empleados'));
       const empleadosData = empSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setEmpleados(empleadosData);
     }
   };
 
   const seleccionarEmpleado = (emp) => {
+    const areaOrigen = emp.area || {
+      id: emp.lugarTrabajo || 'sin-area',
+      nombre: emp.lugarTrabajo || 'Sin área asignada',
+      ruta: emp.lugarTrabajo || ''
+    };
+
     setEmpleadoSeleccionado(emp);
-    setSolicitud({ ...solicitud, empleado: emp });
+    setSolicitud({
+      ...solicitud,
+      empleado: {
+        legajo: emp.legajo,
+        nombre: `${emp.nombre} ${emp.apellido}`,
+        areaOrigen: {
+          id: areaOrigen.id,
+          nombre: areaOrigen.nombre,
+          ruta: areaOrigen.ruta || areaOrigen.nombre
+        }
+      },
+      areaOrigen: areaOrigen
+    });
     setBusquedaEmpleado(`${emp.nombre} ${emp.apellido} (${emp.legajo})`);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!solicitud.empleado || !solicitud.areaDestino) {
-      alert('Debes seleccionar un empleado y un área destino');
+      Swal.fire('⚠️', 'Debes seleccionar un empleado y un área destino', 'warning');
+      return;
+    }
+
+    if (solicitud.empleado.areaOrigen?.id === solicitud.areaDestino.id) {
+      Swal.fire('⚠️', 'El empleado ya está en esta área', 'warning');
       return;
     }
 
     setLoading(true);
     try {
-      await addDoc(collection(db, 'solicitudes_traspaso'), {
-        ...solicitud,
-        empleado: {
-          legajo: solicitud.empleado.legajo,
-          nombre: `${solicitud.empleado.nombre} ${solicitud.empleado.apellido}`,
-          areaOrigen: solicitud.empleado.area
-        },
+      const payload = {
+        empleado: solicitud.empleado,
         areaDestino: solicitud.areaDestino,
+        motivo: solicitud.motivo,
+        tipoTraspaso: solicitud.tipoTraspaso,
+        observaciones: solicitud.observaciones,
+        creadoPor: user?.email || '',
+        creadorNombre: `${user?.nombre || ''} ${user?.apellido || ''}`,
         estado: 'pendiente',
-        creadoPor: user?.email,
+        aprobaciones: {
+          rrhh: { estado: 'pendiente', fecha: null, observaciones: null },
+          subsecretaria: { estado: 'pendiente', fecha: null, observaciones: null }
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      });
-      alert('✅ Solicitud creada exitosamente');
+      };
+
+      await addDoc(collection(db, 'solicitudes_traspaso'), payload);
+      
+      Swal.fire('✅', 'Solicitud creada exitosamente', 'success');
+      setSolicitudEnviada(true);
+      
       // Resetear formulario
-      setSolicitud({ empleado: null, areaDestino: null, motivo: '', tipoTraspaso: 'interna', observaciones: '' });
+      setSolicitud({
+        empleado: null,
+        areaDestino: null,
+        motivo: '',
+        tipoTraspaso: 'interna',
+        observaciones: '',
+        creadoPor: user?.email || '',
+        creadorNombre: `${user?.nombre || ''} ${user?.apellido || ''}`,
+        areaOrigen: null
+      });
       setEmpleadoSeleccionado(null);
       setBusquedaEmpleado('');
+      setBusquedaArea('');
+      
     } catch (error) {
       console.error('Error creando solicitud:', error);
-      alert('❌ Error al crear la solicitud');
+      Swal.fire('❌', 'Error al crear la solicitud: ' + error.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -116,16 +174,22 @@ export default function SolicitudTraspaso() {
   return (
     <div className="app-container">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Solicitud de Traspaso</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">📝 Solicitud de Traspaso</h1>
         <p className="text-gray-600">Solicita el traspaso de un empleado a otra área</p>
       </div>
+
+      {solicitudEnviada && (
+        <div className="card p-6 mb-6 bg-green-50 border border-green-200">
+          <p className="text-green-800">✅ Solicitud enviada correctamente. Espera la aprobación de RRHH.</p>
+        </div>
+      )}
 
       <div className="card p-6 max-w-4xl mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Selección de Empleado */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Empleado a traspasar *
+              👤 Empleado a traspasar *
             </label>
             <input
               className="input-modern"
@@ -142,7 +206,7 @@ export default function SolicitudTraspaso() {
                     onClick={() => seleccionarEmpleado(emp)}
                   >
                     <div className="font-medium">{emp.nombre} {emp.apellido}</div>
-                    <div className="text-sm text-gray-600">Legajo: {emp.legajo} | Área: {emp.lugarTrabajo}</div>
+                    <div className="text-sm text-gray-600">Legajo: {emp.legajo} | Área: {emp.area?.nombre || emp.lugarTrabajo || 'Sin área'}</div>
                   </div>
                 ))}
               </div>
@@ -152,7 +216,7 @@ export default function SolicitudTraspaso() {
                 <p className="text-sm font-medium text-green-800">
                   ✅ {empleadoSeleccionado.nombre} {empleadoSeleccionado.apellido} (Legajo: {empleadoSeleccionado.legajo})
                 </p>
-                <p className="text-xs text-green-600">Área actual: {empleadoSeleccionado.lugarTrabajo}</p>
+                <p className="text-xs text-green-600">Área actual: {empleadoSeleccionado.area?.nombre || empleadoSeleccionado.lugarTrabajo || 'Sin área'}</p>
               </div>
             )}
           </div>
@@ -160,7 +224,7 @@ export default function SolicitudTraspaso() {
           {/* Selección de Área Destino */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Área Destino *
+              🏢 Área Destino *
             </label>
             <input
               className="input-modern"
@@ -206,7 +270,7 @@ export default function SolicitudTraspaso() {
           {/* Motivo */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Motivo del Traspaso *
+              📝 Motivo del Traspaso *
             </label>
             <textarea
               className="input-modern"
@@ -221,7 +285,7 @@ export default function SolicitudTraspaso() {
           {/* Tipo de Traspaso */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tipo de Traspaso
+              🔄 Tipo de Traspaso
             </label>
             <select
               className="input-modern"
@@ -236,7 +300,7 @@ export default function SolicitudTraspaso() {
           {/* Observaciones */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Observaciones Adicionales
+              📋 Observaciones Adicionales
             </label>
             <textarea
               className="input-modern"
@@ -250,14 +314,16 @@ export default function SolicitudTraspaso() {
           {/* Botón de Envío */}
           <button
             type="submit"
-            disabled={loading}
-            className="w-full btn-primary py-3"
+            disabled={loading || solicitudEnviada}
+            className="w-full btn-primary py-3 disabled:opacity-50"
           >
             {loading ? (
               <div className="flex items-center justify-center">
                 <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin mr-2"></div>
                 Procesando...
               </div>
+            ) : solicitudEnviada ? (
+              '✅ Solicitud Enviada'
             ) : (
               '📤 Enviar Solicitud'
             )}

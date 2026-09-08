@@ -1,48 +1,62 @@
-// src/pages/RRHH/EmpleadosDisponibles.jsx - CORREGIDO
-
+// src/pages/RRHH/EmpleadosDisponibles.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db, collection, getDocs, query, where } from '../../firebase';
 import { fetchAllAreas } from '../../utils/areas';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export default function EmpleadosDisponibles() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [areas, setAreas] = useState([]);
   const [empleados, setEmpleados] = useState([]);
   const [solicitudesPendientes, setSolicitudesPendientes] = useState([]);
+  const [empleadosPorArea, setEmpleadosPorArea] = useState({});
   const [filtros, setFiltros] = useState({
     area: '',
     funcion: '',
     buscar: ''
   });
-  const [empleadosPorArea, setEmpleadosPorArea] = useState({});
 
-  // Función para formatear fecha
+  // 📅 Función para formatear fecha CORREGIDA
   const formatearFecha = (fecha) => {
     if (!fecha) return '-';
+    
+    // Si es número de serie de Excel
     if (typeof fecha === 'number') {
-      // Convertir número de serie de Excel a fecha
       const epoch = new Date(1899, 11, 30);
       const date = new Date(epoch.getTime() + fecha * 86400000);
       return date.toLocaleDateString('es-AR');
     }
-    // Si es string, intentar parsear
+    
+    // Si es string tipo "YYYY-MM-DD"
     if (typeof fecha === 'string') {
-      const parts = fecha.split(/[/-]/);
-      if (parts.length === 3) {
-        const day = parseInt(parts[0]);
-        const month = parseInt(parts[1]) - 1;
-        const year = parseInt(parts[2]);
-        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-          const date = new Date(year, month, day);
-          return date.toLocaleDateString('es-AR');
-        }
+      let parts = fecha.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        const date = new Date(parts[0], parts[1] - 1, parts[2]);
+        return date.toLocaleDateString('es-AR');
       }
+      
+      // Si es string tipo "DD/MM/YYYY"
+      parts = fecha.split('/');
+      if (parts.length === 3 && parts[2].length === 4) {
+        const date = new Date(parts[2], parts[1] - 1, parts[0]);
+        return date.toLocaleDateString('es-AR');
+      }
+      
       return fecha;
     }
+    
+    // Si es Timestamp de Firestore
+    if (fecha?.toDate) {
+      return fecha.toDate().toLocaleDateString('es-AR');
+    }
+    
+    // Si es Date
+    if (fecha instanceof Date) {
+      return fecha.toLocaleDateString('es-AR');
+    }
+    
     return fecha;
   };
 
@@ -54,8 +68,6 @@ export default function EmpleadosDisponibles() {
     setLoading(true);
     try {
       const areasData = await fetchAllAreas();
-      setAreas(areasData);
-
       const empSnapshot = await getDocs(collection(db, 'empleados'));
       const empleadosData = empSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setEmpleados(empleadosData);
@@ -116,11 +128,6 @@ export default function EmpleadosDisponibles() {
     return cantidad > 3;
   };
 
-  // Redirigir a solicitud con empleado preseleccionado
-  const handleSolicitarTraspaso = (legajo) => {
-    navigate(`/admin/solicitar-traspaso?legajo=${legajo}`);
-  };
-
   return (
     <div className="app-container">
       <div className="text-center mb-8">
@@ -165,8 +172,6 @@ export default function EmpleadosDisponibles() {
         </div>
         <div className="mt-4 text-sm text-gray-500">
           {empleadosFiltrados.length} empleados encontrados
-          {filtros.area && ` en área "${filtros.area}"`}
-          {filtros.funcion && ` con función "${filtros.funcion}"`}
         </div>
       </div>
 
@@ -178,7 +183,7 @@ export default function EmpleadosDisponibles() {
         <div className="card p-12 text-center">
           <div className="text-gray-400 text-6xl mb-4">👤</div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron empleados</h3>
-          <p className="text-gray-600">Prueba con otros filtros o carga más empleados</p>
+          <p className="text-gray-600">Prueba con otros filtros</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
@@ -229,31 +234,29 @@ export default function EmpleadosDisponibles() {
                             <span><span className="font-medium">Categoría:</span> {emp.categoria}</span>
                           )}
                           <span><span className="font-medium">Ingreso:</span> {formatearFecha(emp.fechaIngreso)}</span>
+                          <span><span className="font-medium">Partición:</span> {emp.particion || 'Municipal'}</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {!tieneSolicitud && (
+                    {!tieneSolicitud ? (
                       <button
                         className="btn-primary text-sm px-4 py-2"
-                        onClick={() => handleSolicitarTraspaso(emp.legajo)}
+                        onClick={() => navigate(`/admin/solicitar-traspaso?legajo=${emp.legajo}`)}
                       >
                         📝 Solicitar Traspaso
                       </button>
-                    )}
-                    {tieneSolicitud && solicitud && (
+                    ) : (
                       <div className="text-sm text-yellow-700 bg-yellow-50 px-3 py-2 rounded-lg">
-                        Solicitud pendiente a: {solicitud.areaDestino?.nombre}
+                        Solicitud pendiente a: {solicitud?.areaDestino?.nombre}
                       </div>
                     )}
                     <button
                       className="btn-secondary text-sm px-4 py-2"
                       onClick={() => {
-                        // Ver detalle del empleado - por ahora solo mostrar en consola
-                        console.log('👤 Detalle del empleado:', emp);
-                        alert(`👤 ${emp.nombre} ${emp.apellido}\nLegajo: ${emp.legajo}\nÁrea: ${areaNombre}\nFunción: ${emp.funcion || 'No asignada'}\nCategoría: ${emp.categoria || 'No asignada'}`);
+                        alert(`👤 ${emp.nombre} ${emp.apellido}\nLegajo: ${emp.legajo}\nÁrea: ${areaNombre}\nFunción: ${emp.funcion || 'No asignada'}\nCategoría: ${emp.categoria || 'No asignada'}\nIngreso: ${formatearFecha(emp.fechaIngreso)}`);
                       }}
                     >
                       👁️ Ver Detalle
@@ -270,11 +273,6 @@ export default function EmpleadosDisponibles() {
                   {emp.estado === 'inactivo' && (
                     <span className="px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
                       ⛔ Inactivo
-                    </span>
-                  )}
-                  {emp.fechaIngreso && (
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
-                      📅 Ingreso: {formatearFecha(emp.fechaIngreso)}
                     </span>
                   )}
                 </div>
