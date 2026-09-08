@@ -1,36 +1,69 @@
 // src/components/Navbar.jsx
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { db, collection, query, where, getDocs } from "../firebase";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [solicitudesPendientes, setSolicitudesPendientes] = useState(0);
+
+  // 🔔 Contar solicitudes pendientes para el globito
+  useEffect(() => {
+    if (!user) return;
+    
+    const contarSolicitudes = async () => {
+      try {
+        let q;
+        if (user.rol === 'subsecretario') {
+          q = query(collection(db, 'solicitudes_traspaso'), where('estado', '==', 'rrhh_aprobado'));
+        } else if (user.rol === 'rrhh') {
+          q = query(collection(db, 'solicitudes_traspaso'), where('estado', '==', 'pendiente'));
+        } else {
+          return;
+        }
+        const snapshot = await getDocs(q);
+        setSolicitudesPendientes(snapshot.size);
+      } catch (error) {
+        console.error('Error contando solicitudes:', error);
+      }
+    };
+
+    contarSolicitudes();
+    const interval = setInterval(contarSolicitudes, 30000); // Actualizar cada 30s
+    return () => clearInterval(interval);
+  }, [user]);
 
   if (!user) return null;
 
   const menus = {
     rrhh: [
       { name: "Inicio", path: "/rrhh", icon: "🏠" },
-      { name: "Ausencias", path: "/rrhh/ausencias", icon: "📅" },
       { name: "Empleados", path: "/rrhh/empleados", icon: "👥" },
-      { name: "QR", path: "/rrhh/qr", icon: "📱" },
+      { name: "Ausencias", path: "/rrhh/ausencias", icon: "📅" },
       { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
       { name: "Usuarios", path: "/rrhh/usuarios", icon: "👤" },
-      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🔎" },
-      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
-      { name: "A Disposición", path: "/rrhh/empleados-disponibles", icon: "🔁" },
+      { name: "QR", path: "/rrhh/qr", icon: "📱" },
+      { name: "📊 Análisis", path: "/rrhh/dashboard-analisis", icon: "📊" },
+      { name: "📋 Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
+      { name: "👥 Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
     ],
     subsecretario: [
       { name: "Inicio", path: "/rrhh", icon: "🏠" },
-      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
-      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🔎" },
-      { name: "A Disposición", path: "/rrhh/empleados-disponibles", icon: "🙎🏻‍♂️" },
       { name: "Empleados", path: "/rrhh/empleados", icon: "👥" },
       { name: "Ausencias", path: "/rrhh/ausencias", icon: "📅" },
       { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
+      { name: "📊 Análisis", path: "/rrhh/dashboard-analisis", icon: "📊" },
+      { 
+        name: "📋 Solicitudes", 
+        path: "/rrhh/gestion-solicitudes", 
+        icon: "📋",
+        badge: solicitudesPendientes > 0 ? solicitudesPendientes : null
+      },
+      { name: "👥 Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
     ],
     admin: [
       { name: "Inicio", path: "/admin", icon: "🏠" },
@@ -54,7 +87,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/60">
       <div className="app-container">
         <div className="flex items-center justify-between h-16">
-          {/* Logo y Hamburger */}
+          {/* Logo */}
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -75,7 +108,7 @@ export default function Navbar() {
               <div className="hidden sm:block">
                 <div className="text-lg font-semibold text-gray-900 leading-tight">Control de Asistencias</div>
                 <div className="text-xs text-gray-500 capitalize leading-tight">
-                  {user.nombre} {user.apellido} • {user.rol}
+                  {user.nombre} {user.apellido} • {user.rol === 'subsecretario' ? 'Subsecretario' : user.rol}
                 </div>
               </div>
             </div>
@@ -97,6 +130,11 @@ export default function Navbar() {
                 >
                   <span className="text-base">{item.icon}</span>
                   <span>{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -112,7 +150,7 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* User & Logout - Mobile */}
+          {/* Mobile */}
           {!isMenuOpen && (
             <div className="lg:hidden flex items-center space-x-3">
               <div className="text-right">
@@ -149,6 +187,11 @@ export default function Navbar() {
                   >
                     <span className="text-base">{item.icon}</span>
                     <span>{item.name}</span>
+                    {item.badge && (
+                      <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

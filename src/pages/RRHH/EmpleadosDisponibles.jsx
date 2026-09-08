@@ -12,51 +12,42 @@ export default function EmpleadosDisponibles() {
   const [empleados, setEmpleados] = useState([]);
   const [solicitudesPendientes, setSolicitudesPendientes] = useState([]);
   const [empleadosPorArea, setEmpleadosPorArea] = useState({});
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
   const [filtros, setFiltros] = useState({
     area: '',
     funcion: '',
-    buscar: ''
+    buscar: '',
+    soloDisposicion: false
   });
 
-  // 📅 Función para formatear fecha CORREGIDA
+  // 📅 Función para formatear fecha
   const formatearFecha = (fecha) => {
     if (!fecha) return '-';
-    
-    // Si es número de serie de Excel
     if (typeof fecha === 'number') {
       const epoch = new Date(1899, 11, 30);
       const date = new Date(epoch.getTime() + fecha * 86400000);
       return date.toLocaleDateString('es-AR');
     }
-    
-    // Si es string tipo "YYYY-MM-DD"
     if (typeof fecha === 'string') {
       let parts = fecha.split('-');
       if (parts.length === 3 && parts[0].length === 4) {
         const date = new Date(parts[0], parts[1] - 1, parts[2]);
         return date.toLocaleDateString('es-AR');
       }
-      
-      // Si es string tipo "DD/MM/YYYY"
       parts = fecha.split('/');
       if (parts.length === 3 && parts[2].length === 4) {
         const date = new Date(parts[2], parts[1] - 1, parts[0]);
         return date.toLocaleDateString('es-AR');
       }
-      
       return fecha;
     }
-    
-    // Si es Timestamp de Firestore
     if (fecha?.toDate) {
       return fecha.toDate().toLocaleDateString('es-AR');
     }
-    
-    // Si es Date
     if (fecha instanceof Date) {
       return fecha.toLocaleDateString('es-AR');
     }
-    
     return fecha;
   };
 
@@ -67,7 +58,6 @@ export default function EmpleadosDisponibles() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const areasData = await fetchAllAreas();
       const empSnapshot = await getDocs(collection(db, 'empleados'));
       const empleadosData = empSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setEmpleados(empleadosData);
@@ -111,7 +101,12 @@ export default function EmpleadosDisponibles() {
       nombreCompleto.includes(busqueda) || 
       emp.legajo?.includes(filtros.buscar);
     
-    return coincideArea && coincideFuncion && coincideBusqueda;
+    // 🔥 FILTRO "A DISPOSICIÓN": solo empleados sin área o con área "Disposición"
+    const esDisposicion = emp.lugarTrabajo?.toLowerCase().includes('disposicion') || 
+                          emp.area?.nombre?.toLowerCase().includes('disposicion');
+    const coincideDisposicion = !filtros.soloDisposicion || esDisposicion;
+    
+    return coincideArea && coincideFuncion && coincideBusqueda && coincideDisposicion;
   });
 
   const tieneSolicitudPendiente = (legajo) => {
@@ -128,6 +123,16 @@ export default function EmpleadosDisponibles() {
     return cantidad > 3;
   };
 
+  const abrirModal = (emp) => {
+    setEmpleadoSeleccionado(emp);
+    setMostrarModal(true);
+  };
+
+  const cerrarModal = () => {
+    setMostrarModal(false);
+    setEmpleadoSeleccionado(null);
+  };
+
   return (
     <div className="app-container">
       <div className="text-center mb-8">
@@ -137,7 +142,7 @@ export default function EmpleadosDisponibles() {
 
       {/* Filtros */}
       <div className="card p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
             <input
@@ -169,9 +174,21 @@ export default function EmpleadosDisponibles() {
               ))}
             </select>
           </div>
+          <div className="flex items-end">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="w-4 h-4 text-municipio-500 rounded"
+                checked={filtros.soloDisposicion}
+                onChange={(e) => setFiltros({ ...filtros, soloDisposicion: e.target.checked })}
+              />
+              <span className="text-sm text-gray-700">Solo "A Disposición"</span>
+            </label>
+          </div>
         </div>
         <div className="mt-4 text-sm text-gray-500">
           {empleadosFiltrados.length} empleados encontrados
+          {filtros.soloDisposicion && ' (Filtro: A Disposición)'}
         </div>
       </div>
 
@@ -192,13 +209,15 @@ export default function EmpleadosDisponibles() {
             const solicitud = getSolicitudPendiente(emp.legajo);
             const areaNombre = emp.area?.nombre || emp.lugarTrabajo || 'Sin área';
             const hayExcedente = analizarExcedente(areaNombre, emp.funcion);
+            const esDisposicion = emp.lugarTrabajo?.toLowerCase().includes('disposicion') || 
+                                  emp.area?.nombre?.toLowerCase().includes('disposicion');
 
             return (
               <div 
                 key={emp.id} 
                 className={`card p-6 hover:shadow-md transition-all ${
                   tieneSolicitud ? 'border-l-4 border-yellow-500' : ''
-                }`}
+                } ${esDisposicion ? 'border-l-4 border-purple-500' : ''}`}
               >
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div className="flex-1">
@@ -223,6 +242,11 @@ export default function EmpleadosDisponibles() {
                               📈 Excedente
                             </span>
                           )}
+                          {esDisposicion && (
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full">
+                              📌 A Disposición
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
                           <span><span className="font-medium">Legajo:</span> {emp.legajo}</span>
@@ -234,7 +258,6 @@ export default function EmpleadosDisponibles() {
                             <span><span className="font-medium">Categoría:</span> {emp.categoria}</span>
                           )}
                           <span><span className="font-medium">Ingreso:</span> {formatearFecha(emp.fechaIngreso)}</span>
-                          <span><span className="font-medium">Partición:</span> {emp.particion || 'Municipal'}</span>
                         </div>
                       </div>
                     </div>
@@ -255,9 +278,7 @@ export default function EmpleadosDisponibles() {
                     )}
                     <button
                       className="btn-secondary text-sm px-4 py-2"
-                      onClick={() => {
-                        alert(`👤 ${emp.nombre} ${emp.apellido}\nLegajo: ${emp.legajo}\nÁrea: ${areaNombre}\nFunción: ${emp.funcion || 'No asignada'}\nCategoría: ${emp.categoria || 'No asignada'}\nIngreso: ${formatearFecha(emp.fechaIngreso)}`);
-                      }}
+                      onClick={() => abrirModal(emp)}
                     >
                       👁️ Ver Detalle
                     </button>
@@ -282,6 +303,155 @@ export default function EmpleadosDisponibles() {
         </div>
       )}
 
+      {/* 🟢 MODAL DE DETALLE DE EMPLEADO */}
+      {mostrarModal && empleadoSeleccionado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-2xl">
+              <h3 className="text-xl font-bold text-gray-900">
+                👤 {empleadoSeleccionado.nombre} {empleadoSeleccionado.apellido}
+              </h3>
+              <button
+                onClick={cerrarModal}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* DATOS PERSONALES */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Legajo</p>
+                  <p className="font-medium">{empleadoSeleccionado.legajo}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Documento</p>
+                  <p className="font-medium">{empleadoSeleccionado.documento || '-'}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Email</p>
+                  <p className="font-medium">{empleadoSeleccionado.email || '-'}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Teléfono</p>
+                  <p className="font-medium">{empleadoSeleccionado.telefono || '-'}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Domicilio</p>
+                  <p className="font-medium">{empleadoSeleccionado.domicilio || '-'}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500">Fecha de Nacimiento</p>
+                  <p className="font-medium">{formatearFecha(empleadoSeleccionado.fechaNacimiento)}</p>
+                </div>
+              </div>
+
+              {/* DATOS LABORALES */}
+              <div className="border-t border-gray-200 pt-4">
+                <h4 className="font-semibold text-gray-900 mb-3">💼 Datos Laborales</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Área</p>
+                    <p className="font-medium">{empleadoSeleccionado.area?.nombre || empleadoSeleccionado.lugarTrabajo || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Función</p>
+                    <p className="font-medium">{empleadoSeleccionado.funcion || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Categoría</p>
+                    <p className="font-medium">{empleadoSeleccionado.categoria || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Partición</p>
+                    <p className="font-medium">{empleadoSeleccionado.particion || 'Municipal'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Tipo de Cargo</p>
+                    <p className="font-medium">{empleadoSeleccionado.tipoCargo || 'Permanente'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Horario</p>
+                    <p className="font-medium">{empleadoSeleccionado.horario || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Fecha de Ingreso</p>
+                    <p className="font-medium">{formatearFecha(empleadoSeleccionado.fechaIngreso)}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="text-xs text-gray-500">Estado</p>
+                    <p className="font-medium">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${
+                        empleadoSeleccionado.estado === 'activo' ? 'bg-green-100 text-green-800' :
+                        empleadoSeleccionado.estado === 'inactivo' ? 'bg-red-100 text-red-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {empleadoSeleccionado.estado || 'activo'}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* HISTORIAL DE TRASPASOS */}
+              <div className="border-t border-gray-200 pt-4">
+                <h4 className="font-semibold text-gray-900 mb-3">📜 Historial de Traspasos</h4>
+                {empleadoSeleccionado.historialTraspasos?.length > 0 ? (
+                  <div className="space-y-2">
+                    {empleadoSeleccionado.historialTraspasos.map((item, index) => (
+                      <div key={index} className="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+                        <div>
+                          <p className="text-sm font-medium">{item.areaOrigen || item.area}</p>
+                          <p className="text-xs text-gray-500">{item.motivo || 'Traspaso'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">{formatearFecha(item.fecha)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No hay traspasos registrados</p>
+                )}
+              </div>
+
+              {/* HISTORIAL LABORAL */}
+              <div className="border-t border-gray-200 pt-4">
+                <h4 className="font-semibold text-gray-900 mb-3">📋 Historial Laboral</h4>
+                {empleadoSeleccionado.historialLaboral?.length > 0 ? (
+                  <div className="space-y-2">
+                    {empleadoSeleccionado.historialLaboral.map((item, index) => (
+                      <div key={index} className="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+                        <div>
+                          <p className="text-sm font-medium">{item.area || item.empresa || '-'}</p>
+                          <p className="text-xs text-gray-500">{item.cargo || item.funcion || '-'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">
+                            {formatearFecha(item.fechaInicio)} - {formatearFecha(item.fechaFin) || 'Actual'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No hay historial laboral registrado</p>
+                )}
+              </div>
+
+              <button
+                onClick={cerrarModal}
+                className="w-full btn-secondary py-2"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <h4 className="text-sm font-medium text-gray-700 mb-2">📋 Leyenda</h4>
         <div className="flex flex-wrap gap-4 text-sm text-gray-600">
@@ -294,8 +464,8 @@ export default function EmpleadosDisponibles() {
             <span>Excedente (más de 3 personas con misma función)</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-orange-500 rounded"></span>
-            <span>Empleado temporario</span>
+            <span className="w-3 h-3 bg-purple-500 rounded"></span>
+            <span>A Disposición de Personal</span>
           </div>
         </div>
       </div>
