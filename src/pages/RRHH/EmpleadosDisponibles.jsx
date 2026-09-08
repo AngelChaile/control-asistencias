@@ -1,11 +1,14 @@
-// src/pages/RRHH/EmpleadosDisponibles.jsx
+// src/pages/RRHH/EmpleadosDisponibles.jsx - CORREGIDO
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db, collection, getDocs, query, where } from '../../firebase';
 import { fetchAllAreas } from '../../utils/areas';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function EmpleadosDisponibles() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [areas, setAreas] = useState([]);
   const [empleados, setEmpleados] = useState([]);
@@ -15,8 +18,33 @@ export default function EmpleadosDisponibles() {
     funcion: '',
     buscar: ''
   });
-  const [areaSeleccionada, setAreaSeleccionada] = useState(null);
   const [empleadosPorArea, setEmpleadosPorArea] = useState({});
+
+  // Función para formatear fecha
+  const formatearFecha = (fecha) => {
+    if (!fecha) return '-';
+    if (typeof fecha === 'number') {
+      // Convertir número de serie de Excel a fecha
+      const epoch = new Date(1899, 11, 30);
+      const date = new Date(epoch.getTime() + fecha * 86400000);
+      return date.toLocaleDateString('es-AR');
+    }
+    // Si es string, intentar parsear
+    if (typeof fecha === 'string') {
+      const parts = fecha.split(/[/-]/);
+      if (parts.length === 3) {
+        const day = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1;
+        const year = parseInt(parts[2]);
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+          const date = new Date(year, month, day);
+          return date.toLocaleDateString('es-AR');
+        }
+      }
+      return fecha;
+    }
+    return fecha;
+  };
 
   useEffect(() => {
     cargarDatos();
@@ -25,16 +53,13 @@ export default function EmpleadosDisponibles() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      // 1. Obtener todas las áreas
       const areasData = await fetchAllAreas();
       setAreas(areasData);
 
-      // 2. Obtener todos los empleados
       const empSnapshot = await getDocs(collection(db, 'empleados'));
       const empleadosData = empSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setEmpleados(empleadosData);
 
-      // 3. Agrupar empleados por área
       const agrupado = {};
       empleadosData.forEach(emp => {
         const areaNombre = emp.area?.nombre || emp.lugarTrabajo || 'Sin área';
@@ -45,7 +70,6 @@ export default function EmpleadosDisponibles() {
       });
       setEmpleadosPorArea(agrupado);
 
-      // 4. Obtener solicitudes pendientes
       const solicitudesSnapshot = await getDocs(
         query(collection(db, 'solicitudes_traspaso'), where('estado', '==', 'pendiente'))
       );
@@ -62,10 +86,8 @@ export default function EmpleadosDisponibles() {
     }
   };
 
-  // Obtener funciones únicas
   const funcionesUnicas = [...new Set(empleados.map(e => e.funcion).filter(Boolean))].sort();
 
-  // Filtrar empleados
   const empleadosFiltrados = empleados.filter(emp => {
     const areaNombre = emp.area?.nombre || emp.lugarTrabajo || '';
     const nombreCompleto = `${emp.nombre} ${emp.apellido}`.toLowerCase();
@@ -80,21 +102,23 @@ export default function EmpleadosDisponibles() {
     return coincideArea && coincideFuncion && coincideBusqueda;
   });
 
-  // Verificar si un empleado tiene solicitud pendiente
   const tieneSolicitudPendiente = (legajo) => {
     return solicitudesPendientes.some(s => s.empleado?.legajo === legajo);
   };
 
-  // Obtener solicitud pendiente de un empleado
   const getSolicitudPendiente = (legajo) => {
     return solicitudesPendientes.find(s => s.empleado?.legajo === legajo);
   };
 
-  // Verificar si un área tiene excedente de una función
   const analizarExcedente = (areaNombre, funcion) => {
     const empleadosArea = empleadosPorArea[areaNombre] || [];
     const cantidad = empleadosArea.filter(e => e.funcion === funcion).length;
-    return cantidad > 3; // Más de 3 personas = excedente
+    return cantidad > 3;
+  };
+
+  // Redirigir a solicitud con empleado preseleccionado
+  const handleSolicitarTraspaso = (legajo) => {
+    navigate(`/admin/solicitar-traspaso?legajo=${legajo}`);
   };
 
   return (
@@ -172,7 +196,6 @@ export default function EmpleadosDisponibles() {
                 }`}
               >
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  {/* Información del empleado */}
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full flex items-center justify-center flex-shrink-0">
@@ -181,7 +204,7 @@ export default function EmpleadosDisponibles() {
                         </span>
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-lg font-semibold text-gray-900">
                             {emp.nombre} {emp.apellido}
                           </h3>
@@ -205,21 +228,17 @@ export default function EmpleadosDisponibles() {
                           {emp.categoria && (
                             <span><span className="font-medium">Categoría:</span> {emp.categoria}</span>
                           )}
-                          <span><span className="font-medium">Partición:</span> {emp.particion || 'Municipal'}</span>
+                          <span><span className="font-medium">Ingreso:</span> {formatearFecha(emp.fechaIngreso)}</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Acciones */}
                   <div className="flex flex-wrap gap-2">
                     {!tieneSolicitud && (
                       <button
                         className="btn-primary text-sm px-4 py-2"
-                        onClick={() => {
-                          // Navegar a solicitud con el empleado preseleccionado
-                          window.location.href = `/admin/solicitar-traspaso?legajo=${emp.legajo}`;
-                        }}
+                        onClick={() => handleSolicitarTraspaso(emp.legajo)}
                       >
                         📝 Solicitar Traspaso
                       </button>
@@ -232,8 +251,9 @@ export default function EmpleadosDisponibles() {
                     <button
                       className="btn-secondary text-sm px-4 py-2"
                       onClick={() => {
-                        // Ver detalle del empleado
-                        console.log('Empleado:', emp);
+                        // Ver detalle del empleado - por ahora solo mostrar en consola
+                        console.log('👤 Detalle del empleado:', emp);
+                        alert(`👤 ${emp.nombre} ${emp.apellido}\nLegajo: ${emp.legajo}\nÁrea: ${areaNombre}\nFunción: ${emp.funcion || 'No asignada'}\nCategoría: ${emp.categoria || 'No asignada'}`);
                       }}
                     >
                       👁️ Ver Detalle
@@ -241,7 +261,6 @@ export default function EmpleadosDisponibles() {
                   </div>
                 </div>
 
-                {/* Badges adicionales */}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {emp.tipoCargo === 'temporario' && (
                     <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full">
@@ -255,7 +274,7 @@ export default function EmpleadosDisponibles() {
                   )}
                   {emp.fechaIngreso && (
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
-                      📅 Ingreso: {emp.fechaIngreso}
+                      📅 Ingreso: {formatearFecha(emp.fechaIngreso)}
                     </span>
                   )}
                 </div>
@@ -265,7 +284,6 @@ export default function EmpleadosDisponibles() {
         </div>
       )}
 
-      {/* Leyenda */}
       <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <h4 className="text-sm font-medium text-gray-700 mb-2">📋 Leyenda</h4>
         <div className="flex flex-wrap gap-4 text-sm text-gray-600">

@@ -1,8 +1,10 @@
-// src/pages/RRHH/DashboardAnalisis.jsx
+// src/pages/RRHH/DashboardAnalisis.jsx - CORREGIDO
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db, collection, getDocs, query, where } from '../../firebase';
 import { fetchAllAreas } from '../../utils/areas';
+import { Link } from 'react-router-dom';
 
 export default function DashboardAnalisis() {
   const { user } = useAuth();
@@ -13,6 +15,7 @@ export default function DashboardAnalisis() {
   const [filtroFuncion, setFiltroFuncion] = useState('');
   const [filtroArea, setFiltroArea] = useState('');
   const [funcionesUnicas, setFuncionesUnicas] = useState([]);
+  const [areaExpandida, setAreaExpandida] = useState(null);
 
   useEffect(() => {
     cargarDatos();
@@ -21,14 +24,12 @@ export default function DashboardAnalisis() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      // 1. Obtener todas las áreas
       const areas = await fetchAllAreas();
       
-      // 2. Obtener todos los empleados
       const empSnapshot = await getDocs(collection(db, 'empleados'));
       const empleados = empSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // 3. Agrupar por área
+      // Agrupar por área
       const agrupado = {};
       empleados.forEach(emp => {
         const areaNombre = emp.area?.nombre || emp.lugarTrabajo || 'Sin área';
@@ -44,21 +45,18 @@ export default function DashboardAnalisis() {
       
       setEmpleadosPorArea(agrupado);
       
-      // 4. Obtener funciones únicas
       const funciones = new Set();
       empleados.forEach(emp => {
         if (emp.funcion) funciones.add(emp.funcion);
       });
       setFuncionesUnicas(Array.from(funciones).sort());
       
-      // 5. Obtener solicitudes pendientes
       const solicitudesSnapshot = await getDocs(
         query(collection(db, 'solicitudes_traspaso'), where('estado', '==', 'pendiente'))
       );
       const solicitudes = solicitudesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setSolicitudesPendientes(solicitudes);
       
-      // 6. Preparar datos para vista de áreas
       const areasConEmpleados = Object.keys(agrupado).map(nombre => ({
         nombre: nombre,
         total: agrupado[nombre].empleados.length,
@@ -79,21 +77,40 @@ export default function DashboardAnalisis() {
     }
   };
 
-  // Función para determinar si un área tiene excedente de una función
   const analizarNecesidad = (area, funcion) => {
     const empleadosArea = empleadosPorArea[area.nombre]?.empleados || [];
     const cantidad = empleadosArea.filter(e => e.funcion === funcion).length;
     
-    // Si tiene más de 3 personas con la misma función, hay excedente
-    if (cantidad > 3) return { estado: 'excedente', cantidad, color: 'bg-red-100 text-red-800' };
-    if (cantidad === 0) return { estado: 'falta', cantidad, color: 'bg-yellow-100 text-yellow-800' };
-    return { estado: 'ok', cantidad, color: 'bg-green-100 text-green-800' };
+    if (cantidad > 3) return { estado: 'excedente', cantidad, color: 'bg-red-100 text-red-800', icon: '📈' };
+    if (cantidad === 0) return { estado: 'falta', cantidad, color: 'bg-yellow-100 text-yellow-800', icon: '⚠️' };
+    return { estado: 'ok', cantidad, color: 'bg-green-100 text-green-800', icon: '✅' };
+  };
+
+  // Función para mostrar empleados del área
+  const toggleEmpleadosArea = (nombre) => {
+    if (areaExpandida === nombre) {
+      setAreaExpandida(null);
+    } else {
+      setAreaExpandida(nombre);
+    }
+  };
+
+  // Formatear fecha
+  const formatearFecha = (fecha) => {
+    if (!fecha) return '-';
+    if (typeof fecha === 'number') {
+      // Convertir número de serie de Excel a fecha
+      const epoch = new Date(1899, 11, 30);
+      const date = new Date(epoch.getTime() + fecha * 86400000);
+      return date.toLocaleDateString('es-AR');
+    }
+    return fecha;
   };
 
   return (
     <div className="app-container">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard de Análisis de Personal</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">📊 Dashboard de Análisis de Personal</h1>
         <p className="text-gray-600">Visualiza las necesidades y excedentes de personal por área</p>
       </div>
 
@@ -125,7 +142,6 @@ export default function DashboardAnalisis() {
         </div>
       </div>
 
-      {/* Vista de Áreas */}
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-municipio-500"></div>
@@ -160,12 +176,15 @@ export default function DashboardAnalisis() {
                         <span className="text-sm text-gray-700">{funcion}</span>
                         <div className="flex items-center space-x-2">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${analisis.color}`}>
-                            {analisis.cantidad} {analisis.estado === 'excedente' ? '📈' : analisis.estado === 'falta' ? '⚠️' : '✅'}
+                            {analisis.icon} {analisis.cantidad}
                           </span>
                           {analisis.estado === 'excedente' && (
-                            <button className="text-xs text-blue-600 hover:text-blue-800">
+                            <Link 
+                              to={`/rrhh/empleados-disponibles?area=${encodeURIComponent(area.nombre)}&funcion=${encodeURIComponent(funcion)}`}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
                               Ver disponibles →
-                            </button>
+                            </Link>
                           )}
                         </div>
                       </div>
@@ -173,17 +192,41 @@ export default function DashboardAnalisis() {
                   })}
                 </div>
 
-                {/* Empleados del área */}
+                {/* Botón para ver empleados del área */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <button 
-                    className="text-sm text-gray-600 hover:text-gray-900"
-                    onClick={() => {
-                      const empleados = area.empleados;
-                      console.log('👥 Empleados de', area.nombre, empleados);
-                    }}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                    onClick={() => toggleEmpleadosArea(area.nombre)}
                   >
-                    Ver todos los empleados ({area.total})
+                    {areaExpandida === area.nombre ? '🔼 Ocultar empleados' : `👥 Ver empleados (${area.total})`}
                   </button>
+                  
+                  {areaExpandida === area.nombre && (
+                    <div className="mt-3 max-h-60 overflow-y-auto border border-gray-200 rounded-lg">
+                      <table className="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Empleado</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Legajo</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Función</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Ingreso</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {area.empleados.map(emp => (
+                            <tr key={emp.id} className="hover:bg-gray-50">
+                              <td className="px-3 py-2 whitespace-nowrap font-medium text-gray-900">
+                                {emp.nombre} {emp.apellido}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap text-gray-600">{emp.legajo}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-gray-600">{emp.funcion || '-'}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-gray-600">{formatearFecha(emp.fechaIngreso)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -205,7 +248,7 @@ export default function DashboardAnalisis() {
                       {solicitud.empleado?.nombre} ({solicitud.empleado?.legajo})
                     </p>
                     <p className="text-sm text-gray-600">
-                      <span className="font-medium">Origen:</span> {solicitud.empleado?.areaOrigen?.nombre}
+                      <span className="font-medium">Origen:</span> {solicitud.empleado?.areaOrigen?.nombre || 'No especificado'}
                     </p>
                     <p className="text-sm text-gray-600">
                       <span className="font-medium">Destino:</span> {solicitud.areaDestino?.nombre}
@@ -214,9 +257,12 @@ export default function DashboardAnalisis() {
                       <span className="font-medium">Motivo:</span> {solicitud.motivo}
                     </p>
                   </div>
-                  <button className="btn-primary text-sm px-4 py-2">
+                  <Link 
+                    to={`/rrhh/gestion-solicitudes`}
+                    className="btn-primary text-sm px-4 py-2"
+                  >
                     Gestionar
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}
