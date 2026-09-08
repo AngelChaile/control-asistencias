@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useEffect, useState, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { auth, onAuthStateChanged, firebaseSignOut } from "./firebase";
@@ -42,7 +43,6 @@ export default function App() {
 
   const { setUser: setContextUser } = useAuth();
 
-  // 🔹 Detectar cambios de auth
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) {
@@ -67,7 +67,6 @@ export default function App() {
     return () => unsub();
   }, [setContextUser]);
 
-  // 🔹 Cerrar sesión
   async function logout() {
     await firebaseSignOut(auth);
     setUser(null);
@@ -76,9 +75,24 @@ export default function App() {
 
   if (!authReady) return <div style={{ padding: 20 }}>Cargando...</div>;
 
+  // 🔥 FUNCIÓN PARA REDIRECCIÓN SEGURA
+  const getRedirectPath = () => {
+    if (!user) return "/login";
+    
+    // Mapeo de roles a rutas
+    const roleRoutes = {
+      'rrhh': '/rrhh',
+      'subsecretario': '/rrhh/gestion-solicitudes',
+      'admin': '/admin',
+      'empleado': '/scan'
+    };
+    
+    return roleRoutes[user.rol] || '/login';
+  };
+
   return (
     <BrowserRouter>
-      {/* Navbar global según rol */}
+      {/* Navbar: mostramos para todos los roles excepto empleado */}
       {user && user.rol !== "empleado" && <Navbar />}
 
       <Suspense fallback={<div className="p-6">Cargando...</div>}>
@@ -89,27 +103,22 @@ export default function App() {
           <Route path="/scan" element={<Scan />} />
           <Route
             path="/login"
-            element={!user ? <Login /> : <Navigate to="/" replace />}
+            element={!user ? <Login /> : <Navigate to={getRedirectPath()} replace />}
           />
 
-          {/* Redirección raíz según rol */}
-
-<Route
-  path="/"
-  element={
-    !user ? (
-      <Navigate to="/login" replace />
-    ) : user.rol === "rrhh" ? (
-      <Navigate to="/rrhh" replace />
-    ) : user.rol === "subsecretario" ? (
-      <Navigate to="/rrhh/gestion-solicitudes" replace />  // ← NUEVO
-    ) : user.rol === "admin" ? (
-      <Navigate to="/admin" replace />
-    ) : (
-      <Navigate to="/scan" replace />
-    )
-  }
-/>
+          {/* ===========================
+               🔹 REDIRECCIÓN RAÍZ
+          =========================== */}
+          <Route
+            path="/"
+            element={
+              !user ? (
+                <Navigate to="/login" replace />
+              ) : (
+                <Navigate to={getRedirectPath()} replace />
+              )
+            }
+          />
 
           {/* ===========================
                🔹 RUTAS RRHH
@@ -167,7 +176,7 @@ export default function App() {
           <Route
             path="/rrhh/dashboard-analisis"
             element={
-              <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
+              <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario"]}>
                 <DashboardAnalisis />
               </ProtectedRoute>
             }
@@ -175,7 +184,7 @@ export default function App() {
           <Route
             path="/rrhh/gestion-solicitudes"
             element={
-              <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
+              <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario"]}>
                 <GestionSolicitudes />
               </ProtectedRoute>
             }
@@ -183,7 +192,7 @@ export default function App() {
           <Route
             path="/rrhh/empleados-disponibles"
             element={
-              <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
+              <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario"]}>
                 <EmpleadosDisponibles />
               </ProtectedRoute>
             }
@@ -262,7 +271,20 @@ export default function App() {
           {/* Página no encontrada */}
           <Route
             path="*"
-            element={<div style={{ padding: 20 }}>Página no encontrada</div>}
+            element={
+              <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                  <h1 className="text-6xl font-bold text-gray-300 mb-4">404</h1>
+                  <p className="text-gray-600">Página no encontrada</p>
+                  <button 
+                    onClick={() => window.location.href = getRedirectPath()}
+                    className="mt-4 btn-primary"
+                  >
+                    Volver al inicio
+                  </button>
+                </div>
+              </div>
+            }
           />
         </Routes>
       </Suspense>

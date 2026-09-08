@@ -1,3 +1,4 @@
+// src/components/Navbar.jsx
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
@@ -18,19 +19,17 @@ export default function Navbar() {
       { name: "QR", path: "/rrhh/qr", icon: "📱" },
       { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
       { name: "Usuarios", path: "/rrhh/usuarios", icon: "👤" },
-      // 🟢 NUEVAS OPCIONES PARA TRASPASOS - RRHH
-      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🤔" },
-      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
-      { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
+      { name: "📊 Análisis", path: "/rrhh/dashboard-analisis", icon: "📊" },
+      { name: "📋 Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
+      { name: "👥 Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
     ],
-     subsecretario: [   // ← NUEVO
-      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
-      { name: "Dashboard", path: "/rrhh/dashboard-analisis", icon: "📊" },
-      { name: "Empleados", path: "/rrhh/empleados", icon: "👥" },
-      { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
-      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🤔" },
-      { name: "Ausencias", path: "/rrhh/ausencias", icon: "📅" },
-      { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
+    subsecretario: [
+      { name: "📋 Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
+      { name: "📊 Análisis", path: "/rrhh/dashboard-analisis", icon: "📊" },
+      { name: "👥 Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
+      { name: "👥 Empleados", path: "/rrhh/empleados", icon: "👥" },
+      { name: "📅 Ausencias", path: "/rrhh/ausencias", icon: "📅" },
+      { name: "📊 Reportes", path: "/rrhh/reportes", icon: "📊" },
     ],
     admin: [
       { name: "Inicio", path: "/admin", icon: "🏠" },
@@ -38,9 +37,8 @@ export default function Navbar() {
       { name: "Asistencias", path: "/admin/asistencias", icon: "✅" },
       { name: "Ausencias", path: "/admin/ausencias", icon: "📅" },
       { name: "Reportes", path: "/admin/reportes", icon: "📊" },
-      // 🟢 NUEVAS OPCIONES PARA TRASPASOS - ADMIN
-      { name: "Solicitar", path: "/admin/solicitar-traspaso", icon: "📝" },
-      { name: "Mis Solicitudes", path: "/admin/mis-solicitudes", icon: "📋" },
+      { name: "📝 Solicitar", path: "/admin/solicitar-traspaso", icon: "📝" },
+      { name: "📋 Mis Solicitudes", path: "/admin/mis-solicitudes", icon: "📋" },
     ],
   };
 
@@ -57,7 +55,6 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo y Hamburger */}
           <div className="flex items-center space-x-3">
-            {/* Hamburger Menu - Solo móvil */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -70,7 +67,6 @@ export default function Navbar() {
               </div>
             </button>
 
-            {/* Logo */}
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-r from-municipio-500 to-municipio-600 rounded-xl flex items-center justify-center shadow-sm">
                 <span className="text-white font-bold text-lg">M</span>
@@ -78,7 +74,7 @@ export default function Navbar() {
               <div className="hidden sm:block">
                 <div className="text-lg font-semibold text-gray-900 leading-tight">Control de Asistencias</div>
                 <div className="text-xs text-gray-500 capitalize leading-tight">
-                  {user.nombre} {user.apellido} • {user.lugarTrabajo || 'Municipio'}
+                  {user.nombre} {user.apellido} • {user.rol}
                 </div>
               </div>
             </div>
@@ -115,7 +111,7 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* User & Logout - Mobile (sin menú abierto) */}
+          {/* User & Logout - Mobile */}
           {!isMenuOpen && (
             <div className="lg:hidden flex items-center space-x-3">
               <div className="text-right">
@@ -136,7 +132,6 @@ export default function Navbar() {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="lg:hidden border-t border-gray-200 pt-4 pb-4">
-            {/* Navigation Links */}
             <nav className="grid grid-cols-2 gap-2 mb-4">
               {currentMenus.map((item) => {
                 const isActive = location.pathname === item.path;
@@ -158,7 +153,6 @@ export default function Navbar() {
               })}
             </nav>
 
-            {/* User Info Mobile */}
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div>
                 <div className="text-sm font-medium text-gray-900">{user.nombre}</div>

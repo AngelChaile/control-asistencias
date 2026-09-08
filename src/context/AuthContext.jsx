@@ -1,3 +1,4 @@
+// src/context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../firebase";
@@ -19,18 +20,15 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
-      // cerrar sesión en Firebase (si existe)
       await signOut(auth);
     } catch (err) {
       console.error("Error cerrando sesión en Firebase:", err);
-      // seguir limpiando estado local aunque falle
     } finally {
       setUser(null);
       localStorage.removeItem("user");
     }
   }, []);
 
-  // centralizar onAuthStateChanged aquí
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) {
@@ -43,6 +41,13 @@ export const AuthProvider = ({ children }) => {
       try {
         const userDoc = await getUserDoc(u.uid);
         const full = userDoc ? { uid: u.uid, ...userDoc } : { uid: u.uid };
+        
+        // ✅ 🔥 AGREGAR: Asegurar que el rol se mantenga
+        // Si el usuario tiene rol "subsecretario", lo mantenemos
+        if (full.rol === "subsecretario") {
+          console.log("👑 Usuario Subsecretario detectado:", full.email);
+        }
+        
         setUser(full);
         localStorage.setItem("user", JSON.stringify(full));
       } catch (err) {
@@ -57,7 +62,7 @@ export const AuthProvider = ({ children }) => {
     return () => unsub();
   }, []);
 
-  // inactivity auto-logout (solo cuando hay usuario)
+  // Inactivity auto-logout
   useEffect(() => {
     if (!user) return;
     let timer;
