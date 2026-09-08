@@ -27,11 +27,10 @@ export default function Navbar() {
       { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
       { name: "Dashboard", path: "/rrhh/dashboard-analisis", icon: "📊" },
       { name: "Empleados", path: "/rrhh/empleados", icon: "👥" },
+      { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
+      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🤔" },
       { name: "Ausencias", path: "/rrhh/ausencias", icon: "📅" },
       { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
-      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🤔" },
-      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
-      { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
     ],
     admin: [
       { name: "Inicio", path: "/admin", icon: "🏠" },
