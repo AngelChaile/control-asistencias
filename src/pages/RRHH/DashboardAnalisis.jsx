@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db, collection, getDocs, query, where } from '../../firebase';
 import { fetchAllAreas } from '../../utils/areas';
+import { formatearFecha } from '../../utils/fechas';
 import { Link } from 'react-router-dom';
 
 export default function DashboardAnalisis() {
@@ -94,56 +95,6 @@ export default function DashboardAnalisis() {
       setAreaExpandida(nombre);
     }
   };
-
-  // Formatear fecha
-// Función CORREGIDA para formatear fecha (maneja string numérico)
-const formatearFecha = (fecha) => {
-  if (!fecha) return '-';
-  
-  // Si es string y contiene un número (ej: "37151")
-  if (typeof fecha === 'string' && !isNaN(parseFloat(fecha))) {
-    const num = parseFloat(fecha);
-    // ✅ CORRECCIÓN: Base 1900-01-01 menos 2 días
-    const epoch = new Date(1900, 0, 1);
-    const date = new Date(epoch.getTime() + (num - 2) * 86400000);
-    return date.toLocaleDateString('es-AR');
-  }
-  
-  // Si es número de serie de Excel
-  if (typeof fecha === 'number') {
-    const epoch = new Date(1900, 0, 1);
-    const date = new Date(epoch.getTime() + (fecha - 2) * 86400000);
-    return date.toLocaleDateString('es-AR');
-  }
-  
-  // Si es string tipo "YYYY-MM-DD"
-  if (typeof fecha === 'string') {
-    let parts = fecha.split('-');
-    if (parts.length === 3 && parts[0].length === 4) {
-      const date = new Date(parts[0], parts[1] - 1, parts[2]);
-      return date.toLocaleDateString('es-AR');
-    }
-    // Si es "DD/MM/YYYY"
-    parts = fecha.split('/');
-    if (parts.length === 3 && parts[2].length === 4) {
-      const date = new Date(parts[2], parts[1] - 1, parts[0]);
-      return date.toLocaleDateString('es-AR');
-    }
-    return fecha;
-  }
-  
-  // Si es Timestamp de Firestore
-  if (fecha?.toDate) {
-    return fecha.toDate().toLocaleDateString('es-AR');
-  }
-  
-  // Si es Date
-  if (fecha instanceof Date) {
-    return fecha.toLocaleDateString('es-AR');
-  }
-  
-  return fecha;
-};
 
   return (
     <div className="app-container">

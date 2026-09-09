@@ -33,7 +33,7 @@ export default function Login() {
         showConfirmButton: false,
       });
 
-      if (userDoc.rol === "rrhh") {
+      if (userDoc.rol === "rrhh" || userDoc.rol === "subsecretario") {
         navigate("/rrhh", { replace: true });
       } else if (userDoc.rol === "admin") {
         navigate("/admin", { replace: true });
