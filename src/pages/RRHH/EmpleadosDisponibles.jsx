@@ -21,35 +21,53 @@ export default function EmpleadosDisponibles() {
     soloDisposicion: false
   });
 
-  // 📅 Función para formatear fecha
-  const formatearFecha = (fecha) => {
-    if (!fecha) return '-';
-    if (typeof fecha === 'number') {
-      const epoch = new Date(1899, 11, 30);
-      const date = new Date(epoch.getTime() + fecha * 86400000);
+// Función CORREGIDA para formatear fecha (maneja string numérico)
+const formatearFecha = (fecha) => {
+  if (!fecha) return '-';
+  
+  // Si es string y contiene un número (ej: "37151")
+  if (typeof fecha === 'string' && !isNaN(parseFloat(fecha))) {
+    const num = parseFloat(fecha);
+    const epoch = new Date(1899, 11, 30);
+    const date = new Date(epoch.getTime() + num * 86400000);
+    return date.toLocaleDateString('es-AR');
+  }
+  
+  // Si es número de serie de Excel
+  if (typeof fecha === 'number') {
+    const epoch = new Date(1899, 11, 30);
+    const date = new Date(epoch.getTime() + fecha * 86400000);
+    return date.toLocaleDateString('es-AR');
+  }
+  
+  // Si es string tipo "YYYY-MM-DD"
+  if (typeof fecha === 'string') {
+    let parts = fecha.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      const date = new Date(parts[0], parts[1] - 1, parts[2]);
       return date.toLocaleDateString('es-AR');
     }
-    if (typeof fecha === 'string') {
-      let parts = fecha.split('-');
-      if (parts.length === 3 && parts[0].length === 4) {
-        const date = new Date(parts[0], parts[1] - 1, parts[2]);
-        return date.toLocaleDateString('es-AR');
-      }
-      parts = fecha.split('/');
-      if (parts.length === 3 && parts[2].length === 4) {
-        const date = new Date(parts[2], parts[1] - 1, parts[0]);
-        return date.toLocaleDateString('es-AR');
-      }
-      return fecha;
-    }
-    if (fecha?.toDate) {
-      return fecha.toDate().toLocaleDateString('es-AR');
-    }
-    if (fecha instanceof Date) {
-      return fecha.toLocaleDateString('es-AR');
+    // Si es "DD/MM/YYYY"
+    parts = fecha.split('/');
+    if (parts.length === 3 && parts[2].length === 4) {
+      const date = new Date(parts[2], parts[1] - 1, parts[0]);
+      return date.toLocaleDateString('es-AR');
     }
     return fecha;
-  };
+  }
+  
+  // Si es Timestamp de Firestore
+  if (fecha?.toDate) {
+    return fecha.toDate().toLocaleDateString('es-AR');
+  }
+  
+  // Si es Date
+  if (fecha instanceof Date) {
+    return fecha.toLocaleDateString('es-AR');
+  }
+  
+  return fecha;
+};
 
   useEffect(() => {
     cargarDatos();

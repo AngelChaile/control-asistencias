@@ -82,7 +82,7 @@ export default function App() {
     // Mapeo de roles a rutas
     const roleRoutes = {
       'rrhh': '/rrhh',
-      'subsecretario': '/rrhh/gestion-solicitudes',
+      'subsecretario': '/rrhh/',
       'admin': '/admin',
       'empleado': '/scan'
     };
@@ -119,11 +119,6 @@ export default function App() {
               )
             }
           />
-
-          {/* ===========================
-               🔹 RUTAS RRHH
-          =========================== */}
-// src/App.jsx - SECCIÓN DE RUTAS RRHH (MODIFICADA)
 
 {/* ===========================
      🔹 RUTAS RRHH (Ahora accesibles para RRHH y Subsecretario)
@@ -216,6 +211,7 @@ export default function App() {
             }
           />
 
+          {/* 🔹 NUEVAS RUTAS ADMIN */}
 
           <Route
             path="/admin"
