@@ -76,19 +76,19 @@ export default function App() {
   if (!authReady) return <div style={{ padding: 20 }}>Cargando...</div>;
 
   // 🔥 FUNCIÓN PARA REDIRECCIÓN SEGURA
-  const getRedirectPath = () => {
-    if (!user) return "/login";
-    
-    // Mapeo de roles a rutas
-    const roleRoutes = {
-      'rrhh': '/rrhh',
-      'subsecretario': '/rrhh/',
-      'admin': '/admin',
-      'empleado': '/scan'
-    };
-    
-    return roleRoutes[user.rol] || '/login';
+const getRedirectPath = () => {
+  if (!user) return "/login";
+  
+  // Mapeo de roles a rutas
+  const roleRoutes = {
+    'rrhh': '/rrhh',
+    'subsecretario': '/rrhh', // ✅ SIN BARRA AL FINAL
+    'admin': '/admin',
+    'empleado': '/scan'
   };
+  
+  return roleRoutes[user.rol] || '/login';
+};
 
   return (
     <BrowserRouter>

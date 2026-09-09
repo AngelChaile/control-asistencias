@@ -28,15 +28,16 @@ const formatearFecha = (fecha) => {
   // Si es string y contiene un número (ej: "37151")
   if (typeof fecha === 'string' && !isNaN(parseFloat(fecha))) {
     const num = parseFloat(fecha);
-    const epoch = new Date(1899, 11, 30);
-    const date = new Date(epoch.getTime() + num * 86400000);
+    // ✅ CORRECCIÓN: Base 1900-01-01 menos 2 días
+    const epoch = new Date(1900, 0, 1);
+    const date = new Date(epoch.getTime() + (num - 2) * 86400000);
     return date.toLocaleDateString('es-AR');
   }
   
   // Si es número de serie de Excel
   if (typeof fecha === 'number') {
-    const epoch = new Date(1899, 11, 30);
-    const date = new Date(epoch.getTime() + fecha * 86400000);
+    const epoch = new Date(1900, 0, 1);
+    const date = new Date(epoch.getTime() + (fecha - 2) * 86400000);
     return date.toLocaleDateString('es-AR');
   }
   
@@ -275,7 +276,7 @@ const formatearFecha = (fecha) => {
                           {emp.categoria && (
                             <span><span className="font-medium">Categoría:</span> {emp.categoria}</span>
                           )}
-                          <span><span className="font-medium">Ingreso:</span> {formatearFecha(emp.fechaIngreso)}</span>
+                          <span><span className="font-medium">Ingreso:</span> {(emp.fechaIngreso)}</span>
                         </div>
                       </div>
                     </div>

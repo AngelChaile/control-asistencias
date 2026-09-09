@@ -129,13 +129,15 @@ export async function rechazarSolicitud(solicitudId, motivo) {
 }
 
 // 🔄 Ejecutar traspaso (finalizar)
+// src/utils/traspasos.js - Función ejecutarTraspaso (MODIFICADA)
+
 export async function ejecutarTraspaso(solicitudId) {
   try {
     const solicitudRef = doc(db, 'solicitudes_traspaso', solicitudId);
     const solicitudDoc = await getDoc(solicitudRef);
     const solicitud = solicitudDoc.data();
     
-    // 1. Actualizar el empleado con la nueva área
+    // 1. Obtener el empleado
     const empleadoQuery = query(
       collection(db, 'empleados'),
       where('legajo', '==', solicitud.empleado.legajo)
@@ -145,10 +147,24 @@ export async function ejecutarTraspaso(solicitudId) {
     if (!empleadoSnapshot.empty) {
       const empleadoDoc = empleadoSnapshot.docs[0];
       const empleadoRef = doc(db, 'empleados', empleadoDoc.id);
+      const empleadoData = empleadoDoc.data();
       
+      // ✅ NUEVO: Crear entrada en el historial de traspasos
+      const historialEntry = {
+        fecha: new Date().toISOString().split('T')[0],
+        areaOrigen: solicitud.empleado.areaOrigen?.nombre || empleadoData.lugarTrabajo || 'Sin área',
+        areaDestino: solicitud.areaDestino.nombre,
+        motivo: solicitud.motivo,
+        solicitudId: solicitudId,
+        aprobadoPor: 'Subsecretaría'
+      };
+      
+      // ✅ Actualizar el historial del empleado
+      const historialActual = empleadoData.historialTraspasos || [];
       await updateDoc(empleadoRef, {
         area: solicitud.areaDestino,
         lugarTrabajo: solicitud.areaDestino.nombre,
+        historialTraspasos: [...historialActual, historialEntry],
         updatedAt: serverTimestamp()
       });
     }
