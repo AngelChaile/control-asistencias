@@ -605,14 +605,14 @@ export default function Empleados() {
             </div>
           ) : (
             <>
-              <div className="overflow-hidden rounded-xl border border-slate-200">
-                <table className="min-w-full table-fixed divide-y divide-gray-200">
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="min-w-[1120px] w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
-                      <th className="hidden px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">Categoría</th>
-                      <th className="hidden px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">Función</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Función</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                     </tr>
@@ -638,10 +638,10 @@ export default function Empleados() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {emp.area?.nombre || emp.lugarTrabajo || "-"}
                         </td>
-                        <td className="hidden px-6 py-4 whitespace-nowrap text-sm text-gray-900 md:table-cell">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {emp.categoria || "-"}
                         </td>
-                        <td className="hidden px-6 py-4 whitespace-nowrap text-sm text-gray-900 md:table-cell">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {emp.funcion || "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

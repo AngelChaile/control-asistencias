@@ -82,11 +82,11 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/60">
-      <div className="app-container">
-        <div className="flex items-center justify-between h-16">
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
+      <div className="mx-auto max-w-[90rem] px-4 sm:px-6 lg:px-8">
+        <div className="flex min-h-16 items-center justify-between gap-4 py-2">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
+          <div className="flex min-w-0 items-center space-x-3">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -99,50 +99,28 @@ export default function Navbar() {
               </div>
             </button>
 
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-municipio-500 to-municipio-600 rounded-xl flex items-center justify-center shadow-sm">
+            <div className="flex min-w-0 items-center space-x-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-municipio-500 to-municipio-600 shadow-sm">
                 <span className="text-white font-bold text-lg">M</span>
               </div>
               <div className="hidden sm:block">
-                <div className="text-lg font-semibold text-gray-900 leading-tight">Control de Asistencias</div>
-                <div className="text-xs text-gray-500 capitalize leading-tight">
+                <div className="truncate text-lg font-semibold leading-tight text-slate-900">Control de Asistencias</div>
+                <div className="truncate text-xs capitalize leading-tight text-slate-500">
                   {user.nombre} {user.apellido} • {user.rol === 'subsecretario' ? 'Subsecretario' : user.rol}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Navigation - Desktop */}
-          <nav className="hidden lg:flex items-center space-x-1">
-            {currentMenus.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? 'bg-municipio-50 text-municipio-700 border border-municipio-200'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <span className="text-base">{item.icon}</span>
-                  <span>{item.name}</span>
-                  {item.badge && (
-                    <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
           {/* User & Logout - Desktop */}
-          <div className="hidden lg:flex items-center space-x-4">
+          <div className="hidden flex-shrink-0 items-center gap-3 lg:flex">
+            <div className="hidden text-right xl:block">
+              <div className="text-sm font-semibold text-slate-800">{user.nombre} {user.apellido}</div>
+              <div className="text-xs capitalize text-slate-500">{user.rol === 'subsecretario' ? 'Subsecretario' : user.rol}</div>
+            </div>
             <button
               onClick={handleLogout}
-              className="btn-secondary text-sm whitespace-nowrap cursor-pointer"
+              className="btn-secondary cursor-pointer whitespace-nowrap text-sm"
             >
               Cerrar sesión
             </button>
@@ -165,6 +143,30 @@ export default function Navbar() {
             </div>
           )}
         </div>
+
+        {/* Navigation - Desktop */}
+        <nav className="hidden border-t border-slate-100 lg:block">
+          <div className="flex items-center gap-1 overflow-x-auto py-2 [scrollbar-width:thin]">
+            {currentMenus.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                    isActive
+                      ? 'bg-municipio-50 text-municipio-700 ring-1 ring-inset ring-municipio-200'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <span className="text-base">{item.icon}</span>
+                  <span>{item.name}</span>
+                  {item.badge && <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">{item.badge}</span>}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
 
         {/* Mobile Menu */}
         {isMenuOpen && (
