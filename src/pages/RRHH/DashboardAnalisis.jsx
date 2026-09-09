@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { db, collection, getDocs, query, where } from '../../firebase';
 import { fetchAllAreas } from '../../utils/areas';
 import { formatearFecha } from '../../utils/fechas';
+import { esEmpleadoADisposicion } from '../../utils/empleados';
 import { Link } from 'react-router-dom';
 
 export default function DashboardAnalisis() {
@@ -98,13 +99,29 @@ export default function DashboardAnalisis() {
 
   return (
     <div className="app-container">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">📊 Dashboard de Análisis de Personal</h1>
-        <p className="text-gray-600">Visualiza las necesidades y excedentes de personal por área</p>
+      <div className="mb-7">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-red-600">Gestión de personal</p>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">Análisis de personal</h1>
+        <p className="max-w-2xl text-slate-600">Detecta excedentes, revisa la distribución por área y encuentra rápidamente el personal disponible.</p>
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="card border-l-4 border-blue-500 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Personal registrado</p>
+          <p className="mt-2 text-3xl font-bold text-slate-900">{areasData.reduce((total, area) => total + area.total, 0)}</p>
+        </div>
+        <div className="card border-l-4 border-purple-500 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">A disposición</p>
+          <p className="mt-2 text-3xl font-bold text-slate-900">{areasData.reduce((total, area) => total + area.empleados.filter(esEmpleadoADisposicion).length, 0)}</p>
+        </div>
+        <div className="card border-l-4 border-amber-500 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Solicitudes pendientes</p>
+          <p className="mt-2 text-3xl font-bold text-slate-900">{solicitudesPendientes.length}</p>
+        </div>
       </div>
 
       {/* Filtros */}
-      <div className="card p-6 mb-6">
+      <div className="card mb-6 border-slate-200 p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por Función</label>
@@ -143,7 +160,7 @@ export default function DashboardAnalisis() {
               (!filtroFuncion || area.funciones.includes(filtroFuncion))
             )
             .map(area => (
-              <div key={area.nombre} className={`card p-6 ${area.tieneSolicitudes ? 'border-2 border-yellow-400' : ''}`}>
+              <div key={area.nombre} className={`card p-6 transition-shadow hover:shadow-lg ${area.tieneSolicitudes ? 'border-2 border-yellow-400' : ''}`}>
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">{area.nombre}</h3>

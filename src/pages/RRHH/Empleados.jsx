@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from "../../firebase";
 import ExportExcel from "../../components/ExportExcel";
+import EmployeeDetailModal from "../../components/EmployeeDetailModal";
 import { fetchEmpleadosPage, fetchAllEmpleados, fetchEmpleadosByLugarTrabajo } from "../../utils/usuarios";
 import { fetchAllAreas, searchAreas } from "../../utils/areas";
 
@@ -13,6 +14,7 @@ export default function Empleados() {
   const [filter, setFilter] = useState({ legajo: "", nombre: "", area: "" });
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [empleadoDetalle, setEmpleadoDetalle] = useState(null);
 
   const [nuevo, setNuevo] = useState({
     legajo: "",
@@ -30,6 +32,8 @@ export default function Empleados() {
     tipoCargo: "permanente",
     area: null,
     fechaIngreso: "",
+    fechaReingreso: "",
+    fechaBaja: "",
     estado: "activo",
     activo: true,
     rol: "empleado"
@@ -156,6 +160,8 @@ export default function Empleados() {
       tipoCargo: "permanente",
       area: null,
       fechaIngreso: "",
+      fechaReingreso: "",
+      fechaBaja: "",
       estado: "activo",
       activo: true,
       rol: "empleado"
@@ -182,6 +188,8 @@ export default function Empleados() {
       tipoCargo: emp.tipoCargo || "permanente",
       area: emp.area || null,
       fechaIngreso: emp.fechaIngreso || "",
+      fechaReingreso: emp.fechaReingreso || "",
+      fechaBaja: emp.fechaBaja || "",
       estado: emp.estado || "activo",
       activo: emp.activo !== undefined ? emp.activo : true,
       rol: emp.rol || "empleado"
@@ -468,7 +476,7 @@ export default function Empleados() {
               </select>
             </div>
 
-            {/* Fecha y Estado */}
+            {/* Fechas y Estado */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Ingreso</label>
               <input 
@@ -476,6 +484,24 @@ export default function Empleados() {
                 type="date"
                 value={nuevo.fechaIngreso} 
                 onChange={(e) => setNuevo({ ...nuevo, fechaIngreso: e.target.value })} 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Reingreso</label>
+              <input
+                className="input-modern"
+                type="date"
+                value={nuevo.fechaReingreso}
+                onChange={(e) => setNuevo({ ...nuevo, fechaReingreso: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Baja</label>
+              <input
+                className="input-modern"
+                type="date"
+                value={nuevo.fechaBaja}
+                onChange={(e) => setNuevo({ ...nuevo, fechaBaja: e.target.value })}
               />
             </div>
             <div>
@@ -579,16 +605,16 @@ export default function Empleados() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 1100 }}>
+              <div className="overflow-hidden rounded-xl border border-slate-200">
+                <table className="min-w-full table-fixed divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Función</th>
+                      <th className="hidden px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">Categoría</th>
+                      <th className="hidden px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell">Función</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -612,10 +638,10 @@ export default function Empleados() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {emp.area?.nombre || emp.lugarTrabajo || "-"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="hidden px-6 py-4 whitespace-nowrap text-sm text-gray-900 md:table-cell">
                           {emp.categoria || "-"}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="hidden px-6 py-4 whitespace-nowrap text-sm text-gray-900 md:table-cell">
                           {emp.funcion || "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -632,7 +658,13 @@ export default function Empleados() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex gap-2">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => setEmpleadoDetalle(emp)}
+                              className="rounded-lg bg-slate-100 px-3 py-1.5 text-slate-700 transition-colors hover:bg-slate-200"
+                            >
+                              👁️ Detalle
+                            </button>
                             <button 
                               onClick={() => handleEditar(emp)} 
                               className="text-municipio-600 hover:text-municipio-700 bg-municipio-50 hover:bg-municipio-100 px-3 py-1 rounded-lg transition-colors"
@@ -673,6 +705,7 @@ export default function Empleados() {
           )}
         </div>
       </div>
+      <EmployeeDetailModal empleado={empleadoDetalle} onClose={() => setEmpleadoDetalle(null)} />
     </div>
   );
 }

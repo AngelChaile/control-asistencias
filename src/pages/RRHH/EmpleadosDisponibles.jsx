@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { db, collection, getDocs, query, where } from '../../firebase';
 import { fetchAllAreas } from '../../utils/areas';
 import { formatearFecha } from '../../utils/fechas';
+import { esEmpleadoADisposicion } from '../../utils/empleados';
+import EmployeeDetailModal from '../../components/EmployeeDetailModal';
 import { useNavigate } from 'react-router-dom';
 
 export default function EmpleadosDisponibles() {
@@ -19,7 +21,7 @@ export default function EmpleadosDisponibles() {
     area: '',
     funcion: '',
     buscar: '',
-    soloDisposicion: false
+    soloDisposicion: true
   });
 
   useEffect(() => {
@@ -72,10 +74,7 @@ export default function EmpleadosDisponibles() {
       nombreCompleto.includes(busqueda) || 
       emp.legajo?.includes(filtros.buscar);
     
-    // 🔥 FILTRO "A DISPOSICIÓN": solo empleados sin área o con área "Disposición"
-    const esDisposicion = emp.lugarTrabajo?.toLowerCase().includes('disposicion') || 
-                          emp.area?.nombre?.toLowerCase().includes('disposicion');
-    const coincideDisposicion = !filtros.soloDisposicion || esDisposicion;
+    const coincideDisposicion = esEmpleadoADisposicion(emp);
     
     return coincideArea && coincideFuncion && coincideBusqueda && coincideDisposicion;
   });
@@ -107,8 +106,9 @@ export default function EmpleadosDisponibles() {
   return (
     <div className="app-container">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">👥 Empleados Disponibles para Traspaso</h1>
-        <p className="text-gray-600">Visualiza y analiza el personal disponible por área y función</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-red-600">Gestión de personal</p>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Empleados disponibles</h1>
+        <p className="text-slate-600">Personal que se encuentra a disposición para nuevos destinos</p>
       </div>
 
       {/* Filtros */}
@@ -146,20 +146,15 @@ export default function EmpleadosDisponibles() {
             </select>
           </div>
           <div className="flex items-end">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                className="w-4 h-4 text-municipio-500 rounded"
-                checked={filtros.soloDisposicion}
-                onChange={(e) => setFiltros({ ...filtros, soloDisposicion: e.target.checked })}
-              />
-              <span className="text-sm text-gray-700">Solo "A Disposición"</span>
-            </label>
+            <div className="flex h-full items-end">
+              <div className="w-full rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-800">
+                <span className="font-semibold">Filtro activo:</span> A Disposición de Personal
+              </div>
+            </div>
           </div>
         </div>
         <div className="mt-4 text-sm text-gray-500">
-          {empleadosFiltrados.length} empleados encontrados
-          {filtros.soloDisposicion && ' (Filtro: A Disposición)'}
+          <span className="font-semibold text-slate-700">{empleadosFiltrados.length}</span> empleados a disposición encontrados
         </div>
       </div>
 
@@ -180,8 +175,7 @@ export default function EmpleadosDisponibles() {
             const solicitud = getSolicitudPendiente(emp.legajo);
             const areaNombre = emp.area?.nombre || emp.lugarTrabajo || 'Sin área';
             const hayExcedente = analizarExcedente(areaNombre, emp.funcion);
-            const esDisposicion = emp.lugarTrabajo?.toLowerCase().includes('disposicion') || 
-                                  emp.area?.nombre?.toLowerCase().includes('disposicion');
+            const esDisposicion = esEmpleadoADisposicion(emp);
 
             return (
               <div 
@@ -275,7 +269,7 @@ export default function EmpleadosDisponibles() {
       )}
 
       {/* 🟢 MODAL DE DETALLE DE EMPLEADO */}
-      {mostrarModal && empleadoSeleccionado && (
+      {false && mostrarModal && empleadoSeleccionado && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-2xl">
@@ -422,6 +416,8 @@ export default function EmpleadosDisponibles() {
           </div>
         </div>
       )}
+
+      <EmployeeDetailModal empleado={empleadoSeleccionado} onClose={cerrarModal} />
 
       <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <h4 className="text-sm font-medium text-gray-700 mb-2">📋 Leyenda</h4>
