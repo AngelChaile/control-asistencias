@@ -123,54 +123,59 @@ export default function App() {
           {/* ===========================
                🔹 RUTAS RRHH
           =========================== */}
-          <Route
-            path="/rrhh"
-            element={
-              <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-                <HomeRRHH />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/rrhh/empleados"
-            element={
-              <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-                <EmpleadosRRHH />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/rrhh/ausencias"
-            element={
-              <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-                <AusenciasRRHH />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/rrhh/usuarios"
-            element={
-              <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-                <Usuarios />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/rrhh/qr"
-            element={
-              <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-                <QRGenerator />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/rrhh/reportes"
-            element={
-              <ProtectedRoute user={user} allowedRoles={["rrhh"]}>
-                <ReportesRRHH />
-              </ProtectedRoute>
-            }
-          />
+// src/App.jsx - SECCIÓN DE RUTAS RRHH (MODIFICADA)
+
+{/* ===========================
+     🔹 RUTAS RRHH (Ahora accesibles para RRHH y Subsecretario)
+=========================== */}
+<Route
+  path="/rrhh"
+  element={
+    <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario"]}>
+      <HomeRRHH />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/rrhh/empleados"
+  element={
+    <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario"]}>
+      <EmpleadosRRHH />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/rrhh/ausencias"
+  element={
+    <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario"]}>
+      <AusenciasRRHH />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/rrhh/reportes"
+  element={
+    <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario"]}>
+      <ReportesRRHH />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/rrhh/usuarios"
+  element={
+    <ProtectedRoute user={user} allowedRoles={["rrhh"]}> {/* ⚠️ SOLO RRHH */}
+      <Usuarios />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/rrhh/qr"
+  element={
+    <ProtectedRoute user={user} allowedRoles={["rrhh"]}> {/* ⚠️ SOLO RRHH */}
+      <QRGenerator />
+    </ProtectedRoute>
+  }
+/>
 
           {/* 🔹 NUEVAS RUTAS RRHH - Sistema de Traspasos */}
           <Route
