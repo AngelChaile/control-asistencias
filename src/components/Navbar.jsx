@@ -47,23 +47,21 @@ export default function Navbar() {
       { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
       { name: "Usuarios", path: "/rrhh/usuarios", icon: "👤" },
       { name: "QR", path: "/rrhh/qr", icon: "📱" },
-      { name: "📊 Análisis", path: "/rrhh/dashboard-analisis", icon: "📊" },
-      { name: "📋 Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
-      { name: "👥 Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
+      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🔎" },
+      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
+      { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "🙎🏻‍♂️" },
     ],
     subsecretario: [
       { name: "Inicio", path: "/rrhh", icon: "🏠" },
       { name: "Empleados", path: "/rrhh/empleados", icon: "👥" },
       { name: "Ausencias", path: "/rrhh/ausencias", icon: "📅" },
       { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
-      { name: "📊 Análisis", path: "/rrhh/dashboard-analisis", icon: "📊" },
+      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🤔" },
       { 
-        name: "📋 Solicitudes", 
-        path: "/rrhh/gestion-solicitudes", 
-        icon: "📋",
+        name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋",
         badge: solicitudesPendientes > 0 ? solicitudesPendientes : null
       },
-      { name: "👥 Disponibles", path: "/rrhh/empleados-disponibles", icon: "👥" },
+      { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "🙎🏻‍♂️" },
     ],
     admin: [
       { name: "Inicio", path: "/admin", icon: "🏠" },
@@ -71,8 +69,8 @@ export default function Navbar() {
       { name: "Asistencias", path: "/admin/asistencias", icon: "✅" },
       { name: "Ausencias", path: "/admin/ausencias", icon: "📅" },
       { name: "Reportes", path: "/admin/reportes", icon: "📊" },
-      { name: "📝 Solicitar", path: "/admin/solicitar-traspaso", icon: "📝" },
-      { name: "📋 Mis Solicitudes", path: "/admin/mis-solicitudes", icon: "📋" },
+      { name: "Solicitar", path: "/admin/solicitar-traspaso", icon: "📝" },
+      { name: "Mis Solicitudes", path: "/admin/mis-solicitudes", icon: "📋" },
     ],
   };
 

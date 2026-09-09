@@ -199,8 +199,19 @@ export default function App() {
           />
 
           {/* ===========================
-               🔹 RUTAS ADMIN
-          =========================== */}
+           🔹 RUTAS PARA SUBSECRETARIO (Alias a RRHH)
+            =========================== */}
+          <Route
+            path="/subsecretario/*"
+            element={
+              <ProtectedRoute user={user} allowedRoles={["subsecretario"]}>
+                {/* Redirige todo lo que esté en /subsecretario/* a /rrhh/* */}
+                <Navigate to={`/rrhh/${location.pathname.split('/').slice(2).join('/')}`} replace />
+              </ProtectedRoute>
+            }
+          />
+
+
           <Route
             path="/admin"
             element={
