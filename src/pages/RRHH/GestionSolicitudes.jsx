@@ -14,12 +14,16 @@ export default function GestionSolicitudes() {
   const { user } = useAuth();
   const [solicitudes, setSolicitudes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filtro, setFiltro] = useState('pendiente');
+  const [filtro, setFiltro] = useState(user?.rol === 'subsecretario' ? 'rrhh_aprobado' : 'pendiente');
   const [error, setError] = useState(null);
 
   useEffect(() => {
     cargarSolicitudes();
   }, [filtro]);
+
+  useEffect(() => {
+    if (user?.rol === 'subsecretario') setFiltro('rrhh_aprobado');
+  }, [user?.rol]);
 
   const cargarSolicitudes = async () => {
     setLoading(true);

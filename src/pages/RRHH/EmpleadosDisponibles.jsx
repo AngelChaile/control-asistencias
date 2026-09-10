@@ -6,22 +6,20 @@ import { fetchAllAreas } from '../../utils/areas';
 import { formatearFecha } from '../../utils/fechas';
 import { esEmpleadoADisposicion } from '../../utils/empleados';
 import EmployeeDetailModal from '../../components/EmployeeDetailModal';
-import { useNavigate } from 'react-router-dom';
-import { asignarEmpleadoAPedido } from '../../utils/traspasos';
+import { asignarEmpleadoAPedido, destinarEmpleadoDisponible, solicitarDestinoDesdeDisponibles } from '../../utils/traspasos';
 import Swal from 'sweetalert2';
 
 export default function EmpleadosDisponibles() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [empleados, setEmpleados] = useState([]);
+  const [areas, setAreas] = useState([]);
   const [solicitudesPendientes, setSolicitudesPendientes] = useState([]);
   const [pedidosAsignacion, setPedidosAsignacion] = useState([]);
-  const [empleadosPorArea, setEmpleadosPorArea] = useState({});
-  const [mostrarModal, setMostrarModal] = useState(false);
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
+  const [empleadoADestinar, setEmpleadoADestinar] = useState(null);
+  const [areaSeleccionada, setAreaSeleccionada] = useState('');
   const [filtros, setFiltros] = useState({
-    area: '',
     funcion: '',
     buscar: '',
     soloDisposicion: true
@@ -34,27 +32,16 @@ export default function EmpleadosDisponibles() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const empSnapshot = await getDocs(collection(db, 'empleados'));
+      const [empSnapshot, areasData] = await Promise.all([getDocs(collection(db, 'empleados')), fetchAllAreas()]);
       const empleadosData = empSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setEmpleados(empleadosData);
+      setAreas(areasData.filter(area => !String(area.nombre).toLowerCase().includes('disposición de personal')));
 
-      const agrupado = {};
-      empleadosData.forEach(emp => {
-        const areaNombre = emp.area?.nombre || emp.lugarTrabajo || 'Sin área';
-        if (!agrupado[areaNombre]) {
-          agrupado[areaNombre] = [];
-        }
-        agrupado[areaNombre].push(emp);
-      });
-      setEmpleadosPorArea(agrupado);
-
-      const solicitudesSnapshot = await getDocs(
-        query(collection(db, 'solicitudes_traspaso'), where('estado', '==', 'pendiente'))
-      );
+      const solicitudesSnapshot = await getDocs(collection(db, 'solicitudes_traspaso'));
       const solicitudes = solicitudesSnapshot.docs.map(doc => ({ 
         id: doc.id, 
         ...doc.data() 
-      }));
+      })).filter(solicitud => ['pendiente', 'rrhh_aprobado'].includes(solicitud.estado) && solicitud.empleado?.legajo);
       setSolicitudesPendientes(solicitudes);
 
       const pedidosSnapshot = await getDocs(
@@ -73,11 +60,9 @@ export default function EmpleadosDisponibles() {
   const funcionesUnicas = [...new Set(empleados.map(e => e.funcion).filter(Boolean))].sort();
 
   const empleadosFiltrados = empleados.filter(emp => {
-    const areaNombre = emp.area?.nombre || emp.lugarTrabajo || '';
     const nombreCompleto = `${emp.nombre} ${emp.apellido}`.toLowerCase();
     const busqueda = filtros.buscar.toLowerCase();
     
-    const coincideArea = !filtros.area || areaNombre.toLowerCase().includes(filtros.area.toLowerCase());
     const coincideFuncion = !filtros.funcion || emp.funcion === filtros.funcion;
     const coincideBusqueda = !filtros.buscar || 
       nombreCompleto.includes(busqueda) || 
@@ -85,7 +70,7 @@ export default function EmpleadosDisponibles() {
     
     const coincideDisposicion = esEmpleadoADisposicion(emp);
     
-    return coincideArea && coincideFuncion && coincideBusqueda && coincideDisposicion;
+    return coincideFuncion && coincideBusqueda && coincideDisposicion;
   });
 
   const tieneSolicitudPendiente = (legajo) => {
@@ -94,12 +79,6 @@ export default function EmpleadosDisponibles() {
 
   const getSolicitudPendiente = (legajo) => {
     return solicitudesPendientes.find(s => s.empleado?.legajo === legajo);
-  };
-
-  const analizarExcedente = (areaNombre, funcion) => {
-    const empleadosArea = empleadosPorArea[areaNombre] || [];
-    const cantidad = empleadosArea.filter(e => e.funcion === funcion).length;
-    return cantidad > 3;
   };
 
   const pedidosCompatibles = (empleado) => pedidosAsignacion.filter(pedido =>
@@ -122,14 +101,21 @@ export default function EmpleadosDisponibles() {
     }
   };
 
-  const abrirModal = (emp) => {
-    setEmpleadoSeleccionado(emp);
-    setMostrarModal(true);
-  };
-
-  const cerrarModal = () => {
-    setMostrarModal(false);
-    setEmpleadoSeleccionado(null);
+  const abrirDestino = (empleado) => { setEmpleadoADestinar(empleado); setAreaSeleccionada(''); };
+  const cerrarDestino = () => { setEmpleadoADestinar(null); setAreaSeleccionada(''); };
+  const confirmarDestino = async () => {
+    const destino = areas.find(area => area.id === areaSeleccionada);
+    if (!destino) { Swal.fire('⚠️', 'Seleccioná un área destino.', 'warning'); return; }
+    try {
+      if (user?.rol === 'subsecretario') {
+        await destinarEmpleadoDisponible(empleadoADestinar, destino);
+        await Swal.fire('✅ Destino asignado', `${empleadoADestinar.nombre} fue destinado a ${destino.nombre}.`, 'success');
+      } else {
+        await solicitarDestinoDesdeDisponibles(empleadoADestinar, destino, user?.email || '', `${user?.nombre || ''} ${user?.apellido || ''}`.trim());
+        await Swal.fire('✅ Enviado a aprobación', `El destino a ${destino.nombre} quedó pendiente de la aprobación de Subsecretaría.`, 'success');
+      }
+      cerrarDestino(); cargarDatos();
+    } catch (error) { Swal.fire('❌ Error', error.message || 'No se pudo registrar el destino.', 'error'); }
   };
 
   return (
@@ -155,7 +141,7 @@ export default function EmpleadosDisponibles() {
 
       {/* Filtros */}
       <div className="card p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
             <input
@@ -163,15 +149,6 @@ export default function EmpleadosDisponibles() {
               placeholder="Nombre, legajo..."
               value={filtros.buscar}
               onChange={(e) => setFiltros({ ...filtros, buscar: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por Área</label>
-            <input
-              className="input-modern"
-              placeholder="Nombre del área..."
-              value={filtros.area}
-              onChange={(e) => setFiltros({ ...filtros, area: e.target.value })}
             />
           </div>
           <div>
@@ -186,13 +163,6 @@ export default function EmpleadosDisponibles() {
                 <option key={func} value={func}>{func}</option>
               ))}
             </select>
-          </div>
-          <div className="flex items-end">
-            <div className="flex h-full items-end">
-              <div className="w-full rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-800">
-                <span className="font-semibold">Filtro activo:</span> A Disposición de Personal
-              </div>
-            </div>
           </div>
         </div>
         <div className="mt-4 text-sm text-gray-500">
@@ -215,8 +185,6 @@ export default function EmpleadosDisponibles() {
           {empleadosFiltrados.map((emp) => {
             const tieneSolicitud = tieneSolicitudPendiente(emp.legajo);
             const solicitud = getSolicitudPendiente(emp.legajo);
-            const areaNombre = emp.area?.nombre || emp.lugarTrabajo || 'Sin área';
-            const hayExcedente = analizarExcedente(areaNombre, emp.funcion);
             const esDisposicion = esEmpleadoADisposicion(emp);
             const pedidosEmpleado = pedidosCompatibles(emp);
 
@@ -245,11 +213,6 @@ export default function EmpleadosDisponibles() {
                               🔄 Solicitud pendiente
                             </span>
                           )}
-                          {hayExcedente && !tieneSolicitud && (
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                              📈 Excedente
-                            </span>
-                          )}
                           {esDisposicion && (
                             <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full">
                               📌 A Disposición
@@ -258,7 +221,7 @@ export default function EmpleadosDisponibles() {
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
                           <span><span className="font-medium">Legajo:</span> {emp.legajo}</span>
-                          <span><span className="font-medium">Área:</span> {areaNombre}</span>
+                          <span><span className="font-medium">Situación:</span> A Disposición de Personal</span>
                           {emp.funcion && (
                             <span><span className="font-medium">Función:</span> {emp.funcion}</span>
                           )}
@@ -280,9 +243,9 @@ export default function EmpleadosDisponibles() {
                     {!tieneSolicitud ? (
                       <button
                         className="btn-primary text-sm px-4 py-2"
-                        onClick={() => navigate(`/admin/solicitar-traspaso?legajo=${emp.legajo}`)}
+                        onClick={() => abrirDestino(emp)}
                       >
-                        📝 Solicitar Traspaso
+                        ➜ Enviar a
                       </button>
                     ) : (
                       <div className="text-sm text-yellow-700 bg-yellow-50 px-3 py-2 rounded-lg">
@@ -291,7 +254,7 @@ export default function EmpleadosDisponibles() {
                     )}
                     <button
                       className="btn-secondary text-sm px-4 py-2"
-                      onClick={() => abrirModal(emp)}
+                      onClick={() => setEmpleadoSeleccionado(emp)}
                     >
                       👁️ Ver Detalle
                     </button>
@@ -317,7 +280,7 @@ export default function EmpleadosDisponibles() {
       )}
 
       {/* 🟢 MODAL DE DETALLE DE EMPLEADO */}
-      {false && mostrarModal && empleadoSeleccionado && (
+      {false && empleadoSeleccionado && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-2xl">
@@ -325,7 +288,7 @@ export default function EmpleadosDisponibles() {
                 👤 {empleadoSeleccionado.nombre} {empleadoSeleccionado.apellido}
               </h3>
               <button
-                onClick={cerrarModal}
+                onClick={() => setEmpleadoSeleccionado(null)}
                 className="text-gray-400 hover:text-gray-600 text-2xl"
               >
                 ✕
@@ -455,7 +418,7 @@ export default function EmpleadosDisponibles() {
               </div>
 
               <button
-                onClick={cerrarModal}
+                onClick={() => setEmpleadoSeleccionado(null)}
                 className="w-full btn-secondary py-2"
               >
                 Cerrar
@@ -465,7 +428,25 @@ export default function EmpleadosDisponibles() {
         </div>
       )}
 
-      <EmployeeDetailModal empleado={empleadoSeleccionado} onClose={cerrarModal} />
+      <EmployeeDetailModal empleado={empleadoSeleccionado} onClose={() => setEmpleadoSeleccionado(null)} />
+
+      {empleadoADestinar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onMouseDown={cerrarDestino}>
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl" onMouseDown={event => event.stopPropagation()}>
+            <h2 className="text-xl font-bold text-slate-900">➜ Enviar a un área</h2>
+            <p className="mt-2 text-sm text-slate-600">{empleadoADestinar.nombre} {empleadoADestinar.apellido} · Legajo {empleadoADestinar.legajo}</p>
+            <label className="mt-5 block text-sm font-medium text-slate-700">Área destino</label>
+            <select className="input-modern mt-2" value={areaSeleccionada} onChange={event => setAreaSeleccionada(event.target.value)}>
+              <option value="">Seleccionar área...</option>
+              {areas.map(area => <option key={area.id} value={area.id}>{area.nombre}</option>)}
+            </select>
+            <p className="mt-3 text-sm text-slate-500">
+              {user?.rol === 'subsecretario' ? 'El destino se aplicará inmediatamente.' : 'El destino se enviará a Subsecretaría para su aprobación.'}
+            </p>
+            <div className="mt-6 flex justify-end gap-3"><button type="button" className="btn-secondary" onClick={cerrarDestino}>Cancelar</button><button type="button" className="btn-primary" onClick={confirmarDestino}>Confirmar destino</button></div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <h4 className="text-sm font-medium text-gray-700 mb-2">📋 Leyenda</h4>
@@ -473,10 +454,6 @@ export default function EmpleadosDisponibles() {
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 bg-yellow-500 rounded"></span>
             <span>Solicitud pendiente</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-blue-500 rounded"></span>
-            <span>Excedente (más de 3 personas con misma función)</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 bg-purple-500 rounded"></span>

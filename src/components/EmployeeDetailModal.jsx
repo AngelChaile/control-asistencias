@@ -61,6 +61,29 @@ export default function EmployeeDetailModal({ empleado, onClose }) {
             </div>
           </section>
 
+          <section className="border-t border-slate-200 pt-5">
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-700">Historial de áreas y destinos</h3>
+            {empleado.historialAreas?.length > 0 ? (
+              <div className="space-y-2">
+                {empleado.historialAreas.map((item, index) => (
+                  <div key={`${item.area}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex sm:items-center sm:justify-between">
+                    <p className="font-medium text-slate-900">{item.area}</p>
+                    <p className="mt-1 text-sm text-slate-500 sm:mt-0">{formatearFecha(item.fechaInicio)} — {item.fechaFin ? formatearFecha(item.fechaFin) : 'Actualidad'}</p>
+                  </div>
+                ))}
+              </div>
+            ) : empleado.historialTraspasos?.length > 0 ? (
+              <div className="space-y-2">
+                {empleado.historialTraspasos.map((item, index) => (
+                  <div key={`${item.fecha}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="font-medium text-slate-900">{item.areaOrigen || 'Sin área'} → {item.areaDestino || item.area}</p>
+                    <p className="mt-1 text-sm text-slate-500">{formatearFecha(item.fecha)}</p>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="text-sm text-slate-500">Aún no hay destinos anteriores registrados.</p>}
+          </section>
+
           <button type="button" onClick={onClose} className="btn-secondary w-full py-2.5">Cerrar ficha</button>
         </div>
       </div>

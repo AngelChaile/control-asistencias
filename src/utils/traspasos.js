@@ -13,6 +13,19 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 
+const fechaActual = () => new Date().toISOString().split('T')[0];
+
+function actualizarHistorialAreas(empleado, destino) {
+  const hoy = fechaActual();
+  const origen = empleado.area?.nombre || empleado.lugarTrabajo || 'Sin área';
+  const historial = empleado.historialAreas || [];
+  const ultimoActivo = historial.findIndex(item => !item.fechaFin);
+  const cerrado = ultimoActivo >= 0
+    ? historial.map((item, index) => index === ultimoActivo ? { ...item, fechaFin: hoy } : item)
+    : [...historial, { area: origen, fechaInicio: empleado.fechaIngreso || hoy, fechaFin: hoy }];
+  return [...cerrado, { area: destino.nombre, fechaInicio: hoy, fechaFin: null }];
+}
+
 // 📝 Crear una nueva solicitud de traspaso
 export async function crearSolicitudTraspaso(solicitudData) {
   try {
@@ -151,7 +164,7 @@ export async function ejecutarTraspaso(solicitudId) {
       
       // ✅ NUEVO: Crear entrada en el historial de traspasos
       const historialEntry = {
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: fechaActual(),
         areaOrigen: solicitud.empleado.areaOrigen?.nombre || empleadoData.lugarTrabajo || 'Sin área',
         areaDestino: solicitud.areaDestino.nombre,
         motivo: solicitud.motivo,
@@ -165,6 +178,7 @@ export async function ejecutarTraspaso(solicitudId) {
         area: solicitud.areaDestino,
         lugarTrabajo: solicitud.areaDestino.nombre,
         historialTraspasos: [...historialActual, historialEntry],
+        historialAreas: actualizarHistorialAreas(empleadoData, solicitud.areaDestino),
         updatedAt: serverTimestamp()
       });
     }
@@ -218,9 +232,10 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
       area: destino,
       lugarTrabajo: destino.nombre,
       historialTraspasos: [...historial, {
-        fecha: new Date().toISOString().split('T')[0], areaOrigen: origen, areaDestino: destino.nombre,
+        fecha: fechaActual(), areaOrigen: origen, areaDestino: destino.nombre,
         motivo: `Asignación a pedido de personal`, solicitudId, aprobadoPor: 'RRHH / Subsecretaría'
       }],
+      historialAreas: actualizarHistorialAreas(empleadoData, destino),
       updatedAt: serverTimestamp()
     });
     await updateDoc(solicitudRef, {
@@ -234,4 +249,41 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
     console.error('Error asignando empleado al pedido:', error);
     throw error;
   }
+}
+
+// Destina directamente un empleado disponible. Sólo debe invocarlo Subsecretaría.
+export async function destinarEmpleadoDisponible(empleado, areaDestino, ejecutadoPor = 'Subsecretaría') {
+  const empleadoQuery = query(collection(db, 'empleados'), where('legajo', '==', empleado.legajo));
+  const snapshot = await getDocs(empleadoQuery);
+  if (snapshot.empty) throw new Error('No se encontró el empleado seleccionado.');
+  const empleadoDoc = snapshot.docs[0];
+  const datos = empleadoDoc.data();
+  const origen = datos.area?.nombre || datos.lugarTrabajo || 'A Disposición de Personal';
+  await updateDoc(doc(db, 'empleados', empleadoDoc.id), {
+    area: areaDestino,
+    lugarTrabajo: areaDestino.nombre,
+    historialTraspasos: [...(datos.historialTraspasos || []), {
+      fecha: fechaActual(), areaOrigen: origen, areaDestino: areaDestino.nombre,
+      motivo: 'Destino asignado desde Disponibles', aprobadoPor: ejecutadoPor
+    }],
+    historialAreas: actualizarHistorialAreas(datos, areaDestino),
+    updatedAt: serverTimestamp()
+  });
+}
+
+// RRHH propone un destino desde Disponibles; queda listo para Subsecretaría.
+export async function solicitarDestinoDesdeDisponibles(empleado, areaDestino, creadoPor, creadorNombre) {
+  const origen = empleado.area || { id: empleado.lugarTrabajo || 'disposicion-personal', nombre: empleado.lugarTrabajo || 'A Disposición de Personal' };
+  const docRef = await addDoc(collection(db, 'solicitudes_traspaso'), {
+    tipoSolicitud: 'traspaso_individual', origenSolicitud: 'disponibles',
+    empleado: { legajo: empleado.legajo, nombre: `${empleado.nombre} ${empleado.apellido}`, funcion: empleado.funcion || '', areaOrigen: origen },
+    areaDestino, motivo: 'Destino propuesto desde el módulo de Disponibles', observaciones: '', creadoPor, creadorNombre,
+    estado: 'rrhh_aprobado',
+    aprobaciones: {
+      rrhh: { estado: 'aprobado', fecha: serverTimestamp(), observaciones: 'Destino propuesto desde Disponibles' },
+      subsecretaria: { estado: 'pendiente', fecha: null, observaciones: null }
+    },
+    createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+  });
+  return docRef.id;
 }
