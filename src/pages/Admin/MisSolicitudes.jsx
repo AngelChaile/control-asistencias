@@ -48,6 +48,7 @@ export default function MisSolicitudes() {
       'pendiente': 'bg-yellow-100 text-yellow-800',
       'rrhh_aprobado': 'bg-blue-100 text-blue-800',
       'subsecretaria_aprobado': 'bg-green-100 text-green-800',
+      'asignacion_pendiente': 'bg-purple-100 text-purple-800',
       'rechazado': 'bg-red-100 text-red-800',
       'finalizado': 'bg-gray-100 text-gray-800'
     };
@@ -59,6 +60,7 @@ export default function MisSolicitudes() {
       'pendiente': '🟡 Pendiente',
       'rrhh_aprobado': '🔵 Aprobado por RRHH',
       'subsecretaria_aprobado': '🟢 Aprobado por Subsecretaría',
+      'asignacion_pendiente': '🟣 Pendiente de asignación',
       'rechazado': '🔴 Rechazado',
       'finalizado': '⚪ Finalizado'
     };
@@ -107,7 +109,7 @@ export default function MisSolicitudes() {
                   </div>
 
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {solicitud.empleado?.nombre || 'Empleado no especificado'}
+                    {solicitud.tipoSolicitud === 'solicitud_personal' ? '👥 Pedido de personal' : solicitud.empleado?.nombre || 'Empleado no especificado'}
                   </h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm">
@@ -120,6 +122,12 @@ export default function MisSolicitudes() {
                     <div className="col-span-2">
                       <span className="font-medium">Área Destino:</span> {solicitud.areaDestino?.nombre || 'No especificada'}
                     </div>
+                    {solicitud.tipoSolicitud === 'solicitud_personal' && (
+                      <div className="col-span-2">
+                        <span className="font-medium">Personal requerido:</span>{' '}
+                        {(solicitud.necesidades || []).map(item => `${item.funcion}: ${item.cantidadAsignada || 0}/${item.cantidad}`).join(' · ')}
+                      </div>
+                    )}
                     <div className="col-span-2">
                       <span className="font-medium">Motivo:</span> {solicitud.motivo || 'Sin motivo especificado'}
                     </div>
@@ -155,6 +163,11 @@ export default function MisSolicitudes() {
                   {solicitud.estado === 'subsecretaria_aprobado' && (
                     <span className="text-sm text-green-600 font-medium text-center">
                       ✅ Aprobado por Subsecretaría
+                    </span>
+                  )}
+                  {solicitud.estado === 'asignacion_pendiente' && (
+                    <span className="text-sm text-purple-700 font-medium text-center">
+                      📌 Pedido aprobado: RRHH asignará personal disponible
                     </span>
                   )}
                 </div>

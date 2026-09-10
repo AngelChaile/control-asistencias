@@ -182,3 +182,56 @@ export async function ejecutarTraspaso(solicitudId) {
     throw error;
   }
 }
+
+// Asigna un empleado disponible a un pedido de personal ya aprobado.
+export async function asignarEmpleadoAPedido(solicitudId, empleado) {
+  try {
+    const solicitudRef = doc(db, 'solicitudes_traspaso', solicitudId);
+    const solicitudDoc = await getDoc(solicitudRef);
+    if (!solicitudDoc.exists()) throw new Error('La solicitud ya no existe.');
+    const solicitud = solicitudDoc.data();
+    if (solicitud.tipoSolicitud !== 'solicitud_personal' || solicitud.estado !== 'asignacion_pendiente') {
+      throw new Error('Este pedido no está disponible para asignación.');
+    }
+
+    const necesidadIndex = (solicitud.necesidades || []).findIndex(item =>
+      item.funcion === empleado.funcion && Number(item.cantidadAsignada || 0) < Number(item.cantidad || 0)
+    );
+    if (necesidadIndex < 0) throw new Error('La función del empleado no coincide con un cupo pendiente del pedido.');
+
+    const empleadoQuery = query(collection(db, 'empleados'), where('legajo', '==', empleado.legajo));
+    const empleadoSnapshot = await getDocs(empleadoQuery);
+    if (empleadoSnapshot.empty) throw new Error('No se encontró el empleado seleccionado.');
+
+    const empleadoDoc = empleadoSnapshot.docs[0];
+    const empleadoData = empleadoDoc.data();
+    const historial = empleadoData.historialTraspasos || [];
+    const origen = empleadoData.area?.nombre || empleadoData.lugarTrabajo || 'A Disposición de Personal';
+    const destino = solicitud.areaDestino;
+    const necesidadesActualizadas = solicitud.necesidades.map((item, index) => index === necesidadIndex
+      ? { ...item, cantidadAsignada: Number(item.cantidadAsignada || 0) + 1 }
+      : item);
+    const asignaciones = solicitud.asignaciones || [];
+    const completa = necesidadesActualizadas.every(item => Number(item.cantidadAsignada || 0) >= Number(item.cantidad || 0));
+
+    await updateDoc(doc(db, 'empleados', empleadoDoc.id), {
+      area: destino,
+      lugarTrabajo: destino.nombre,
+      historialTraspasos: [...historial, {
+        fecha: new Date().toISOString().split('T')[0], areaOrigen: origen, areaDestino: destino.nombre,
+        motivo: `Asignación a pedido de personal`, solicitudId, aprobadoPor: 'RRHH / Subsecretaría'
+      }],
+      updatedAt: serverTimestamp()
+    });
+    await updateDoc(solicitudRef, {
+      necesidades: necesidadesActualizadas,
+      asignaciones: [...asignaciones, { legajo: empleado.legajo, nombre: `${empleado.nombre} ${empleado.apellido}`, funcion: empleado.funcion || '', fecha: serverTimestamp() }],
+      estado: completa ? 'finalizado' : 'asignacion_pendiente',
+      updatedAt: serverTimestamp()
+    });
+    return { completa };
+  } catch (error) {
+    console.error('Error asignando empleado al pedido:', error);
+    throw error;
+  }
+}

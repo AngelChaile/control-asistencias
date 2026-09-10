@@ -7,6 +7,8 @@ import { formatearFecha } from '../../utils/fechas';
 import { esEmpleadoADisposicion } from '../../utils/empleados';
 import EmployeeDetailModal from '../../components/EmployeeDetailModal';
 import { useNavigate } from 'react-router-dom';
+import { asignarEmpleadoAPedido } from '../../utils/traspasos';
+import Swal from 'sweetalert2';
 
 export default function EmpleadosDisponibles() {
   const { user } = useAuth();
@@ -14,6 +16,7 @@ export default function EmpleadosDisponibles() {
   const [loading, setLoading] = useState(false);
   const [empleados, setEmpleados] = useState([]);
   const [solicitudesPendientes, setSolicitudesPendientes] = useState([]);
+  const [pedidosAsignacion, setPedidosAsignacion] = useState([]);
   const [empleadosPorArea, setEmpleadosPorArea] = useState({});
   const [mostrarModal, setMostrarModal] = useState(false);
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
@@ -54,6 +57,12 @@ export default function EmpleadosDisponibles() {
       }));
       setSolicitudesPendientes(solicitudes);
 
+      const pedidosSnapshot = await getDocs(
+        query(collection(db, 'solicitudes_traspaso'), where('estado', '==', 'asignacion_pendiente'))
+      );
+      setPedidosAsignacion(pedidosSnapshot.docs.map(item => ({ id: item.id, ...item.data() }))
+        .filter(item => item.tipoSolicitud === 'solicitud_personal'));
+
     } catch (error) {
       console.error('Error cargando datos:', error);
     } finally {
@@ -93,6 +102,26 @@ export default function EmpleadosDisponibles() {
     return cantidad > 3;
   };
 
+  const pedidosCompatibles = (empleado) => pedidosAsignacion.filter(pedido =>
+    (pedido.necesidades || []).some(item => item.funcion === empleado.funcion && Number(item.cantidadAsignada || 0) < Number(item.cantidad || 0))
+  );
+
+  const asignarAPedido = async (empleado, pedido) => {
+    const result = await Swal.fire({
+      title: '¿Asignar empleado?',
+      html: `<strong>${empleado.nombre} ${empleado.apellido}</strong> será asignado a <strong>${pedido.areaDestino?.nombre || 'el área solicitante'}</strong>.`,
+      icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, asignar', cancelButtonText: 'Cancelar'
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const { completa } = await asignarEmpleadoAPedido(pedido.id, empleado);
+      await Swal.fire('✅ Asignación realizada', completa ? 'El pedido fue completado.' : 'Aún quedan cupos por cubrir.', 'success');
+      cargarDatos();
+    } catch (error) {
+      Swal.fire('❌ Error', error.message || 'No se pudo asignar el empleado.', 'error');
+    }
+  };
+
   const abrirModal = (emp) => {
     setEmpleadoSeleccionado(emp);
     setMostrarModal(true);
@@ -110,6 +139,19 @@ export default function EmpleadosDisponibles() {
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Empleados disponibles</h1>
         <p className="text-slate-600">Personal que se encuentra a disposición para nuevos destinos</p>
       </div>
+
+      {!loading && pedidosAsignacion.length > 0 && (
+        <div className="card p-5 mb-6 border border-purple-200 bg-purple-50">
+          <h2 className="font-semibold text-purple-900">📌 Pedidos aprobados pendientes de asignación</h2>
+          <div className="mt-3 space-y-2 text-sm text-purple-900">
+            {pedidosAsignacion.map(pedido => (
+              <div key={pedido.id}><strong>{pedido.areaDestino?.nombre}:</strong>{' '}
+                {(pedido.necesidades || []).map(item => `${item.funcion} (${item.cantidadAsignada || 0}/${item.cantidad})`).join(' · ')}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="card p-6 mb-6">
@@ -176,6 +218,7 @@ export default function EmpleadosDisponibles() {
             const areaNombre = emp.area?.nombre || emp.lugarTrabajo || 'Sin área';
             const hayExcedente = analizarExcedente(areaNombre, emp.funcion);
             const esDisposicion = esEmpleadoADisposicion(emp);
+            const pedidosEmpleado = pedidosCompatibles(emp);
 
             return (
               <div 
@@ -229,6 +272,11 @@ export default function EmpleadosDisponibles() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
+                    {!tieneSolicitud && pedidosEmpleado.map(pedido => (
+                      <button key={pedido.id} className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg" onClick={() => asignarAPedido(emp, pedido)}>
+                        ➜ Asignar a {pedido.areaDestino?.nombre}
+                      </button>
+                    ))}
                     {!tieneSolicitud ? (
                       <button
                         className="btn-primary text-sm px-4 py-2"
