@@ -1,5 +1,6 @@
 // src/utils/traspasos.js
 import { db } from '../firebase';
+import { notificarTraspasoFinalizado } from './notificaciones';
 import { 
   collection, 
   addDoc, 
@@ -181,6 +182,12 @@ export async function ejecutarTraspaso(solicitudId) {
         historialAreas: actualizarHistorialAreas(empleadoData, solicitud.areaDestino),
         updatedAt: serverTimestamp()
       });
+      await notificarTraspasoFinalizado({
+        empleado: solicitud.empleado,
+        areaOrigen: historialEntry.areaOrigen,
+        areaDestino: solicitud.areaDestino.nombre,
+        tipo: solicitud.tipoSolicitud || 'traspaso'
+      });
     }
     
     // 2. Actualizar la solicitud
@@ -244,6 +251,12 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
       estado: completa ? 'finalizado' : 'asignacion_pendiente',
       updatedAt: serverTimestamp()
     });
+    await notificarTraspasoFinalizado({
+      empleado,
+      areaOrigen: origen,
+      areaDestino: destino.nombre,
+      tipo: 'asignacion_pedido'
+    });
     return { completa };
   } catch (error) {
     console.error('Error asignando empleado al pedido:', error);
@@ -269,6 +282,11 @@ export async function destinarEmpleadoDisponible(empleado, areaDestino, ejecutad
     historialAreas: actualizarHistorialAreas(datos, areaDestino),
     updatedAt: serverTimestamp()
   });
+  await notificarTraspasoFinalizado({ empleado, areaOrigen: origen, areaDestino: areaDestino.nombre, tipo: 'destino_disponibles' });
+  return {
+    empleado: { legajo: empleado.legajo, nombre: `${empleado.nombre} ${empleado.apellido}`, funcion: empleado.funcion || '', areaOrigen: { nombre: origen } },
+    areaDestino, motivo: 'Destino asignado desde Disponibles', observaciones: '', fechaEjecucion: new Date().toISOString()
+  };
 }
 
 // RRHH propone un destino desde Disponibles; queda listo para Subsecretaría.

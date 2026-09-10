@@ -9,6 +9,7 @@ import {
   ejecutarTraspaso
 } from '../../utils/traspasos';
 import Swal from 'sweetalert2';
+import { descargarFormularioTraspaso } from '../../utils/formularioTraspaso';
 
 export default function GestionSolicitudes() {
   const { user } = useAuth();
@@ -334,9 +335,10 @@ export default function GestionSolicitudes() {
                   )}
 
                   {solicitud.estado === 'finalizado' && (
-                    <span className="text-sm text-gray-600 font-medium text-center">
-                      ✅ Traspaso completado
-                    </span>
+                    <>
+                      <span className="text-sm text-gray-600 font-medium text-center">✅ Traspaso completado</span>
+                      <button type="button" onClick={() => descargarFormularioTraspaso(solicitud)} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200">🖨️ Descargar formulario</button>
+                    </>
                   )}
 
                   {solicitud.estado === 'rechazado' && (

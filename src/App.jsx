@@ -184,7 +184,7 @@ const getRedirectPath = () => {
           <Route
             path="/rrhh/gestion-solicitudes"
             element={
-              <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario"]}>
+              <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario", "coordinador"]}>
                 <GestionSolicitudes />
               </ProtectedRoute>
             }

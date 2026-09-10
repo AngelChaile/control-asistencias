@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState, useEffect } from "react";
 import { db, collection, query, where, getDocs } from "../firebase";
+import { getNotificaciones, marcarComoLeida } from "../utils/notificaciones";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -10,6 +11,23 @@ export default function Navbar() {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [solicitudesPendientes, setSolicitudesPendientes] = useState(0);
+  const [notificaciones, setNotificaciones] = useState([]);
+  const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    const cargarNotificaciones = async () => setNotificaciones(await getNotificaciones(user.uid));
+    cargarNotificaciones();
+    const interval = setInterval(cargarNotificaciones, 30000);
+    return () => clearInterval(interval);
+  }, [user?.uid]);
+
+  const abrirNotificacion = async (notificacion) => {
+    if (!notificacion.leido) await marcarComoLeida(notificacion.id);
+    setNotificaciones(actuales => actuales.map(item => item.id === notificacion.id ? { ...item, leido: true } : item));
+    setMostrarNotificaciones(false);
+    if (notificacion.link) navigate(notificacion.link);
+  };
 
   // 🔔 Contar solicitudes pendientes para el globito
   useEffect(() => {
@@ -63,6 +81,9 @@ export default function Navbar() {
       },
       { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "🙎🏻‍♂️" },
     ],
+    coordinador: [
+      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
+    ],
     admin: [
       { name: "Inicio", path: "/admin", icon: "🏠" },
       { name: "Empleados", path: "/admin/empleados", icon: "👥" },
@@ -114,6 +135,16 @@ export default function Navbar() {
 
           {/* User & Logout - Desktop */}
           <div className="hidden flex-shrink-0 items-center gap-3 lg:flex">
+            <div className="relative">
+              <button type="button" onClick={() => setMostrarNotificaciones(actual => !actual)} className="relative rounded-lg p-2 text-xl text-slate-600 hover:bg-slate-100" aria-label="Notificaciones">
+                🔔
+                {notificaciones.filter(item => !item.leido).length > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-xs text-white">{notificaciones.filter(item => !item.leido).length}</span>}
+              </button>
+              {mostrarNotificaciones && <div className="absolute right-0 top-12 z-50 w-96 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                <div className="border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-800">Notificaciones</div>
+                {notificaciones.length ? <div className="max-h-96 overflow-y-auto">{notificaciones.map(notificacion => <button type="button" key={notificacion.id} onClick={() => abrirNotificacion(notificacion)} className={`block w-full border-b border-slate-100 px-4 py-3 text-left text-sm hover:bg-slate-50 ${notificacion.leido ? 'text-slate-500' : 'bg-blue-50 text-slate-900'}`}><p className="font-semibold">{notificacion.titulo}</p><p className="mt-1">{notificacion.mensaje}</p></button>)}</div> : <p className="p-4 text-sm text-slate-500">No tenés notificaciones.</p>}
+              </div>}
+            </div>
             <div className="hidden text-right xl:block">
               <div className="text-sm font-semibold text-slate-800">{user.nombre} {user.apellido}</div>
               <div className="text-xs capitalize text-slate-500">{user.rol === 'subsecretario' ? 'Subsecretario' : user.rol}</div>

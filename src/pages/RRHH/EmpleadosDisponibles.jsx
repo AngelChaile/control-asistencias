@@ -7,6 +7,7 @@ import { formatearFecha } from '../../utils/fechas';
 import { esEmpleadoADisposicion } from '../../utils/empleados';
 import EmployeeDetailModal from '../../components/EmployeeDetailModal';
 import { asignarEmpleadoAPedido, destinarEmpleadoDisponible, solicitarDestinoDesdeDisponibles } from '../../utils/traspasos';
+import { descargarFormularioTraspaso } from '../../utils/formularioTraspaso';
 import Swal from 'sweetalert2';
 
 export default function EmpleadosDisponibles() {
@@ -19,6 +20,7 @@ export default function EmpleadosDisponibles() {
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
   const [empleadoADestinar, setEmpleadoADestinar] = useState(null);
   const [areaSeleccionada, setAreaSeleccionada] = useState('');
+  const [busquedaDestino, setBusquedaDestino] = useState('');
   const [filtros, setFiltros] = useState({
     funcion: '',
     buscar: '',
@@ -101,15 +103,16 @@ export default function EmpleadosDisponibles() {
     }
   };
 
-  const abrirDestino = (empleado) => { setEmpleadoADestinar(empleado); setAreaSeleccionada(''); };
-  const cerrarDestino = () => { setEmpleadoADestinar(null); setAreaSeleccionada(''); };
+  const abrirDestino = (empleado) => { setEmpleadoADestinar(empleado); setAreaSeleccionada(''); setBusquedaDestino(''); };
+  const cerrarDestino = () => { setEmpleadoADestinar(null); setAreaSeleccionada(''); setBusquedaDestino(''); };
   const confirmarDestino = async () => {
     const destino = areas.find(area => area.id === areaSeleccionada);
     if (!destino) { Swal.fire('⚠️', 'Seleccioná un área destino.', 'warning'); return; }
     try {
       if (user?.rol === 'subsecretario') {
-        await destinarEmpleadoDisponible(empleadoADestinar, destino);
-        await Swal.fire('✅ Destino asignado', `${empleadoADestinar.nombre} fue destinado a ${destino.nombre}.`, 'success');
+        const formulario = await destinarEmpleadoDisponible(empleadoADestinar, destino);
+        const resultado = await Swal.fire({ title: '✅ Destino asignado', text: `${empleadoADestinar.nombre} fue destinado a ${destino.nombre}.`, icon: 'success', showCancelButton: true, confirmButtonText: '🖨️ Descargar formulario', cancelButtonText: 'Cerrar' });
+        if (resultado.isConfirmed) descargarFormularioTraspaso(formulario);
       } else {
         await solicitarDestinoDesdeDisponibles(empleadoADestinar, destino, user?.email || '', `${user?.nombre || ''} ${user?.apellido || ''}`.trim());
         await Swal.fire('✅ Enviado a aprobación', `El destino a ${destino.nombre} quedó pendiente de la aprobación de Subsecretaría.`, 'success');
@@ -117,6 +120,7 @@ export default function EmpleadosDisponibles() {
       cerrarDestino(); cargarDatos();
     } catch (error) { Swal.fire('❌ Error', error.message || 'No se pudo registrar el destino.', 'error'); }
   };
+  const areasFiltradasDestino = areas.filter(area => area.nombre.toLowerCase().includes(busquedaDestino.toLowerCase()));
 
   return (
     <div className="app-container">
@@ -435,11 +439,12 @@ export default function EmpleadosDisponibles() {
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl" onMouseDown={event => event.stopPropagation()}>
             <h2 className="text-xl font-bold text-slate-900">➜ Enviar a un área</h2>
             <p className="mt-2 text-sm text-slate-600">{empleadoADestinar.nombre} {empleadoADestinar.apellido} · Legajo {empleadoADestinar.legajo}</p>
-            <label className="mt-5 block text-sm font-medium text-slate-700">Área destino</label>
-            <select className="input-modern mt-2" value={areaSeleccionada} onChange={event => setAreaSeleccionada(event.target.value)}>
-              <option value="">Seleccionar área...</option>
-              {areas.map(area => <option key={area.id} value={area.id}>{area.nombre}</option>)}
-            </select>
+            <label className="mt-5 block text-sm font-medium text-slate-700">Buscar área destino</label>
+            <input className="input-modern mt-2" autoFocus placeholder="Escribí el nombre del área..." value={busquedaDestino} onChange={event => setBusquedaDestino(event.target.value)} />
+            <div className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-slate-200">
+              {areasFiltradasDestino.length ? areasFiltradasDestino.map(area => <button type="button" key={area.id} onClick={() => setAreaSeleccionada(area.id)} className={`block w-full border-b border-slate-100 px-4 py-3 text-left text-sm transition hover:bg-slate-50 ${areaSeleccionada === area.id ? 'bg-blue-50 font-semibold text-blue-800' : 'text-slate-700'}`}>{area.nombre}</button>) : <p className="p-4 text-sm text-slate-500">No se encontraron áreas.</p>}
+            </div>
+            {areaSeleccionada && <p className="mt-2 text-sm font-medium text-green-700">✓ {areas.find(area => area.id === areaSeleccionada)?.nombre}</p>}
             <p className="mt-3 text-sm text-slate-500">
               {user?.rol === 'subsecretario' ? 'El destino se aplicará inmediatamente.' : 'El destino se enviará a Subsecretaría para su aprobación.'}
             </p>
