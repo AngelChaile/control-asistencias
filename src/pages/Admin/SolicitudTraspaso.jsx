@@ -13,6 +13,8 @@ export default function SolicitudTraspaso() {
   const [empleados, setEmpleados] = useState([]);
   const [areas, setAreas] = useState([]);
   const [busquedaEmpleado, setBusquedaEmpleado] = useState('');
+  const [busquedaArea, setBusquedaArea] = useState('');
+  const [mostrarResultadosAreas, setMostrarResultadosAreas] = useState(false);
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
   const [solicitudEnviada, setSolicitudEnviada] = useState(false);
   const [tipo, setTipo] = useState('traspaso_individual');
@@ -28,7 +30,10 @@ export default function SolicitudTraspaso() {
         const [areasData, empSnapshot] = await Promise.all([fetchAllAreas(), getDocs(collection(db, 'empleados'))]);
         setAreas(areasData);
         const areaUsuario = areasData.find(area => area.nombre === user?.lugarTrabajo);
-        if (areaUsuario) setAreaDestino(areaUsuario);
+        if (areaUsuario) {
+          setAreaDestino(areaUsuario);
+          setBusquedaArea(areaUsuario.nombre);
+        }
         const empleadosData = empSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
         setEmpleados(empleadosData);
         const legajo = new URLSearchParams(window.location.search).get('legajo');
@@ -42,6 +47,11 @@ export default function SolicitudTraspaso() {
   const seleccionarEmpleado = (empleado) => {
     setEmpleadoSeleccionado(empleado);
     setBusquedaEmpleado(`${empleado.nombre} ${empleado.apellido} (${empleado.legajo})`);
+  };
+  const seleccionarArea = (area) => {
+    setAreaDestino(area);
+    setBusquedaArea(area.nombre);
+    setMostrarResultadosAreas(false);
   };
   const actualizarNecesidad = (index, campo, valor) => setNecesidades(actuales => actuales.map((item, i) => i === index ? { ...item, [campo]: valor } : item));
   const resetear = () => { setEmpleadoSeleccionado(null); setBusquedaEmpleado(''); setMotivo(''); setObservaciones(''); setNecesidades([{ funcion: '', cantidad: 1 }]); };
@@ -73,6 +83,7 @@ export default function SolicitudTraspaso() {
   };
 
   const resultadosEmpleados = busquedaEmpleado.length > 1 ? empleados.filter(emp => `${emp.nombre} ${emp.apellido}`.toLowerCase().includes(busquedaEmpleado.toLowerCase()) || String(emp.legajo || '').includes(busquedaEmpleado)) : [];
+  const resultadosAreas = areas.filter(area => `${area.nombre} ${area.ruta || ''}`.toLowerCase().includes(busquedaArea.toLowerCase())).slice(0, 30);
   const titulo = tipo === 'solicitud_personal' ? 'Pedido de Personal' : tipo === 'enviar_disposicion' ? 'Enviar personal a disposición' : 'Solicitud de Traspaso';
   return <div className="app-container"><div className="text-center mb-8"><h1 className="text-3xl font-bold text-gray-900 mb-2">📝 {titulo}</h1><p className="text-gray-600">Los pedidos requieren aprobación de RRHH y Subsecretaría.</p></div>
     {solicitudEnviada && <div className="card p-4 mb-6 bg-green-50 border border-green-200 text-green-800">✅ Solicitud enviada correctamente.</div>}
@@ -81,7 +92,7 @@ export default function SolicitudTraspaso() {
       {tipo !== 'solicitud_personal' && <div><label className="block text-sm font-medium text-gray-700 mb-2">👤 Empleado *</label><input className="input-modern" placeholder="Buscar por nombre o legajo..." value={busquedaEmpleado} onChange={e => { setBusquedaEmpleado(e.target.value); setEmpleadoSeleccionado(null); }} />
         {resultadosEmpleados.length > 0 && <div className="mt-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg">{resultadosEmpleados.map(emp => <button key={emp.id} type="button" className="block w-full p-3 text-left hover:bg-gray-50 border-b border-gray-100" onClick={() => seleccionarEmpleado(emp)}><span className="font-medium">{emp.nombre} {emp.apellido}</span><span className="text-sm text-gray-600"> — Legajo {emp.legajo} · {emp.funcion || 'Sin función'}</span></button>)}</div>}
         {empleadoSeleccionado && <p className="mt-2 p-3 bg-green-50 rounded-lg text-sm text-green-800">✅ {empleadoSeleccionado.nombre} {empleadoSeleccionado.apellido} · Área actual: {empleadoSeleccionado.area?.nombre || empleadoSeleccionado.lugarTrabajo || 'Sin área'}</p>}</div>}
-      {tipo !== 'enviar_disposicion' && <div><label className="block text-sm font-medium text-gray-700 mb-2">🏢 {tipo === 'solicitud_personal' ? 'Área solicitante *' : 'Área destino *'}</label><select className="input-modern" value={areaDestino?.id || ''} onChange={e => setAreaDestino(areas.find(area => area.id === e.target.value) || null)}><option value="">Seleccionar área...</option>{areas.map(area => <option key={area.id} value={area.id}>{area.nombre}</option>)}</select></div>}
+      {tipo !== 'enviar_disposicion' && <div><label className="block text-sm font-medium text-gray-700 mb-2">🏢 {tipo === 'solicitud_personal' ? 'Área solicitante *' : 'Área destino *'}</label><div className="relative"><input className="input-modern" placeholder="Buscar área por nombre..." value={busquedaArea} onFocus={() => setMostrarResultadosAreas(true)} onChange={e => { setBusquedaArea(e.target.value); setAreaDestino(null); setMostrarResultadosAreas(true); }} onBlur={() => setTimeout(() => setMostrarResultadosAreas(false), 150)} />{mostrarResultadosAreas && <div className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">{resultadosAreas.length > 0 ? resultadosAreas.map(area => <button key={area.id} type="button" className="block w-full border-b border-gray-100 p-3 text-left hover:bg-gray-50" onMouseDown={event => { event.preventDefault(); seleccionarArea(area); }}><span className="font-medium">{area.nombre}</span>{area.ruta && area.ruta !== area.nombre && <span className="block text-sm text-gray-600">{area.ruta}</span>}</button>) : <p className="p-3 text-sm text-gray-500">No se encontraron áreas.</p>}</div>}</div></div>}
       {tipo === 'enviar_disposicion' && <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 text-sm text-purple-800">📌 El destino será <strong>A Disposición de Personal</strong>.</div>}
       {tipo === 'solicitud_personal' && <div><label className="block text-sm font-medium text-gray-700 mb-2">Funciones y cantidad requerida *</label><div className="space-y-2">{necesidades.map((necesidad, index) => <div className="flex gap-2" key={index}><input className="input-modern flex-1" placeholder="Ej.: Cajero, Pintor, Electricista" value={necesidad.funcion} onChange={e => actualizarNecesidad(index, 'funcion', e.target.value)} /><input className="input-modern w-28" type="number" min="1" value={necesidad.cantidad} onChange={e => actualizarNecesidad(index, 'cantidad', e.target.value)} />{necesidades.length > 1 && <button type="button" className="btn-secondary px-3" onClick={() => setNecesidades(actuales => actuales.filter((_, i) => i !== index))}>Quitar</button>}</div>)}</div><button type="button" className="mt-2 text-sm text-blue-600 hover:text-blue-800" onClick={() => setNecesidades(actuales => [...actuales, { funcion: '', cantidad: 1 }])}>+ Agregar función</button></div>}
       <div><label className="block text-sm font-medium text-gray-700 mb-2">📝 Motivo *</label><textarea className="input-modern" rows="3" required value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Explica el motivo..." /></div><div><label className="block text-sm font-medium text-gray-700 mb-2">📋 Observaciones adicionales</label><textarea className="input-modern" rows="2" value={observaciones} onChange={e => setObservaciones(e.target.value)} /></div><button type="submit" disabled={loading} className="w-full btn-primary py-3 disabled:opacity-50">{loading ? 'Procesando...' : '📤 Enviar solicitud'}</button>
