@@ -70,7 +70,7 @@ export async function notificarTraspasoFinalizado({ empleado, areaOrigen, areaDe
       destinatarios.set(coordinador.email, { usuarioId: usuario?.uid || null, titulo: 'Traspaso finalizado', mensaje: `${textoBase} ${coordinador.mensaje}`, tipo: 'traspaso_coordinacion' });
     });
 
-    usuarios.filter(usuario => ['admin', 'coordinador'].includes(usuario.rol) &&
+    usuarios.filter(usuario => ['admin', 'coordinador_traspasos'].includes(usuario.rol) &&
       [areaOrigen, areaDestino].includes(usuario.lugarTrabajo)).forEach(usuario => {
       const esDestino = usuario.lugarTrabajo === areaDestino;
       destinatarios.set(usuario.email, {

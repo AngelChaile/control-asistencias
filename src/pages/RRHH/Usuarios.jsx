@@ -181,7 +181,7 @@ export default function Usuarios() {
                 <option value="empleado">👨‍💼 Empleado</option>
                 <option value="admin">🛡️ Administrador</option>
                 <option value="rrhh">📊 Recursos Humanos</option>
-                <option value="coordinador">🔔 Coordinador de traspasos</option>
+                <option value="coordinador_traspasos">🔔 Coordinador de traspasos</option>
               </select>
             </div>
             <div className="flex items-end gap-2 md:col-span-2 lg:col-span-3">

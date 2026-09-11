@@ -14,7 +14,7 @@ export default function ProtectedRoute({ children, user, allowedRoles = [] }) {
     const redirectMap = {
       'rrhh': '/rrhh',
       'subsecretario': '/rrhh/gestion-solicitudes',
-      'coordinador': '/rrhh/gestion-solicitudes',
+      'coordinador_traspasos': '/rrhh/gestion-solicitudes',
       'admin': '/admin',
       'empleado': '/scan'
     };

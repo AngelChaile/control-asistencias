@@ -35,7 +35,7 @@ export default function Login() {
 
       if (userDoc.rol === "rrhh") {
         navigate("/rrhh", { replace: true });
-      } else if (userDoc.rol === "subsecretario" || userDoc.rol === "coordinador") {
+      } else if (userDoc.rol === "subsecretario" || userDoc.rol === "coordinador_traspasos") {
         navigate("/rrhh/gestion-solicitudes", { replace: true });
       } else if (userDoc.rol === "admin") {
         navigate("/admin", { replace: true });

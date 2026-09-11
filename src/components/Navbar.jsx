@@ -81,7 +81,7 @@ export default function Navbar() {
       },
       { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "🙎🏻‍♂️" },
     ],
-    coordinador: [
+    coordinador_traspasos: [
       { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
     ],
     admin: [
