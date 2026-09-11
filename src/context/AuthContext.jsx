@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const userDoc = await getUserDoc(u.uid);
+        const userDoc = await getUserDoc(u.uid, u.email);
         const full = userDoc ? { uid: u.uid, ...userDoc } : { uid: u.uid };
         
         // ✅ 🔥 AGREGAR: Asegurar que el rol se mantenga

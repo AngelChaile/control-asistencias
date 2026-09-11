@@ -21,7 +21,7 @@ export default function Login() {
       const uid = userCred.user.uid;
 
       // 🔹 Obtener datos del usuario
-      const userDoc = await getUserDoc(uid);
+      const userDoc = await getUserDoc(uid, userCred.user.email);
       if (!userDoc) throw new Error("No se pudo cargar la información del usuario.");
 
       // 🔹 Redirigir según rol
@@ -33,8 +33,10 @@ export default function Login() {
         showConfirmButton: false,
       });
 
-      if (userDoc.rol === "rrhh" || userDoc.rol === "subsecretario" || userDoc.rol === "coordinador") {
+      if (userDoc.rol === "rrhh") {
         navigate("/rrhh", { replace: true });
+      } else if (userDoc.rol === "subsecretario" || userDoc.rol === "coordinador") {
+        navigate("/rrhh/gestion-solicitudes", { replace: true });
       } else if (userDoc.rol === "admin") {
         navigate("/admin", { replace: true });
       } else {

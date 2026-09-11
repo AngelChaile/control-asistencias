@@ -52,7 +52,7 @@ export default function App() {
         return;
       }
       try {
-        const userDoc = await getUserDoc(u.uid);
+        const userDoc = await getUserDoc(u.uid, u.email);
         if (userDoc) {
           const full = { uid: u.uid, ...userDoc };
           setUser(full);
@@ -82,7 +82,8 @@ const getRedirectPath = () => {
   // Mapeo de roles a rutas
   const roleRoutes = {
     'rrhh': '/rrhh',
-    'subsecretario': '/rrhh', // ✅ SIN BARRA AL FINAL
+    'subsecretario': '/rrhh/gestion-solicitudes',
+    'coordinador': '/rrhh/gestion-solicitudes',
     'admin': '/admin',
     'empleado': '/scan'
   };
