@@ -32,7 +32,6 @@ export default function SolicitudTraspaso() {
         const areaUsuario = areasData.find(area => area.nombre === user?.lugarTrabajo);
         if (areaUsuario) {
           setAreaDestino(areaUsuario);
-          setBusquedaArea(areaUsuario.nombre);
         }
         const empleadosData = empSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
         setEmpleados(empleadosData);
@@ -82,7 +81,11 @@ export default function SolicitudTraspaso() {
     } catch (error) { console.error('Error creando solicitud:', error); Swal.fire('❌', `Error al crear la solicitud: ${error.message}`, 'error'); } finally { setLoading(false); }
   };
 
-  const resultadosEmpleados = busquedaEmpleado.length > 1 ? empleados.filter(emp => `${emp.nombre} ${emp.apellido}`.toLowerCase().includes(busquedaEmpleado.toLowerCase()) || String(emp.legajo || '').includes(busquedaEmpleado)) : [];
+  const resultadosEmpleados = busquedaEmpleado.length > 1 ? empleados.filter(emp => {
+    const perteneceAlArea = !user?.lugarTrabajo || [emp.area?.nombre, emp.lugarTrabajo].filter(Boolean).some(area => area.toLowerCase() === user.lugarTrabajo.toLowerCase());
+    const busqueda = busquedaEmpleado.toLowerCase();
+    return perteneceAlArea && (`${emp.nombre} ${emp.apellido}`.toLowerCase().includes(busqueda) || String(emp.legajo || '').includes(busqueda));
+  }) : [];
   const resultadosAreas = areas.filter(area => `${area.nombre} ${area.ruta || ''}`.toLowerCase().includes(busquedaArea.toLowerCase())).slice(0, 30);
   const titulo = tipo === 'solicitud_personal' ? 'Pedido de Personal' : tipo === 'enviar_disposicion' ? 'Enviar personal a disposición' : 'Solicitud de Traspaso';
   return <div className="app-container"><div className="text-center mb-8"><h1 className="text-3xl font-bold text-gray-900 mb-2">📝 {titulo}</h1><p className="text-gray-600">Los pedidos requieren aprobación de RRHH y Subsecretaría.</p></div>
