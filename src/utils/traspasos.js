@@ -21,44 +21,59 @@ const EMAILJS_SERVICE_ID = 'service_h97mtwh';   // 👈 Reemplaza con tu Service
 const EMAILJS_TEMPLATE_ID = 'template_wph4gpm'; // 👈 Reemplaza con tu Template ID
 // La Public Key ya fue inicializada en index.html
 
-// ✅ Función para enviar correo de traspaso
+
+// src/utils/traspasos.js - Función enviarCorreoTraspaso CORREGIDA
+
 async function enviarCorreoTraspaso({ empleado, areaOrigen, areaDestino, motivo, tipo }) {
   try {
-    // Verificar que EmailJS esté disponible
     if (typeof window.emailjs === 'undefined') {
-      console.warn('⚠️ EmailJS no está inicializado. No se enviará correo.');
+      console.warn('⚠️ EmailJS no está inicializado.');
       return false;
     }
 
-    const templateParams = {
-      // Datos del empleado
-      nombre_empleado: empleado.nombre || `${empleado.nombre || ''} ${empleado.apellido || ''}`,
-      legajo_empleado: empleado.legajo || '',
-      funcion_empleado: empleado.funcion || 'No especificada',
-      categoria_empleado: empleado.categoria || 'No especificada',
-      
-      // Datos del traspaso
-      area_origen: areaOrigen,
-      area_destino: areaDestino,
-      motivo: motivo || 'No especificado',
-      tipo: tipo || 'traspaso',
-      fecha: new Date().toLocaleDateString('es-AR'),
-      
-      // Destinatarios (Lautaro y Nicolás)
-      to_email: 'registrosdeasistenciasmoron@gmail.com, safeguarding740@gmail.com',
-    };
+    // Lista de destinatarios
+    const destinatarios = [
+      { email: 'registrosdeasistenciasmoron@gmail.com', mensaje: 'Debe actualizar el traspaso del personal en Major y Portal Empleados.' },
+      { email: 'safeguarding740@gmail.com', mensaje: 'Debe notificar al empleado su nuevo destino.' }
+    ];
 
-    // ✅ Enviar correo
-    const response = await window.emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      templateParams
-    );
+    // ✅ Enviar un correo por cada destinatario
+    for (const destinatario of destinatarios) {
+      const templateParams = {
+        // Datos del empleado
+        nombre_empleado: empleado.nombre || `${empleado.nombre || ''} ${empleado.apellido || ''}`,
+        legajo_empleado: empleado.legajo || '',
+        funcion_empleado: empleado.funcion || 'No especificada',
+        categoria_empleado: empleado.categoria || 'No especificada',
+        
+        // Datos del traspaso
+        area_origen: areaOrigen,
+        area_destino: areaDestino,
+        motivo: motivo || 'No especificado',
+        tipo: tipo || 'traspaso',
+        fecha: new Date().toLocaleDateString('es-AR'),
+        
+        // ✅ Destinatario individual (coincide con {{email}} en la plantilla)
+        email: destinatario.email,
+        mensaje_adicional: destinatario.mensaje
+      };
 
-    console.log('✅ Correo enviado exitosamente:', response);
+      console.log(`📧 Enviando correo a: ${destinatario.email}`);
+
+      await window.emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        templateParams
+      );
+
+      console.log(`✅ Correo enviado a: ${destinatario.email}`);
+    }
+
     return true;
   } catch (error) {
-    console.error('⚠️ Error enviando correo (pero el traspaso se completó):', error);
+    console.error('⚠️ Error enviando correo:', error);
+    console.error('   Status:', error?.status);
+    console.error('   Text:', error?.text);
     return false;
   }
 }
