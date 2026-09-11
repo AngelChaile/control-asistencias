@@ -16,6 +16,53 @@ import {
 
 const fechaActual = () => new Date().toISOString().split('T')[0];
 
+// ✅ Configuración de EmailJS
+const EMAILJS_SERVICE_ID = 'service_h97mtwh';   // 👈 Reemplaza con tu Service ID
+const EMAILJS_TEMPLATE_ID = 'template_wph4gpm'; // 👈 Reemplaza con tu Template ID
+// La Public Key ya fue inicializada en index.html
+
+// ✅ Función para enviar correo de traspaso
+async function enviarCorreoTraspaso({ empleado, areaOrigen, areaDestino, motivo, tipo }) {
+  try {
+    // Verificar que EmailJS esté disponible
+    if (typeof window.emailjs === 'undefined') {
+      console.warn('⚠️ EmailJS no está inicializado. No se enviará correo.');
+      return false;
+    }
+
+    const templateParams = {
+      // Datos del empleado
+      nombre_empleado: empleado.nombre || `${empleado.nombre || ''} ${empleado.apellido || ''}`,
+      legajo_empleado: empleado.legajo || '',
+      funcion_empleado: empleado.funcion || 'No especificada',
+      categoria_empleado: empleado.categoria || 'No especificada',
+      
+      // Datos del traspaso
+      area_origen: areaOrigen,
+      area_destino: areaDestino,
+      motivo: motivo || 'No especificado',
+      tipo: tipo || 'traspaso',
+      fecha: new Date().toLocaleDateString('es-AR'),
+      
+      // Destinatarios (Lautaro y Nicolás)
+      to_email: 'registrosdeasistenciasmoron@gmail.com, safeguarding740@gmail.com',
+    };
+
+    // ✅ Enviar correo
+    const response = await window.emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      templateParams
+    );
+
+    console.log('✅ Correo enviado exitosamente:', response);
+    return true;
+  } catch (error) {
+    console.error('⚠️ Error enviando correo (pero el traspaso se completó):', error);
+    return false;
+  }
+}
+
 function actualizarHistorialAreas(empleado, destino) {
   const hoy = fechaActual();
   const origen = empleado.area?.nombre || empleado.lugarTrabajo || 'Sin área';
@@ -142,9 +189,8 @@ export async function rechazarSolicitud(solicitudId, motivo) {
   }
 }
 
-// 🔄 Ejecutar traspaso (finalizar)
-// src/utils/traspasos.js - Función ejecutarTraspaso (MODIFICADA)
 
+// 🔄 Ejecutar traspaso (finalizar) - CON ENVÍO DE CORREO
 export async function ejecutarTraspaso(solicitudId) {
   try {
     const solicitudRef = doc(db, 'solicitudes_traspaso', solicitudId);
@@ -163,7 +209,7 @@ export async function ejecutarTraspaso(solicitudId) {
       const empleadoRef = doc(db, 'empleados', empleadoDoc.id);
       const empleadoData = empleadoDoc.data();
       
-      // ✅ NUEVO: Crear entrada en el historial de traspasos
+      // Crear entrada en el historial de traspasos
       const historialEntry = {
         fecha: fechaActual(),
         areaOrigen: solicitud.empleado.areaOrigen?.nombre || empleadoData.lugarTrabajo || 'Sin área',
@@ -173,7 +219,7 @@ export async function ejecutarTraspaso(solicitudId) {
         aprobadoPor: 'Subsecretaría'
       };
       
-      // ✅ Actualizar el historial del empleado
+      // Actualizar el historial del empleado
       const historialActual = empleadoData.historialTraspasos || [];
       await updateDoc(empleadoRef, {
         area: solicitud.areaDestino,
@@ -182,10 +228,25 @@ export async function ejecutarTraspaso(solicitudId) {
         historialAreas: actualizarHistorialAreas(empleadoData, solicitud.areaDestino),
         updatedAt: serverTimestamp()
       });
+      
+      // Notificar internamente (sistema)
       await notificarTraspasoFinalizado({
         empleado: solicitud.empleado,
         areaOrigen: historialEntry.areaOrigen,
         areaDestino: solicitud.areaDestino.nombre,
+        tipo: solicitud.tipoSolicitud || 'traspaso'
+      });
+      
+      // ✅ NUEVO: Enviar correo electrónico con EmailJS
+      await enviarCorreoTraspaso({
+        empleado: {
+          ...solicitud.empleado,
+          funcion: empleadoData.funcion,
+          categoria: empleadoData.categoria
+        },
+        areaOrigen: historialEntry.areaOrigen,
+        areaDestino: solicitud.areaDestino.nombre,
+        motivo: solicitud.motivo,
         tipo: solicitud.tipoSolicitud || 'traspaso'
       });
     }
@@ -204,7 +265,7 @@ export async function ejecutarTraspaso(solicitudId) {
   }
 }
 
-// Asigna un empleado disponible a un pedido de personal ya aprobado.
+// Asigna un empleado disponible a un pedido de personal ya aprobado. - CON ENVÍO DE CORREO
 export async function asignarEmpleadoAPedido(solicitudId, empleado) {
   try {
     const solicitudRef = doc(db, 'solicitudes_traspaso', solicitudId);
@@ -251,12 +312,24 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
       estado: completa ? 'finalizado' : 'asignacion_pendiente',
       updatedAt: serverTimestamp()
     });
+    
+    // Notificar internamente
     await notificarTraspasoFinalizado({
       empleado,
       areaOrigen: origen,
       areaDestino: destino.nombre,
       tipo: 'asignacion_pedido'
     });
+    
+    // ✅ NUEVO: Enviar correo electrónico con EmailJS
+    await enviarCorreoTraspaso({
+      empleado,
+      areaOrigen: origen,
+      areaDestino: destino.nombre,
+      motivo: 'Asignación a pedido de personal',
+      tipo: 'asignacion_pedido'
+    });
+    
     return { completa };
   } catch (error) {
     console.error('Error asignando empleado al pedido:', error);
@@ -264,7 +337,7 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
   }
 }
 
-// Destina directamente un empleado disponible. Sólo debe invocarlo Subsecretaría.
+// Destina directamente un empleado disponible. Sólo debe invocarlo Subsecretaría. - CON ENVÍO DE CORREO
 export async function destinarEmpleadoDisponible(empleado, areaDestino, ejecutadoPor = 'Subsecretaría') {
   const empleadoQuery = query(collection(db, 'empleados'), where('legajo', '==', empleado.legajo));
   const snapshot = await getDocs(empleadoQuery);
@@ -272,6 +345,7 @@ export async function destinarEmpleadoDisponible(empleado, areaDestino, ejecutad
   const empleadoDoc = snapshot.docs[0];
   const datos = empleadoDoc.data();
   const origen = datos.area?.nombre || datos.lugarTrabajo || 'A Disposición de Personal';
+  
   await updateDoc(doc(db, 'empleados', empleadoDoc.id), {
     area: areaDestino,
     lugarTrabajo: areaDestino.nombre,
@@ -282,7 +356,19 @@ export async function destinarEmpleadoDisponible(empleado, areaDestino, ejecutad
     historialAreas: actualizarHistorialAreas(datos, areaDestino),
     updatedAt: serverTimestamp()
   });
+  
+  // Notificar internamente
   await notificarTraspasoFinalizado({ empleado, areaOrigen: origen, areaDestino: areaDestino.nombre, tipo: 'destino_disponibles' });
+  
+  // ✅ NUEVO: Enviar correo electrónico con EmailJS
+  await enviarCorreoTraspaso({
+    empleado,
+    areaOrigen: origen,
+    areaDestino: areaDestino.nombre,
+    motivo: 'Destino asignado desde Disponibles',
+    tipo: 'destino_disponibles'
+  });
+  
   return {
     empleado: { legajo: empleado.legajo, nombre: `${empleado.nombre} ${empleado.apellido}`, funcion: empleado.funcion || '', areaOrigen: { nombre: origen } },
     areaDestino, motivo: 'Destino asignado desde Disponibles', observaciones: '', fechaEjecucion: new Date().toISOString()

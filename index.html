@@ -21,9 +21,26 @@
   <meta name="theme-color" content="#e11d1d">
   
   <title>Control de Asistencias</title>
+
+  <!-- ✅ EmailJS desde CDN (cargado antes de la app) -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
+  
+  <!-- ✅ Inicializar EmailJS después de que el DOM esté listo -->
+  <script type="text/javascript">
+    window.addEventListener('DOMContentLoaded', function() {
+      if (typeof emailjs !== 'undefined') {
+        emailjs.init({
+          publicKey: "vZRWNMNdhko2RgFmo",
+        });
+        console.log('✅ EmailJS inicializado correctamente');
+      } else {
+        console.error('❌ EmailJS no se cargó correctamente desde el CDN');
+      }
+    });
+  </script>
 </body>
 </html>
