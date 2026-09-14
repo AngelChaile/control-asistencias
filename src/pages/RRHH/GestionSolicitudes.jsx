@@ -1,0 +1,372 @@
+// src/pages/RRHH/GestionSolicitudes.jsx
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { db, collection, getDocs, query, where } from '../../firebase';
+import { 
+  aprobarSolicitudRRHH, 
+  aprobarSolicitudSubsecretaria, 
+  rechazarSolicitud,
+  ejecutarTraspaso
+} from '../../utils/traspasos';
+import Swal from 'sweetalert2';
+import { descargarFormularioTraspaso } from '../../utils/formularioTraspaso';
+
+export default function GestionSolicitudes() {
+  const { user } = useAuth();
+  const [solicitudes, setSolicitudes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filtro, setFiltro] = useState(user?.rol === 'subsecretario' ? 'rrhh_aprobado' : 'pendiente');
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    cargarSolicitudes();
+  }, [filtro]);
+
+  useEffect(() => {
+    if (user?.rol === 'subsecretario') setFiltro('rrhh_aprobado');
+  }, [user?.rol]);
+
+  const cargarSolicitudes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let q;
+      if (filtro === 'todas') {
+        q = collection(db, 'solicitudes_traspaso');
+      } else {
+        q = query(
+          collection(db, 'solicitudes_traspaso'),
+          where('estado', '==', filtro)
+        );
+      }
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      data.sort((a, b) => {
+        const fechaA = a.createdAt?.toDate?.() || new Date(a.createdAt);
+        const fechaB = b.createdAt?.toDate?.() || new Date(b.createdAt);
+        return fechaB - fechaA;
+      });
+      
+      setSolicitudes(data);
+    } catch (error) {
+      console.error('Error cargando solicitudes:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Aprobar RRHH
+  const handleAprobarRRHH = async (solicitud) => {
+    const result = await Swal.fire({
+      title: '✅ Aprobar solicitud',
+      text: solicitud.tipoSolicitud === 'solicitud_personal' ? 'El pedido pasará a Subsecretaría para su aprobación final.' : 'Esta aprobación pasará a Subsecretaría.',
+      input: 'textarea',
+      inputLabel: 'Motivo de la aprobación',
+      inputPlaceholder: 'Escribe por qué apruebas esta solicitud...',
+      inputValidator: (valor) => !valor.trim() ? 'Debes indicar el motivo de la aprobación.' : undefined,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, aprobar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await aprobarSolicitudRRHH(solicitud.id, result.value.trim());
+        Swal.fire('✅ Aprobado', 'La solicitud ha sido aprobada por RRHH. Esperando Subsecretaría.', 'success');
+        cargarSolicitudes();
+      } catch (error) {
+        Swal.fire('❌ Error', 'No se pudo aprobar la solicitud', 'error');
+      }
+    }
+  };
+
+  // ✅ Aprobar Subsecretaría
+  const handleAprobarSubsecretaria = async (solicitud) => {
+    const result = await Swal.fire({
+      title: '✅ ¿Aprobar definitivamente esta solicitud?',
+      text: solicitud.tipoSolicitud === 'solicitud_personal'
+        ? 'El pedido quedará aprobado y RRHH/Subsecretaría podrá asignar empleados disponibles.'
+        : 'Esta acción finalizará el traspaso del empleado.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, aprobar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await aprobarSolicitudSubsecretaria(solicitud.id);
+        if (solicitud.tipoSolicitud === 'solicitud_personal') {
+          const { updateDoc, doc } = await import('firebase/firestore');
+          await updateDoc(doc(db, 'solicitudes_traspaso', solicitud.id), { estado: 'asignacion_pendiente' });
+          Swal.fire('✅ Aprobado', 'El pedido está listo para asignar empleados desde Disponibles.', 'success');
+        } else {
+          await ejecutarTraspaso(solicitud.id);
+          Swal.fire('✅ Traspaso ejecutado', 'El empleado ha sido traspasado exitosamente.', 'success');
+        }
+        cargarSolicitudes();
+      } catch (error) {
+        Swal.fire('❌ Error', 'No se pudo aprobar la solicitud', 'error');
+      }
+    }
+  };
+
+  // ❌ Rechazar
+  const handleRechazar = async (solicitudId) => {
+    const { value: motivo } = await Swal.fire({
+      title: 'Motivo del rechazo',
+      input: 'textarea',
+      inputLabel: '¿Por qué rechazas esta solicitud?',
+      inputPlaceholder: 'Escribe el motivo...',
+      showCancelButton: true,
+      confirmButtonText: 'Rechazar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (motivo) {
+      try {
+        await rechazarSolicitud(solicitudId, motivo);
+        Swal.fire('✅ Rechazado', 'La solicitud ha sido rechazada', 'warning');
+        cargarSolicitudes();
+      } catch (error) {
+        Swal.fire('❌ Error', 'No se pudo rechazar la solicitud', 'error');
+      }
+    }
+  };
+
+  const getEstadoColor = (estado) => {
+    const colores = {
+      'pendiente': 'bg-yellow-100 text-yellow-800',
+      'rrhh_aprobado': 'bg-blue-100 text-blue-800',
+      'subsecretaria_aprobado': 'bg-green-100 text-green-800',
+      'asignacion_pendiente': 'bg-purple-100 text-purple-800',
+      'rechazado': 'bg-red-100 text-red-800',
+      'finalizado': 'bg-gray-100 text-gray-800'
+    };
+    return colores[estado] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getEstadoTexto = (estado) => {
+    const textos = {
+      'pendiente': '🟡 Pendiente',
+      'rrhh_aprobado': '🔵 Aprobado por RRHH',
+      'subsecretaria_aprobado': '🟢 Aprobado por Subsecretaría',
+      'asignacion_pendiente': '🟣 Pendiente de asignación',
+      'rechazado': '🔴 Rechazado',
+      'finalizado': '✅ Completado y cerrado'
+    };
+    return textos[estado] || estado;
+  };
+
+  return (
+    <div className="app-container">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">📋 Gestión de Solicitudes de Traspaso</h1>
+        <p className="text-gray-600">Administra las solicitudes de traspaso de personal</p>
+        {user?.rol === 'subsecretario' && (
+          <p className="text-sm text-blue-600 mt-2">👑 Aprobación final - Subsecretaría</p>
+        )}
+        {user?.rol === 'rrhh' && (
+          <p className="text-sm text-blue-600 mt-2">📋 Primera aprobación - RRHH</p>
+        )}
+      </div>
+
+      {/* Filtros */}
+      <div className="card p-6 mb-6">
+        <div className="flex flex-wrap gap-2">
+          {['pendiente', 'rrhh_aprobado', 'asignacion_pendiente', 'subsecretaria_aprobado', 'rechazado', 'finalizado', 'todas'].map((estado) => (
+            <button
+              key={estado}
+              onClick={() => setFiltro(estado)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filtro === estado
+                  ? 'bg-municipio-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {estado === 'todas' ? '📋 Todas' : estado.charAt(0).toUpperCase() + estado.slice(1)}
+            </button>
+          ))}
+        </div>
+        <button 
+          onClick={cargarSolicitudes} 
+          className="mt-3 text-sm text-blue-600 hover:text-blue-800"
+        >
+          🔄 Recargar
+        </button>
+      </div>
+
+      {error && (
+        <div className="card p-6 mb-6 bg-red-50 border border-red-200">
+          <p className="text-red-600">⚠️ {error}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-municipio-500"></div>
+        </div>
+      ) : solicitudes.length === 0 ? (
+        <div className="card p-12 text-center">
+          <div className="text-gray-400 text-6xl mb-4">📭</div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay solicitudes</h3>
+          <p className="text-gray-600">No hay solicitudes en el estado "{filtro}"</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {solicitudes.map((solicitud) => (
+            <div key={solicitud.id} className="card p-6 hover:shadow-md transition-shadow">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(solicitud.estado)}`}>
+                      {getEstadoTexto(solicitud.estado)}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      📅 {solicitud.createdAt?.toDate?.() ? new Date(solicitud.createdAt.toDate()).toLocaleDateString('es-AR') : solicitud.createdAt || 'Fecha no disponible'}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      👤 {solicitud.creadoPor || 'Desconocido'}
+                    </span>
+                    {solicitud.creadorNombre && (
+                      <span className="text-xs text-gray-500">
+                        📝 {solicitud.creadorNombre}
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {solicitud.tipoSolicitud === 'solicitud_personal' ? '👥 Pedido de personal' : solicitud.empleado?.nombre || 'Empleado no especificado'}
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm">
+                    <div>
+                      <span className="font-medium">Legajo:</span> {solicitud.empleado?.legajo || '-'}
+                    </div>
+                    <div>
+                      <span className="font-medium">Área Origen:</span> {solicitud.empleado?.areaOrigen?.nombre || 'No especificada'}
+                    </div>
+                    <div className="col-span-2">
+                      <span className="font-medium">Área Destino:</span> {solicitud.areaDestino?.nombre || 'No especificada'}
+                    </div>
+                    {solicitud.tipoSolicitud === 'solicitud_personal' && (
+                      <div className="col-span-2">
+                        <span className="font-medium">Personal requerido:</span>{' '}
+                        {(solicitud.necesidades || []).map(item => `${item.cantidad} ${item.funcion}: ${item.cantidadAsignada || 0}/${item.cantidad} asignados`).join(' · ')}
+                      </div>
+                    )}
+                    {solicitud.asignaciones?.length > 0 && (
+                      <div className="col-span-2 text-gray-600">
+                        <span className="font-medium">Personal asignado:</span>{' '}
+                        {solicitud.asignaciones.map(asignacion => `${asignacion.nombre} (${asignacion.funcion || 'Sin función'})`).join(' · ')}
+                      </div>
+                    )}
+                    <div className="col-span-2">
+                      <span className="font-medium">Motivo:</span> {solicitud.motivo || 'Sin motivo especificado'}
+                    </div>
+                    {solicitud.observaciones && (
+                      <div className="col-span-2 text-gray-600">
+                        <span className="font-medium">Observaciones:</span> {solicitud.observaciones}
+                      </div>
+                    )}
+                    {solicitud.aprobaciones?.rrhh?.observaciones && (
+                      <div className="col-span-2 text-blue-700">
+                        <span className="font-medium">Motivo de aprobación de RRHH:</span> {solicitud.aprobaciones.rrhh.observaciones}
+                      </div>
+                    )}
+                    {solicitud.motivoRechazo && (
+                      <div className="col-span-2 text-red-600">
+                        <span className="font-medium">Motivo de rechazo:</span> {solicitud.motivoRechazo}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ACCIONES SEGÚN ROL Y ESTADO */}
+                <div className="flex flex-col gap-2 min-w-[180px]">
+                  
+                  {/* 🔵 RRHH: Solo ve solicitudes pendientes */}
+                  {solicitud.estado === 'pendiente' && user?.rol === 'rrhh' && (
+                    <>
+                      <button
+                        onClick={() => handleAprobarRRHH(solicitud)}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm w-full"
+                      >
+                        ✅ Aprobar (RRHH)
+                      </button>
+                      <button
+                        onClick={() => handleRechazar(solicitud.id)}
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm w-full"
+                      >
+                        ❌ Rechazar
+                      </button>
+                    </>
+                  )}
+
+                  {/* 🟢 SUB SECRETARIO: Ve solicitudes aprobadas por RRHH */}
+                  {solicitud.estado === 'rrhh_aprobado' && user?.rol === 'subsecretario' && (
+                    <>
+                      <button
+                        onClick={() => handleAprobarSubsecretaria(solicitud)}
+                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm w-full"
+                      >
+                        ✅ Aprobar (Subsecretaría)
+                      </button>
+                      <button
+                        onClick={() => handleRechazar(solicitud.id)}
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm w-full"
+                      >
+                        ❌ Rechazar
+                      </button>
+                    </>
+                  )}
+
+                  {/* Estados informativos */}
+                  {solicitud.estado === 'pendiente' && user?.rol === 'subsecretario' && (
+                    <span className="text-sm text-yellow-600 font-medium text-center">
+                      ⏳ Esperando aprobación de RRHH
+                    </span>
+                  )}
+
+                  {solicitud.estado === 'rrhh_aprobado' && user?.rol === 'rrhh' && (
+                    <span className="text-sm text-blue-600 font-medium text-center">
+                      ⏳ Enviado a Subsecretaría
+                    </span>
+                  )}
+
+                  {solicitud.estado === 'subsecretaria_aprobado' && (
+                    <span className="text-sm text-green-600 font-medium text-center">
+                      ✅ Aprobado - Traspaso completado
+                    </span>
+                  )}
+
+                  {solicitud.estado === 'asignacion_pendiente' && (
+                    <span className="text-sm text-purple-700 font-medium text-center">
+                      📌 Asignar desde Disponibles
+                    </span>
+                  )}
+
+                  {solicitud.estado === 'finalizado' && (
+                    <>
+                      <span className="text-sm text-green-600 font-medium text-center">✅ Pedido completado y cerrado</span>
+                      <button type="button" onClick={() => descargarFormularioTraspaso(solicitud)} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200">🖨️ Descargar formulario</button>
+                    </>
+                  )}
+
+                  {solicitud.estado === 'rechazado' && (
+                    <span className="text-sm text-red-600 font-medium text-center">
+                      ❌ Rechazado
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

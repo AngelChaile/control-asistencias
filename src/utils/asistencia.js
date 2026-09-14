@@ -14,6 +14,7 @@ import {
   startAfter,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { formatearHora24 } from "./fechas";
 
 /**
  * validarToken(token)
@@ -120,7 +121,7 @@ export async function registrarAsistenciaPorLegajo(legajo, token = null) {
 
   const now = new Date();
   const fechaStr = now.toLocaleDateString("es-AR");
-  const horaStr = now.toLocaleTimeString("es-AR");
+  const horaStr = formatearHora24(now);
 
   // Determinar si la última fichada es del mismo día que 'now'
   function parseCreatedAtToDate(r) {

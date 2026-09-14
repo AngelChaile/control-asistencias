@@ -11,23 +11,52 @@ import {
   doc,
 } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
+import { fetchAllAreas, searchAreas, nombreCortoArea } from "../../utils/areas";
 
 export default function EmpleadosAdmin() {
   const { user } = useAuth();
   const area = user?.lugarTrabajo || "";
   const [empleados, setEmpleados] = useState([]);
+  const [areas, setAreas] = useState([]);
+  const [areasFiltradas, setAreasFiltradas] = useState([]);
+  const [busquedaArea, setBusquedaArea] = useState("");
+  const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [filter, setFilter] = useState({ legajo: "", nombre: "" });
+  const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
   const [nuevo, setNuevo] = useState({
     legajo: "",
     nombre: "",
     apellido: "",
+    documento: "",
+    email: "",
+    telefono: "",
     lugarTrabajo: area,
     secretaria: "",
     horario: "",
+    categoria: "",
+    funcion: "",
+    particion: "municipal",      // ← Cambiado
+    tipoCargo: "permanente",     // ← Cambiado
+    area: null,
+    fechaIngreso: "",
+    estado: "activo",
+    activo: true,
+    rol: "empleado"
   });
-  const [editingId, setEditingId] = useState(null);
-  const [loading, setLoading] = useState(false);
 
+  // Cargar áreas
+  useEffect(() => {
+    const loadAreas = async () => {
+      const data = await fetchAllAreas();
+      setAreas(data);
+      setAreasFiltradas(data);
+    };
+    loadAreas();
+  }, []);
+
+  // Cargar empleados
   useEffect(() => {
     if (!area) return;
     fetchEmpleados();
@@ -46,35 +75,52 @@ export default function EmpleadosAdmin() {
     }
   }
 
-  const filtered = empleados.filter(
-    (e) =>
-      (filter.legajo === "" || String(e.legajo).includes(filter.legajo)) &&
-      (filter.nombre === "" ||
-        `${e.nombre} ${e.apellido}`.toLowerCase().includes(filter.nombre.toLowerCase()))
-  );
-
   async function handleGuardar(e) {
     e.preventDefault();
     try {
-      const payload = { ...nuevo, lugarTrabajo: area };
+      const payload = { 
+        ...nuevo, 
+        lugarTrabajo: area,
+        area: nuevo.area || null
+      };
+      
       if (editingId) {
         await updateDoc(doc(db, "empleados", editingId), payload);
         setEditingId(null);
       } else {
         await addDoc(collection(db, "empleados"), payload);
       }
-      setNuevo({
-        legajo: "",
-        nombre: "",
-        apellido: "",
-        lugarTrabajo: area,
-        secretaria: "",
-        horario: "",
-      });
+      
+      resetForm();
       fetchEmpleados();
     } catch (err) {
       console.error("guardar empleado admin:", err);
     }
+  }
+
+  function resetForm() {
+    setNuevo({
+      legajo: "",
+      nombre: "",
+      apellido: "",
+      documento: "",
+      email: "",
+      telefono: "",
+      lugarTrabajo: area,
+      secretaria: "",
+      horario: "",
+      categoria: "",
+      funcion: "",
+      particion: "municipal",
+      tipoCargo: "permanente",
+      area: null,
+      fechaIngreso: "",
+      estado: "activo",
+      activo: true,
+      rol: "empleado"
+    });
+    setBusquedaArea("");
+    setEditingId(null);
   }
 
   function handleEditar(emp) {
@@ -83,10 +129,26 @@ export default function EmpleadosAdmin() {
       legajo: emp.legajo || "",
       nombre: emp.nombre || "",
       apellido: emp.apellido || "",
+      documento: emp.documento || "",
+      email: emp.email || "",
+      telefono: emp.telefono || "",
       lugarTrabajo: emp.lugarTrabajo || area,
       secretaria: emp.secretaria || "",
       horario: emp.horario || "",
+      categoria: emp.categoria || "",
+      funcion: emp.funcion || "",
+      particion: emp.particion || "municipal",
+      tipoCargo: emp.tipoCargo || "permanente",
+      area: emp.area || null,
+      fechaIngreso: emp.fechaIngreso || "",
+      estado: emp.estado || "activo",
+      activo: emp.activo !== undefined ? emp.activo : true,
+      rol: emp.rol || "empleado"
     });
+    
+    if (emp.area) {
+      setBusquedaArea(emp.area.nombre);
+    }
   }
 
   async function handleEliminar(id) {
@@ -99,21 +161,108 @@ export default function EmpleadosAdmin() {
     }
   }
 
+  // Funciones de área
+  const handleBusquedaArea = async (text) => {
+    setBusquedaArea(text);
+    if (text.length > 1) {
+      const resultados = await searchAreas(text);
+      setAreasFiltradas(resultados);
+      setMostrarDropdown(true);
+    } else {
+      setAreasFiltradas(areas);
+      setMostrarDropdown(false);
+    }
+  };
+
+  const seleccionarArea = (area) => {
+    setNuevo({
+      ...nuevo,
+      area: {
+        id: area.id,
+        nombre: area.nombre,
+        ruta: area.ruta || area.nombre
+      }
+    });
+    setBusquedaArea(area.nombre);
+    setMostrarDropdown(false);
+  };
+
+  // Filtros
+  const filtered = empleados.filter(
+    (e) =>
+      (filter.legajo === "" || String(e.legajo).includes(filter.legajo)) &&
+      (filter.nombre === "" ||
+        `${e.nombre} ${e.apellido}`.toLowerCase().includes(filter.nombre.toLowerCase()))
+  );
+
+  // Opciones para selectores
+  const categorias = [
+    "ADMINISTRATIVO CAT 4 35 HS",
+    "ADMINISTRATIVO CAT 5 35 HS",
+    "ADMINISTRATIVO CAT 6 35 HS",
+    "OBRERO CAT 5 40 HS",
+    "OBRERO CAT 6 40 HS",
+    "TECNICO CAT 7 35 HS",
+    "TECNICO CAT 9 35 HS",
+    "PROFESIONAL CAT 9 35 HS",
+  ];
+
+  const funciones = [
+    "Administrativo",
+    "Técnico",
+    "Cajero",
+    "Pintor",
+    "Electricista",
+    "Plomero",
+    "Limpieza",
+    "Sepulturero",
+    "Docente",
+    "Enfermero",
+    "Analista Funcional",
+    "Desarrollador de Software",
+    "Soporte Técnico",
+    "Oficial Albañil",
+    "Ayudante Albañil",
+    "Coordinador",
+    "Selección de Personal"
+  ];
+
+  const particiones = [
+    { value: "municipal", label: "CARRERA MUNICIPAL" },
+    { value: "docente", label: "CARRERA DOCENTE" },
+    { value: "medico", label: "CARRERA MÉDICA" }
+  ];
+
+  const tiposCargo = [
+    { value: "permanente", label: "Planta Permanente" },
+    { value: "temporario", label: "Temporario" },
+    { value: "contratado", label: "Contratado" },
+    { value: "pasantia", label: "Pasantía" }
+  ];
+
+  const estados = [
+    { value: "activo", label: "Activo" },
+    { value: "inactivo", label: "Inactivo" },
+    { value: "traspaso_pendiente", label: "Traspaso Pendiente" },
+    { value: "traspaso_aprobado", label: "Traspaso Aprobado" }
+  ];
+
   return (
     <div className="app-container">
-      {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Empleados</h1>
         <p className="text-gray-600">Administración del personal - Área {area}</p>
       </div>
 
       <div className="space-y-6">
-        {/* Formulario de Nuevo/Editar Empleado */}
-        <div className="card p-6">
+        {/* Formulario */}
+        <div className="card p-5 sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {editingId ? "✏️ Editar Empleado" : "👥 Agregar Nuevo Empleado"}
           </h3>
+          
           <form onSubmit={handleGuardar} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Datos Personales */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Legajo *</label>
               <input 
@@ -145,6 +294,36 @@ export default function EmpleadosAdmin() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Documento</label>
+              <input 
+                className="input-modern" 
+                placeholder="Número de documento" 
+                value={nuevo.documento} 
+                onChange={(e) => setNuevo({ ...nuevo, documento: e.target.value })} 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input 
+                className="input-modern" 
+                type="email"
+                placeholder="email@municipio.com" 
+                value={nuevo.email} 
+                onChange={(e) => setNuevo({ ...nuevo, email: e.target.value })} 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+              <input 
+                className="input-modern" 
+                placeholder="Teléfono de contacto" 
+                value={nuevo.telefono} 
+                onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value })} 
+              />
+            </div>
+
+            {/* Datos Laborales */}
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Secretaría</label>
               <input 
                 className="input-modern" 
@@ -162,24 +341,126 @@ export default function EmpleadosAdmin() {
                 onChange={(e) => setNuevo({ ...nuevo, horario: e.target.value })} 
               />
             </div>
-            <div className="flex items-end gap-2">
+
+            {/* Área */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Área *</label>
+              <input
+                className="input-modern"
+                placeholder="Buscar área..."
+                value={busquedaArea}
+                onChange={(e) => handleBusquedaArea(e.target.value)}
+                onFocus={() => setMostrarDropdown(true)}
+                onBlur={() => setTimeout(() => setMostrarDropdown(false), 200)}
+                required={!nuevo.area}
+              />
+              {mostrarDropdown && areasFiltradas.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {areasFiltradas.map((area) => (
+                    <button
+                      key={area.id}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm"
+                      onMouseDown={() => seleccionarArea(area)}
+                    >
+                      <div className="font-medium">{area.nombre}</div>
+                      <div className="text-xs text-gray-500">{area.id}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {nuevo.area && (
+                <div className="mt-2 text-xs text-green-600">
+                  ✅ {nuevo.area.nombre}
+                </div>
+              )}
+            </div>
+
+            {/* Categoría y Función */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
+              <select
+                className="input-modern"
+                value={nuevo.categoria}
+                onChange={(e) => setNuevo({ ...nuevo, categoria: e.target.value })}
+              >
+                <option value="">Seleccionar categoría...</option>
+                {categorias.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Función</label>
+              <select
+                className="input-modern"
+                value={nuevo.funcion}
+                onChange={(e) => setNuevo({ ...nuevo, funcion: e.target.value })}
+              >
+                <option value="">Seleccionar función...</option>
+                {funciones.map(func => (
+                  <option key={func} value={func}>{func}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Partición y Tipo de Cargo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Partición</label>
+              <select
+                className="input-modern"
+                value={nuevo.particion}
+                onChange={(e) => setNuevo({ ...nuevo, particion: e.target.value })}
+              >
+                {particiones.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Cargo</label>
+              <select
+                className="input-modern"
+                value={nuevo.tipoCargo}
+                onChange={(e) => setNuevo({ ...nuevo, tipoCargo: e.target.value })}
+              >
+                {tiposCargo.map(tc => (
+                  <option key={tc.value} value={tc.value}>{tc.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Fecha y Estado */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Ingreso</label>
+              <input 
+                className="input-modern" 
+                type="date"
+                value={nuevo.fechaIngreso} 
+                onChange={(e) => setNuevo({ ...nuevo, fechaIngreso: e.target.value })} 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <select
+                className="input-modern"
+                value={nuevo.estado}
+                onChange={(e) => setNuevo({ ...nuevo, estado: e.target.value })}
+              >
+                {estados.map(est => (
+                  <option key={est.value} value={est.value}>{est.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Botones */}
+            <div className="flex items-end gap-2 col-span-1 md:col-span-2 lg:col-span-3">
               <button type="submit" className="btn-primary flex-1">
                 {editingId ? "💾 Guardar Cambios" : "➕ Crear Empleado"}
               </button>
               {editingId && (
                 <button 
                   type="button" 
-                  onClick={() => { 
-                    setEditingId(null); 
-                    setNuevo({ 
-                      legajo: "", 
-                      nombre: "", 
-                      apellido: "", 
-                      lugarTrabajo: area, 
-                      secretaria: "", 
-                      horario: "" 
-                    }); 
-                  }} 
+                  onClick={resetForm} 
                   className="btn-secondary px-4 py-2"
                 >
                   Cancelar
@@ -233,46 +514,40 @@ export default function EmpleadosAdmin() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 900 }}>
-                <thead className="bg-gray-50">
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Secretaría</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Horario</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Empleado</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Área</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filtered.map((emp) => (
                     <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
-                            <span className="text-blue-600 font-medium text-sm">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-sm font-bold text-red-700">
+                            <span>
                               {emp.nombre?.[0]}{emp.apellido?.[0]}
                             </span>
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
+                          <div className="ml-3 min-w-0">
+                            <div className="truncate text-sm font-semibold text-slate-900">
                               {emp.nombre} {emp.apellido}
                             </div>
-                            <div className="text-sm text-gray-500">Legajo: {emp.legajo}</div>
+                            <div className="text-xs text-slate-500">Legajo {emp.legajo}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {emp.lugarTrabajo}
+                      <td className="max-w-[22rem] px-4 py-4">
+                        <span className="inline-flex max-w-full items-center rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700" title={emp.area?.nombre || emp.lugarTrabajo || "Área no asignada"}>
+                          <span className="truncate">{nombreCortoArea(emp.area?.nombre || emp.lugarTrabajo || "Área no asignada")}</span>
+                        </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {emp.secretaria || <span className="text-gray-400">—</span>}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {emp.horario || <span className="text-gray-400">—</span>}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex gap-2">
+                      <td className="px-4 py-4 text-right text-sm font-medium">
+                        <div className="flex justify-end gap-2">
                           <button 
                             onClick={() => handleEditar(emp)} 
                             className="text-municipio-600 hover:text-municipio-700 bg-municipio-50 hover:bg-municipio-100 px-3 py-1 rounded-lg transition-colors"
