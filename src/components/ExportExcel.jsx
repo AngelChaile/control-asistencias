@@ -5,31 +5,49 @@ import * as XLSX from "xlsx";
  * exportToExcel(filename, rows)
  * rows: array de objetos [{col1: val, col2: val}, ...]
  */
-export async function exportToExcel(filename, rows = []) {
-  // Cargar xlsx dinámicamente para evitar incluirlo en el bundle inicial
+// src/components/ExportExcel.jsx - Modificación para aceptar AOA
+export async function exportToExcel(filename, data = [], columnOrder = null) {
   const XLSX = await import('xlsx');
   const lib = XLSX.default || XLSX;
 
-  if (!Array.isArray(rows)) rows = [];
-
   const wb = lib.utils.book_new();
 
-  // Si no hay filas, crear hoja vacía con mensaje
-  if (rows.length === 0) {
+  if (!data || data.length === 0) {
     const ws = lib.utils.aoa_to_sheet([["No hay datos"]]);
     lib.utils.book_append_sheet(wb, ws, "Report");
     lib.writeFile(wb, filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`);
     return;
   }
 
-  // Usar json_to_sheet para generar tabla
-  const ws = lib.utils.json_to_sheet(rows);
+  let ws;
+
+  // ✅ Detectar si es AOA (array de arrays) o JSON (array de objetos)
+  if (Array.isArray(data[0])) {
+    // Es AOA
+    ws = lib.utils.aoa_to_sheet(data);
+  } else {
+    // Es JSON
+    let jsonData = data;
+    if (columnOrder && Array.isArray(columnOrder)) {
+      jsonData = data.map(row => {
+        const nuevo = {};
+        columnOrder.forEach(key => {
+          if (row.hasOwnProperty(key)) nuevo[key] = row[key];
+        });
+        Object.keys(row).forEach(key => {
+          if (!columnOrder.includes(key)) nuevo[key] = row[key];
+        });
+        return nuevo;
+      });
+    }
+    ws = lib.utils.json_to_sheet(jsonData);
+  }
 
   // Ajustar anchos de columnas
   try {
-    const keys = Object.keys(rows[0]);
-    ws["!cols"] = keys.map(k => ({
-      wch: Math.min(Math.max(k.length, ...rows.map(r => String(r[k] || "").length)), 50)
+    const keys = Array.isArray(data[0]) ? data[0] : Object.keys(data[0]);
+    ws["!cols"] = keys.map((k, i) => ({
+      wch: Math.min(Math.max(String(k).length, ...data.map(r => String(Array.isArray(r) ? r[i] : r[k] || "").length)), 50)
     }));
   } catch {}
 

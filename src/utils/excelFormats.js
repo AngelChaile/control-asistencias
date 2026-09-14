@@ -143,6 +143,8 @@ function fechaBase(rows, desde) {
   return new Date(referencia.getFullYear(), referencia.getMonth(), 1);
 }
 
+// src/utils/excelFormats.js - Versión CORREGIDA
+
 export function formatAsistenciasMensuales(rows = [], { desde = null } = {}) {
   const inicio = fechaBase(rows, desde);
   const fin = new Date(inicio.getFullYear(), inicio.getMonth() + 1, 0);
@@ -166,7 +168,23 @@ export function formatAsistenciasMensuales(rows = [], { desde = null } = {}) {
     else registros.entradas.push(hora);
   });
 
-  return Array.from(empleados.values()).map((empleado) => {
+  // ✅ Devolver un array de arrays (AOA) con el orden exacto
+  const resultado = [];
+  // Encabezados
+  const encabezados = ["Legajo", "Nombre", "Apellido", "Área"];
+  dias.forEach(fecha => {
+    encabezados.push(String(fecha.getDate()).padStart(2, "0"));
+  });
+  resultado.push(encabezados);
+
+  // Filas de datos
+  empleados.forEach((empleado) => {
+    const fila = [
+      empleado.Legajo,
+      empleado.Nombre,
+      empleado.Apellido,
+      empleado.Área
+    ];
     dias.forEach((fecha) => {
       const dia = String(fecha.getDate()).padStart(2, "0");
       const etiqueta = textoDia(fecha);
@@ -174,14 +192,15 @@ export function formatAsistenciasMensuales(rows = [], { desde = null } = {}) {
       if (registros) {
         const entrada = registros.entradas.sort()[0] || "";
         const salida = registros.salidas.sort().at(-1) || "";
-        empleado[dia] = [entrada, salida].filter(Boolean).join(" - ");
+        fila.push([entrada, salida].filter(Boolean).join(" - "));
       } else {
-        empleado[dia] = etiqueta;
+        fila.push(etiqueta);
       }
     });
-    delete empleado.__registros;
-    return empleado;
+    resultado.push(fila);
   });
+
+  return resultado; // ← Ahora devuelve un array de arrays
 }
 
 export function formatAdminAusencias(rows = []) {
