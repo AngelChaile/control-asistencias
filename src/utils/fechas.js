@@ -32,19 +32,41 @@ export function formatearFecha(fecha) {
   return String(fecha);
 }
 
-export function formatearHora24(hora = new Date()) {
-  if (hora instanceof Date) {
-    return hora.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+
+export function formatearHora24(hora) {
+  if (!hora) return '';
+  
+  // Si ya viene en formato 24hs (HH:mm), devolverlo tal cual
+  const horaString = String(hora).trim();
+  
+  // Detectar si ya está en formato 24hs (ej: "08:00" o "14:30")
+  const formato24 = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  if (formato24.test(horaString)) {
+    // Asegurar que tenga dos dígitos en la hora
+    const [h, m] = horaString.split(':');
+    return `${h.padStart(2, '0')}:${m}`;
   }
-
-  const valor = String(hora || "").trim();
-  const match = valor.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?$/i);
-  if (!match) return valor;
-
-  let horas = Number(match[1]);
-  const minutos = match[2];
-  const meridiano = match[3]?.replace(/\s/g, "").toLowerCase();
-  if (meridiano?.startsWith("p") && horas < 12) horas += 12;
-  if (meridiano?.startsWith("a") && horas === 12) horas = 0;
-  return `${String(horas).padStart(2, "0")}:${minutos}`;
+  
+  // Detectar formato AM/PM (ej: "08:00 AM", "2:30 PM")
+  const formato12 = /^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?$/i;
+  const match = horaString.match(formato12);
+  
+  if (match) {
+    let horas = parseInt(match[1], 10);
+    const minutos = match[2];
+    const periodo = (match[3] || '').toUpperCase();
+    
+    // Convertir a 24hs si tiene AM/PM
+    if (periodo === 'PM' && horas < 12) {
+      horas += 12;
+    } else if (periodo === 'AM' && horas === 12) {
+      horas = 0;
+    }
+    
+    return `${String(horas).padStart(2, '0')}:${minutos}`;
+  }
+  
+  // Si no coincide con ningún formato, devolver el valor original
+  return horaString;
 }
