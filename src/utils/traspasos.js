@@ -291,8 +291,9 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
       throw new Error('Este pedido no está disponible para asignación.');
     }
 
+    const funcionEmpleado = String(empleado.funcion || '').trim().toLowerCase();
     const necesidadIndex = (solicitud.necesidades || []).findIndex(item =>
-      item.funcion === empleado.funcion && Number(item.cantidadAsignada || 0) < Number(item.cantidad || 0)
+      String(item.funcion || '').trim().toLowerCase() === funcionEmpleado && Number(item.cantidadAsignada || 0) < Number(item.cantidad || 0)
     );
     if (necesidadIndex < 0) throw new Error('La función del empleado no coincide con un cupo pendiente del pedido.');
 
@@ -323,7 +324,7 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
     });
     await updateDoc(solicitudRef, {
       necesidades: necesidadesActualizadas,
-      asignaciones: [...asignaciones, { legajo: empleado.legajo, nombre: `${empleado.nombre} ${empleado.apellido}`, funcion: empleado.funcion || '', fecha: serverTimestamp() }],
+      asignaciones: [...asignaciones, { legajo: empleado.legajo, nombre: `${empleado.nombre} ${empleado.apellido}`, funcion: empleado.funcion || '', fecha: fechaActual() }],
       estado: completa ? 'finalizado' : 'asignacion_pendiente',
       ...(completa ? { fechaFinalizacion: serverTimestamp(), cerrado: true } : {}),
       updatedAt: serverTimestamp()

@@ -2,6 +2,22 @@
 import { db } from '../firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
+const ALIASES_AREAS = {
+  'UNIDAD DE PREVISION SOCIAL': 'I.P.S.',
+  'UNIDAD DE PREVISIÓN SOCIAL': 'I.P.S.',
+  'DIRECCION DE RECURSOS HUMANOS': 'Dir. de Recursos Humanos',
+  'DIRECCIÓN DE RECURSOS HUMANOS': 'Dir. de Recursos Humanos',
+  'SECRETARIA DE SALUD': 'Sec. de Salud',
+  'SECRETARÍA DE SALUD': 'Sec. de Salud',
+  'SECRETARIA DE DESARROLLO SOCIAL': 'Sec. de Desarrollo Social',
+  'SECRETARÍA DE DESARROLLO SOCIAL': 'Sec. de Desarrollo Social'
+};
+
+export function nombreCortoArea(nombre = '') {
+  const nombreCompleto = String(nombre).trim();
+  return ALIASES_AREAS[nombreCompleto.toUpperCase()] || nombreCompleto;
+}
+
 let cachedAreas = null;
 let cacheTime = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos

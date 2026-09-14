@@ -13,7 +13,16 @@ export default function MisSolicitudes() {
 
   useEffect(() => {
     cargarSolicitudes();
-  }, []);
+    const actualizarAlVolver = () => cargarSolicitudes();
+    window.addEventListener('focus', actualizarAlVolver);
+    document.addEventListener('visibilitychange', actualizarAlVolver);
+    const intervalo = window.setInterval(cargarSolicitudes, 30000);
+    return () => {
+      window.removeEventListener('focus', actualizarAlVolver);
+      document.removeEventListener('visibilitychange', actualizarAlVolver);
+      window.clearInterval(intervalo);
+    };
+  }, [user?.email]);
 
   const cargarSolicitudes = async () => {
     setLoading(true);

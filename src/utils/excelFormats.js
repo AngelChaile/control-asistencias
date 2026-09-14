@@ -93,6 +93,11 @@ function fechaRegistro(valor) {
   return null;
 }
 
+function fechaRegistroSegura(valor) {
+  const fecha = fechaRegistro(valor);
+  return fecha && !Number.isNaN(fecha.getTime()) ? fecha : null;
+}
+
 function pascua(anio) {
   const fecha = new Date(anio, 2, 21);
   const ciclo = (fecha) => {
@@ -126,21 +131,16 @@ function feriadoDe(fecha) {
   return "";
 }
 
-function claveDia(fecha) {
-  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
-}
-
 function textoDia(fecha) {
-  const feriado = feriadoDe(fecha);
-  const finDeSemana = fecha.getDay() === 0 ? "DOMINGO" : fecha.getDay() === 6 ? "SÁBADO" : "";
-  return [feriado && `FERIADO: ${feriado}`, finDeSemana].filter(Boolean).join(" / ");
+  if (feriadoDe(fecha)) return "FER";
+  if (fecha.getDay() === 6) return "SAB";
+  if (fecha.getDay() === 0) return "DOM";
+  return "";
 }
 
 function fechaBase(rows, desde) {
-  if (desde) return new Date(desde.getFullYear(), desde.getMonth(), 1);
-  const primera = fechaRegistro(rows.find(row => row.fecha)?.fecha);
-  const hoy = primera || new Date();
-  return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  const referencia = desde || new Date();
+  return new Date(referencia.getFullYear(), referencia.getMonth(), 1);
 }
 
 export function formatAsistenciasMensuales(rows = [], { desde = null } = {}) {
@@ -150,7 +150,7 @@ export function formatAsistenciasMensuales(rows = [], { desde = null } = {}) {
   const empleados = new Map();
 
   rows.forEach((row) => {
-    const fecha = fechaRegistro(row.fecha);
+    const fecha = fechaRegistroSegura(row.fecha);
     if (!fecha || fecha.getFullYear() !== inicio.getFullYear() || fecha.getMonth() !== inicio.getMonth()) return;
     const legajo = String(row.legajo || "");
     const id = legajo || `${row.nombre || ""}-${row.apellido || ""}`;
@@ -159,17 +159,27 @@ export function formatAsistenciasMensuales(rows = [], { desde = null } = {}) {
     }
     const empleado = empleados.get(id);
     const dia = String(fecha.getDate()).padStart(2, "0");
-    const marca = `${row.tipo || "FICHADA"} ${formatearHora24(row.hora)}`.trim();
-    empleado[dia] = empleado[dia] ? `${empleado[dia]} / ${marca}` : marca;
+    const hora = formatearHora24(row.hora);
+    const registrosDelDia = empleado.__registros || (empleado.__registros = {});
+    const registros = registrosDelDia[dia] || (registrosDelDia[dia] = { entradas: [], salidas: [] });
+    if (String(row.tipo || "").toUpperCase() === "SALIDA") registros.salidas.push(hora);
+    else registros.entradas.push(hora);
   });
 
   return Array.from(empleados.values()).map((empleado) => {
     dias.forEach((fecha) => {
       const dia = String(fecha.getDate()).padStart(2, "0");
       const etiqueta = textoDia(fecha);
-      if (!empleado[dia] && etiqueta) empleado[dia] = etiqueta;
-      else if (empleado[dia] && etiqueta) empleado[dia] = `${etiqueta} / ${empleado[dia]}`;
+      const registros = empleado.__registros?.[dia];
+      if (registros) {
+        const entrada = registros.entradas.sort()[0] || "";
+        const salida = registros.salidas.sort().at(-1) || "";
+        empleado[dia] = [entrada, salida].filter(Boolean).join(" - ");
+      } else {
+        empleado[dia] = etiqueta;
+      }
     });
+    delete empleado.__registros;
     return empleado;
   });
 }

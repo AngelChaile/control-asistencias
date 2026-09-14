@@ -3,7 +3,7 @@ import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, wher
 import ExportExcel from "../../components/ExportExcel";
 import EmployeeDetailModal from "../../components/EmployeeDetailModal";
 import { fetchEmpleadosPage, fetchAllEmpleados, fetchEmpleadosByLugarTrabajo } from "../../utils/usuarios";
-import { fetchAllAreas, searchAreas } from "../../utils/areas";
+import { fetchAllAreas, searchAreas, nombreCortoArea } from "../../utils/areas";
 
 export default function Empleados() {
   const [empleados, setEmpleados] = useState([]);
@@ -605,59 +605,39 @@ export default function Empleados() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto rounded-xl border border-slate-200">
-                <table className="min-w-[1120px] w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-slate-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Función</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Empleado</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Área</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filtered.map(emp => (
                       <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4">
                           <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
-                              <span className="text-blue-600 font-medium text-sm">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-sm font-bold text-red-700">
+                              <span>
                                 {emp.nombre?.[0]}{emp.apellido?.[0]}
                               </span>
                             </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
+                            <div className="ml-3 min-w-0">
+                              <div className="truncate text-sm font-semibold text-slate-900">
                                 {emp.nombre} {emp.apellido}
                               </div>
-                              <div className="text-sm text-gray-500">Legajo: {emp.legajo}</div>
+                              <div className="text-xs text-slate-500">Legajo {emp.legajo}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {emp.area?.nombre || emp.lugarTrabajo || "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {emp.categoria || "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {emp.funcion || "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            emp.estado === 'activo' 
-                              ? 'bg-green-100 text-green-800'
-                              : emp.estado === 'inactivo'
-                              ? 'bg-red-100 text-red-800'
-                              : emp.estado === 'traspaso_pendiente'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {emp.estado || "activo"}
+                        <td className="max-w-[22rem] px-4 py-4">
+                          <span className="inline-flex max-w-full items-center rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700" title={emp.area?.nombre || emp.lugarTrabajo || "Área no asignada"}>
+                            <span className="truncate">{nombreCortoArea(emp.area?.nombre || emp.lugarTrabajo || "Área no asignada")}</span>
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-4 py-4 text-right text-sm font-medium">
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() => setEmpleadoDetalle(emp)}

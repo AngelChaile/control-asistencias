@@ -29,8 +29,8 @@ export default function ReportesAdmin() {
 async function handleSearch() {
   setLoading(true);
   try {
-    const desde = filters.desde ? new Date(filters.desde) : null;
-    const hasta = filters.hasta ? new Date(filters.hasta) : null;
+    const desde = filters.desde ? new Date(`${filters.desde}T00:00:00`) : null;
+    const hasta = filters.hasta ? new Date(`${filters.hasta}T23:59:59`) : null;
     
     // Normalizar filtros antes de enviar
     const normalizedFilters = normalizeFilters(filters);
@@ -73,7 +73,7 @@ async function handleSearch() {
     }));
   };
 
-  const exportData = formatAsistenciasMensuales(result, { desde: filters.desde ? new Date(filters.desde) : null });
+  const exportData = formatAsistenciasMensuales(result, { desde: filters.desde ? new Date(`${filters.desde}T00:00:00`) : null });
   const filename = user?.rol === "rrhh"
     ? `asistencias_admin_${user?.lugarTrabajo || "all"}_${filters.desde || "inicio"}_al_${filters.hasta || "fin"}.xlsx`
     : `asistencias_admin_${user?.lugarTrabajo || "all"}_${filters.desde || "inicio"}_al_${filters.hasta || "fin"}.xlsx`;
