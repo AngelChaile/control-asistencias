@@ -223,6 +223,7 @@ export default function EmpleadosAdmin() {
     "Soporte Técnico",
     "Oficial Albañil",
     "Ayudante Albañil",
+    "Coordinador",
     "Selección de Personal"
   ];
 
@@ -519,9 +520,9 @@ export default function EmpleadosAdmin() {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+                   {/*  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Función</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th> */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
@@ -546,7 +547,7 @@ export default function EmpleadosAdmin() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {emp.area?.nombre || emp.lugarTrabajo || "-"}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+{/*                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {emp.categoria || "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -564,7 +565,7 @@ export default function EmpleadosAdmin() {
                         }`}>
                           {emp.estado || "activo"}
                         </span>
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
                           <button 

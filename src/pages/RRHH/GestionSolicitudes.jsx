@@ -60,8 +60,12 @@ export default function GestionSolicitudes() {
   // ✅ Aprobar RRHH
   const handleAprobarRRHH = async (solicitud) => {
     const result = await Swal.fire({
-      title: '✅ ¿Aprobar esta solicitud?',
+      title: '✅ Aprobar solicitud',
       text: solicitud.tipoSolicitud === 'solicitud_personal' ? 'El pedido pasará a Subsecretaría para su aprobación final.' : 'Esta aprobación pasará a Subsecretaría.',
+      input: 'textarea',
+      inputLabel: 'Motivo de la aprobación',
+      inputPlaceholder: 'Escribe por qué apruebas esta solicitud...',
+      inputValidator: (valor) => !valor.trim() ? 'Debes indicar el motivo de la aprobación.' : undefined,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Sí, aprobar',
@@ -70,7 +74,7 @@ export default function GestionSolicitudes() {
 
     if (result.isConfirmed) {
       try {
-        await aprobarSolicitudRRHH(solicitud.id);
+        await aprobarSolicitudRRHH(solicitud.id, result.value.trim());
         Swal.fire('✅ Aprobado', 'La solicitud ha sido aprobada por RRHH. Esperando Subsecretaría.', 'success');
         cargarSolicitudes();
       } catch (error) {
@@ -152,7 +156,7 @@ export default function GestionSolicitudes() {
       'subsecretaria_aprobado': '🟢 Aprobado por Subsecretaría',
       'asignacion_pendiente': '🟣 Pendiente de asignación',
       'rechazado': '🔴 Rechazado',
-      'finalizado': '⚪ Finalizado'
+      'finalizado': '✅ Completado y cerrado'
     };
     return textos[estado] || estado;
   };
@@ -251,7 +255,13 @@ export default function GestionSolicitudes() {
                     {solicitud.tipoSolicitud === 'solicitud_personal' && (
                       <div className="col-span-2">
                         <span className="font-medium">Personal requerido:</span>{' '}
-                        {(solicitud.necesidades || []).map(item => `${item.funcion}: ${item.cantidadAsignada || 0}/${item.cantidad}`).join(' · ')}
+                        {(solicitud.necesidades || []).map(item => `${item.cantidad} ${item.funcion}: ${item.cantidadAsignada || 0}/${item.cantidad} asignados`).join(' · ')}
+                      </div>
+                    )}
+                    {solicitud.asignaciones?.length > 0 && (
+                      <div className="col-span-2 text-gray-600">
+                        <span className="font-medium">Personal asignado:</span>{' '}
+                        {solicitud.asignaciones.map(asignacion => `${asignacion.nombre} (${asignacion.funcion || 'Sin función'})`).join(' · ')}
                       </div>
                     )}
                     <div className="col-span-2">
@@ -260,6 +270,11 @@ export default function GestionSolicitudes() {
                     {solicitud.observaciones && (
                       <div className="col-span-2 text-gray-600">
                         <span className="font-medium">Observaciones:</span> {solicitud.observaciones}
+                      </div>
+                    )}
+                    {solicitud.aprobaciones?.rrhh?.observaciones && (
+                      <div className="col-span-2 text-blue-700">
+                        <span className="font-medium">Motivo de aprobación de RRHH:</span> {solicitud.aprobaciones.rrhh.observaciones}
                       </div>
                     )}
                     {solicitud.motivoRechazo && (
@@ -336,7 +351,7 @@ export default function GestionSolicitudes() {
 
                   {solicitud.estado === 'finalizado' && (
                     <>
-                      <span className="text-sm text-gray-600 font-medium text-center">✅ Traspaso completado</span>
+                      <span className="text-sm text-green-600 font-medium text-center">✅ Pedido completado y cerrado</span>
                       <button type="button" onClick={() => descargarFormularioTraspaso(solicitud)} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200">🖨️ Descargar formulario</button>
                     </>
                   )}

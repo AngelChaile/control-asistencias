@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
 import { fetchAsistenciasByRange } from "../../utils/asistencia";
-import { formatAdminAsistencias, formatRRHHAsistencias } from "../../utils/excelFormats";
+import { formatAsistenciasMensuales } from "../../utils/excelFormats";
 
 export default function ReportesAdmin() {
   const { user } = useAuth();
@@ -73,7 +73,7 @@ async function handleSearch() {
     }));
   };
 
-  const exportData = user?.rol === "rrhh" ? formatRRHHAsistencias(result) : formatAdminAsistencias(result);
+  const exportData = formatAsistenciasMensuales(result, { desde: filters.desde ? new Date(filters.desde) : null });
   const filename = user?.rol === "rrhh"
     ? `asistencias_admin_${user?.lugarTrabajo || "all"}_${filters.desde || "inicio"}_al_${filters.hasta || "fin"}.xlsx`
     : `asistencias_admin_${user?.lugarTrabajo || "all"}_${filters.desde || "inicio"}_al_${filters.hasta || "fin"}.xlsx`;

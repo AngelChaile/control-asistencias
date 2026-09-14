@@ -31,3 +31,20 @@ export function formatearFecha(fecha) {
 
   return String(fecha);
 }
+
+export function formatearHora24(hora = new Date()) {
+  if (hora instanceof Date) {
+    return hora.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+
+  const valor = String(hora || "").trim();
+  const match = valor.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?$/i);
+  if (!match) return valor;
+
+  let horas = Number(match[1]);
+  const minutos = match[2];
+  const meridiano = match[3]?.replace(/\s/g, "").toLowerCase();
+  if (meridiano?.startsWith("p") && horas < 12) horas += 12;
+  if (meridiano?.startsWith("a") && horas === 12) horas = 0;
+  return `${String(horas).padStart(2, "0")}:${minutos}`;
+}

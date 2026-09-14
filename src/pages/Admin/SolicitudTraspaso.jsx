@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { db, collection, getDocs } from '../../firebase';
 import { fetchAllAreas } from '../../utils/areas';
 import { crearSolicitudTraspaso } from '../../utils/traspasos';
+import { descargarFormularioTraspaso } from '../../utils/formularioTraspaso';
 import Swal from 'sweetalert2';
 
 const AREA_DISPOSICION = { id: 'disposicion-personal', nombre: 'A Disposición de Personal', ruta: 'A Disposición de Personal' };
@@ -68,7 +69,7 @@ export default function SolicitudTraspaso() {
     if (!esPedido && !esDisposicion && origen.id === areaDestino.id) { Swal.fire('⚠️', 'El empleado ya está en esta área.', 'warning'); return; }
     setLoading(true);
     try {
-      await crearSolicitudTraspaso({
+      const solicitudCreada = await crearSolicitudTraspaso({
         tipoSolicitud: tipo,
         empleado: esPedido ? null : { legajo: empleadoSeleccionado.legajo, nombre: `${empleadoSeleccionado.nombre} ${empleadoSeleccionado.apellido}`, funcion: empleadoSeleccionado.funcion || '', areaOrigen: origen },
         areaDestino: esDisposicion ? AREA_DISPOSICION : areaDestino,
@@ -77,7 +78,15 @@ export default function SolicitudTraspaso() {
         aprobaciones: { rrhh: { estado: 'pendiente', fecha: null, observaciones: null }, subsecretaria: { estado: 'pendiente', fecha: null, observaciones: null } }
       });
       setSolicitudEnviada(true); resetear();
-      Swal.fire('✅', esPedido ? 'Pedido de personal enviado correctamente.' : 'Solicitud creada exitosamente.', 'success');
+      const resultado = await Swal.fire({
+        title: '✅ Solicitud creada',
+        text: esPedido ? 'Pedido de personal enviado correctamente.' : 'La solicitud fue creada exitosamente.',
+        icon: 'success',
+        showCancelButton: true,
+        confirmButtonText: '🖨️ Descargar formulario',
+        cancelButtonText: 'Cerrar'
+      });
+      if (resultado.isConfirmed) descargarFormularioTraspaso(solicitudCreada);
     } catch (error) { console.error('Error creando solicitud:', error); Swal.fire('❌', `Error al crear la solicitud: ${error.message}`, 'error'); } finally { setLoading(false); }
   };
 
@@ -97,7 +106,7 @@ export default function SolicitudTraspaso() {
         {empleadoSeleccionado && <p className="mt-2 p-3 bg-green-50 rounded-lg text-sm text-green-800">✅ {empleadoSeleccionado.nombre} {empleadoSeleccionado.apellido} · Área actual: {empleadoSeleccionado.area?.nombre || empleadoSeleccionado.lugarTrabajo || 'Sin área'}</p>}</div>}
       {tipo !== 'enviar_disposicion' && <div><label className="block text-sm font-medium text-gray-700 mb-2">🏢 {tipo === 'solicitud_personal' ? 'Área solicitante *' : 'Área destino *'}</label><div className="relative"><input className="input-modern" placeholder="Buscar área por nombre..." value={busquedaArea} onFocus={() => setMostrarResultadosAreas(true)} onChange={e => { setBusquedaArea(e.target.value); setAreaDestino(null); setMostrarResultadosAreas(true); }} onBlur={() => setTimeout(() => setMostrarResultadosAreas(false), 150)} />{mostrarResultadosAreas && <div className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">{resultadosAreas.length > 0 ? resultadosAreas.map(area => <button key={area.id} type="button" className="block w-full border-b border-gray-100 p-3 text-left hover:bg-gray-50" onMouseDown={event => { event.preventDefault(); seleccionarArea(area); }}><span className="font-medium">{area.nombre}</span>{area.ruta && area.ruta !== area.nombre && <span className="block text-sm text-gray-600">{area.ruta}</span>}</button>) : <p className="p-3 text-sm text-gray-500">No se encontraron áreas.</p>}</div>}</div></div>}
       {tipo === 'enviar_disposicion' && <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 text-sm text-purple-800">📌 El destino será <strong>A Disposición de Personal</strong>.</div>}
-      {tipo === 'solicitud_personal' && <div><label className="block text-sm font-medium text-gray-700 mb-2">Funciones y cantidad requerida *</label><div className="space-y-2">{necesidades.map((necesidad, index) => <div className="flex gap-2" key={index}><input className="input-modern flex-1" placeholder="Ej.: Cajero, Pintor, Electricista" value={necesidad.funcion} onChange={e => actualizarNecesidad(index, 'funcion', e.target.value)} /><input className="input-modern w-28" type="number" min="1" value={necesidad.cantidad} onChange={e => actualizarNecesidad(index, 'cantidad', e.target.value)} />{necesidades.length > 1 && <button type="button" className="btn-secondary px-3" onClick={() => setNecesidades(actuales => actuales.filter((_, i) => i !== index))}>Quitar</button>}</div>)}</div><button type="button" className="mt-2 text-sm text-blue-600 hover:text-blue-800" onClick={() => setNecesidades(actuales => [...actuales, { funcion: '', cantidad: 1 }])}>+ Agregar función</button></div>}
+      {tipo === 'solicitud_personal' && <div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className="mb-3"><label className="block text-sm font-semibold text-gray-700">Personal requerido *</label><p className="mt-1 text-xs text-gray-500">Indicá cada función y la cantidad necesaria. Ejemplo: 1 electricista y 2 administrativos.</p></div><div className="space-y-3">{necesidades.map((necesidad, index) => <div className="grid grid-cols-[minmax(0,1fr)_7rem_auto] items-end gap-2" key={index}><div><label className="mb-1 block text-xs font-medium text-gray-600">Función</label><input className="input-modern" placeholder="Electricista" value={necesidad.funcion} onChange={e => actualizarNecesidad(index, 'funcion', e.target.value)} /></div><div><label className="mb-1 block text-xs font-medium text-gray-600">Cantidad</label><input className="input-modern" type="number" min="1" value={necesidad.cantidad} onChange={e => actualizarNecesidad(index, 'cantidad', e.target.value)} /></div>{necesidades.length > 1 && <button type="button" className="btn-secondary px-3" onClick={() => setNecesidades(actuales => actuales.filter((_, i) => i !== index))}>Quitar</button>}</div>)}</div><button type="button" className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-800" onClick={() => setNecesidades(actuales => [...actuales, { funcion: '', cantidad: 1 }])}>+ Agregar otra función</button><div className="mt-4 border-t border-slate-200 pt-3 text-sm text-slate-700"><span className="font-semibold">Resumen: </span>{necesidades.filter(item => item.funcion.trim() && Number(item.cantidad) > 0).map(item => `${item.cantidad} ${item.funcion.trim()}`).join(' · ') || 'Aún no agregaste funciones.'}</div></div>}
       <div><label className="block text-sm font-medium text-gray-700 mb-2">📝 Motivo *</label><textarea className="input-modern" rows="3" required value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Explica el motivo..." /></div><div><label className="block text-sm font-medium text-gray-700 mb-2">📋 Observaciones adicionales</label><textarea className="input-modern" rows="2" value={observaciones} onChange={e => setObservaciones(e.target.value)} /></div><button type="submit" disabled={loading} className="w-full btn-primary py-3 disabled:opacity-50">{loading ? 'Procesando...' : '📤 Enviar solicitud'}</button>
     </form></div></div>;
 }

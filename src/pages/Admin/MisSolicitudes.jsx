@@ -62,7 +62,7 @@ export default function MisSolicitudes() {
       'subsecretaria_aprobado': '🟢 Aprobado por Subsecretaría',
       'asignacion_pendiente': '🟣 Pendiente de asignación',
       'rechazado': '🔴 Rechazado',
-      'finalizado': '⚪ Finalizado'
+      'finalizado': '✅ Completado y cerrado'
     };
     return textos[estado] || estado;
   };
@@ -125,7 +125,13 @@ export default function MisSolicitudes() {
                     {solicitud.tipoSolicitud === 'solicitud_personal' && (
                       <div className="col-span-2">
                         <span className="font-medium">Personal requerido:</span>{' '}
-                        {(solicitud.necesidades || []).map(item => `${item.funcion}: ${item.cantidadAsignada || 0}/${item.cantidad}`).join(' · ')}
+                        {(solicitud.necesidades || []).map(item => `${item.cantidad} ${item.funcion}: ${item.cantidadAsignada || 0}/${item.cantidad} asignados`).join(' · ')}
+                      </div>
+                    )}
+                    {solicitud.asignaciones?.length > 0 && (
+                      <div className="col-span-2 text-gray-600">
+                        <span className="font-medium">Personal asignado:</span>{' '}
+                        {solicitud.asignaciones.map(asignacion => `${asignacion.nombre} (${asignacion.funcion || 'Sin función'})`).join(' · ')}
                       </div>
                     )}
                     <div className="col-span-2">
@@ -147,7 +153,7 @@ export default function MisSolicitudes() {
                   )}
                   {solicitud.estado === 'finalizado' && (
                     <span className="text-sm text-green-600 font-medium text-center">
-                      ✅ Traspaso completado
+                      ✅ Pedido completado y cerrado
                     </span>
                   )}
                   {solicitud.estado === 'rechazado' && (

@@ -325,6 +325,7 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
       necesidades: necesidadesActualizadas,
       asignaciones: [...asignaciones, { legajo: empleado.legajo, nombre: `${empleado.nombre} ${empleado.apellido}`, funcion: empleado.funcion || '', fecha: serverTimestamp() }],
       estado: completa ? 'finalizado' : 'asignacion_pendiente',
+      ...(completa ? { fechaFinalizacion: serverTimestamp(), cerrado: true } : {}),
       updatedAt: serverTimestamp()
     });
     
