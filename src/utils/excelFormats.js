@@ -162,7 +162,6 @@ export function formatAsistenciasMensuales(rows = [], { desde = null } = {}) {
     const empleado = empleados.get(id);
     const dia = String(fecha.getDate()).padStart(2, "0");
     const hora = formatearHora24(row.hora);
-    console.log('Hora original:', row.hora, '→ Hora formateada:', hora);
     const registrosDelDia = empleado.__registros || (empleado.__registros = {});
     const registros = registrosDelDia[dia] || (registrosDelDia[dia] = { entradas: [], salidas: [] });
     if (String(row.tipo || "").toUpperCase() === "SALIDA") registros.salidas.push(hora);

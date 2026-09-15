@@ -36,6 +36,22 @@ export function formatearFecha(fecha) {
 
 export function formatearHora24(hora) {
   if (!hora) return '';
+
+  // Firestore Timestamp y Date deben conservar la hora local del registro.
+  if (hora?.toDate) return formatearHora24(hora.toDate());
+  if (hora instanceof Date) {
+    if (Number.isNaN(hora.getTime())) return '';
+    return `${String(hora.getHours()).padStart(2, '0')}:${String(hora.getMinutes()).padStart(2, '0')}`;
+  }
+
+  // Excel representa horas como una fracción del día (por ejemplo, 0.5 = 12:00).
+  if (typeof hora === 'number' || /^\d+(\.\d+)?$/.test(String(hora).trim())) {
+    const valor = Number(hora);
+    if (valor >= 0 && valor < 1) {
+      const minutosTotales = Math.round(valor * 24 * 60) % (24 * 60);
+      return `${String(Math.floor(minutosTotales / 60)).padStart(2, '0')}:${String(minutosTotales % 60).padStart(2, '0')}`;
+    }
+  }
   
   // Si ya viene en formato 24hs (HH:mm), devolverlo tal cual
   const horaString = String(hora).trim();

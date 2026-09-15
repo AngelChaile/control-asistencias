@@ -74,7 +74,7 @@ export default function Navbar() {
       { name: "Empleados", path: "/rrhh/empleados", icon: "👥" },
       { name: "Ausencias", path: "/rrhh/ausencias", icon: "📅" },
       { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
-      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🤔" },
+      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🔎" },
       { 
         name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋",
         badge: solicitudesPendientes > 0 ? solicitudesPendientes : null

@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
 import { fetchAsistenciasByRange } from "../../utils/asistencia";
 import { formatAsistenciasMensuales } from "../../utils/excelFormats";
+import { formatearHora24 } from "../../utils/fechas";
 
 export default function ReportesAdmin() {
   const { user } = useAuth();
@@ -256,7 +257,7 @@ async function handleSearch() {
                         {r.fecha}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {r.hora}
+                        {formatearHora24(r.hora)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

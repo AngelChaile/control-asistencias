@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
 import { formatAdminAsistencias } from "../../utils/excelFormats";
 import { fetchAsistenciasToday, fetchAsistenciasByFilters } from "../../utils/asistencia";
+import { formatearHora24 } from "../../utils/fechas";
 
 export default function AsistenciasAdmin() {
   const { user } = useAuth();
@@ -128,7 +129,7 @@ export default function AsistenciasAdmin() {
                       {a.fecha}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {a.hora}
+                      {formatearHora24(a.hora)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {a.lugarTrabajo}

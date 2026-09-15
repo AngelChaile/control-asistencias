@@ -214,15 +214,17 @@ export async function fetchAsistenciasByRange({ desde = null, hasta = null, lega
   const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
   function toTime(r) {
-    if (r.createdAt?.seconds) return r.createdAt.seconds * 1000;
-    // intentar parsear fecha (dd/mm/yyyy) -> crear Date con partes
-    if (r.fecha && typeof r.fecha === "string") {
-      const parts = r.fecha.split("/");
-      if (parts.length === 3) {
-        const [d, m, y] = parts.map(Number);
-        return new Date(y, m - 1, d).getTime();
-      }
+    // La fecha visible del registro es la fuente de verdad para el filtro.
+    if (r.fecha) {
+      const texto = String(r.fecha).trim();
+      const local = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (local) return new Date(Number(local[3]), Number(local[2]) - 1, Number(local[1])).getTime();
+      const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])).getTime();
     }
+    if (r.createdAt?.toMillis) return r.createdAt.toMillis();
+    if (r.createdAt?.seconds) return r.createdAt.seconds * 1000;
+    if (r.createdAt) return new Date(r.createdAt).getTime();
     return 0;
   }
 
@@ -237,7 +239,7 @@ export async function fetchAsistenciasByRange({ desde = null, hasta = null, lega
   const filtered = rows.filter((r) => {
     const t = toTime(r);
     if (desdeTs && t < desdeTs) return false;
-    if (hastaTs && t > hastaTs + 24 * 3600 * 1000 - 1) return false; // incluir hasta día completo
+    if (hastaTs && t > hastaTs) return false;
     
     // Filtro por legajo (case-insensitive y sin espacios)
     if (legajoNormalized) {
