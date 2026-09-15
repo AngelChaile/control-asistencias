@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   db,
   collection,
@@ -11,7 +11,8 @@ import {
   doc,
 } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
-import { fetchAllAreas, searchAreas, nombreCortoArea } from "../../utils/areas";
+import EmployeeDetailModal from "../../components/EmployeeDetailModal";
+import { fetchAllAreas, searchAreas } from "../../utils/areas";
 
 export default function EmpleadosAdmin() {
   const { user } = useAuth();
@@ -24,12 +25,16 @@ export default function EmpleadosAdmin() {
   const [filter, setFilter] = useState({ legajo: "", nombre: "" });
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [empleadoDetalle, setEmpleadoDetalle] = useState(null);
+  const formularioRef = useRef(null);
+  const legajoRef = useRef(null);
 
   const [nuevo, setNuevo] = useState({
     legajo: "",
     nombre: "",
     apellido: "",
     documento: "",
+    domicilio: "",
     email: "",
     telefono: "",
     lugarTrabajo: area,
@@ -104,6 +109,7 @@ export default function EmpleadosAdmin() {
       nombre: "",
       apellido: "",
       documento: "",
+      domicilio: "",
       email: "",
       telefono: "",
       lugarTrabajo: area,
@@ -130,6 +136,7 @@ export default function EmpleadosAdmin() {
       nombre: emp.nombre || "",
       apellido: emp.apellido || "",
       documento: emp.documento || "",
+      domicilio: emp.domicilio || "",
       email: emp.email || "",
       telefono: emp.telefono || "",
       lugarTrabajo: emp.lugarTrabajo || area,
@@ -149,6 +156,11 @@ export default function EmpleadosAdmin() {
     if (emp.area) {
       setBusquedaArea(emp.area.nombre);
     }
+
+    requestAnimationFrame(() => {
+      formularioRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      legajoRef.current?.focus();
+    });
   }
 
   async function handleEliminar(id) {
@@ -256,7 +268,7 @@ export default function EmpleadosAdmin() {
 
       <div className="space-y-6">
         {/* Formulario */}
-        <div className="card p-5 sm:p-6">
+          <div ref={formularioRef} className="card p-5 sm:p-6 scroll-mt-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {editingId ? "✏️ Editar Empleado" : "👥 Agregar Nuevo Empleado"}
           </h3>
@@ -270,6 +282,7 @@ export default function EmpleadosAdmin() {
                 placeholder="Número de legajo" 
                 value={nuevo.legajo} 
                 onChange={(e) => setNuevo({ ...nuevo, legajo: e.target.value })} 
+                ref={legajoRef}
                 required 
               />
             </div>
@@ -300,6 +313,15 @@ export default function EmpleadosAdmin() {
                 placeholder="Número de documento" 
                 value={nuevo.documento} 
                 onChange={(e) => setNuevo({ ...nuevo, documento: e.target.value })} 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Domicilio</label>
+              <input
+                className="input-modern"
+                placeholder="Domicilio del empleado"
+                value={nuevo.domicilio}
+                onChange={(e) => setNuevo({ ...nuevo, domicilio: e.target.value })}
               />
             </div>
             <div>
@@ -543,11 +565,17 @@ export default function EmpleadosAdmin() {
                       </td>
                       <td className="max-w-[22rem] px-4 py-4">
                         <span className="inline-flex max-w-full items-center rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700" title={emp.area?.nombre || emp.lugarTrabajo || "Área no asignada"}>
-                          <span className="truncate">{nombreCortoArea(emp.area?.nombre || emp.lugarTrabajo || "Área no asignada")}</span>
+                          <span className="truncate">{emp.area?.nombre || emp.lugarTrabajo || "Área no asignada"}</span>
                         </span>
                       </td>
                       <td className="px-4 py-4 text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => setEmpleadoDetalle(emp)}
+                            className="rounded-lg bg-slate-100 px-3 py-1.5 text-slate-700 transition-colors hover:bg-slate-200"
+                          >
+                            👁️ Ver Detalle
+                          </button>
                           <button 
                             onClick={() => handleEditar(emp)} 
                             className="text-municipio-600 hover:text-municipio-700 bg-municipio-50 hover:bg-municipio-100 px-3 py-1 rounded-lg transition-colors"
@@ -570,6 +598,7 @@ export default function EmpleadosAdmin() {
           )}
         </div>
       </div>
+      <EmployeeDetailModal empleado={empleadoDetalle} onClose={() => setEmpleadoDetalle(null)} />
     </div>
   );
 }

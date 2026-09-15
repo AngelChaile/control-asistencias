@@ -40,6 +40,10 @@ const Login = lazy(() => import("./pages/Auth/Login"));
 export default function App() {
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem("control-asistencias-theme");
+    return saved ? saved === "dark" : window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+  });
 
   const { setUser: setContextUser } = useAuth();
 
@@ -67,6 +71,11 @@ export default function App() {
     return () => unsub();
   }, [setContextUser]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    localStorage.setItem("control-asistencias-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
+
   async function logout() {
     await firebaseSignOut(auth);
     setUser(null);
@@ -92,9 +101,10 @@ const getRedirectPath = () => {
 };
 
   return (
+    <div className={darkMode ? "dark" : ""}>
     <BrowserRouter>
       {/* Navbar: mostramos para todos los roles excepto empleado */}
-      {user && user.rol !== "empleado" && <Navbar />}
+      {user && user.rol !== "empleado" && <Navbar darkMode={darkMode} onToggleDarkMode={() => setDarkMode(actual => !actual)} />}
 
       <Suspense fallback={<div className="p-6">Cargando...</div>}>
         <Routes>
@@ -302,5 +312,6 @@ const getRedirectPath = () => {
         </Routes>
       </Suspense>
     </BrowserRouter>
+    </div>
   );
 }

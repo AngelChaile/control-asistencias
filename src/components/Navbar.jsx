@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { db, collection, query, where, getDocs } from "../firebase";
 import { getNotificaciones, marcarComoLeida } from "../utils/notificaciones";
 
-export default function Navbar() {
+export default function Navbar({ darkMode, onToggleDarkMode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -13,6 +13,7 @@ export default function Navbar() {
   const [solicitudesPendientes, setSolicitudesPendientes] = useState(0);
   const [notificaciones, setNotificaciones] = useState([]);
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
+  const [notificacionSeleccionada, setNotificacionSeleccionada] = useState(null);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -26,7 +27,7 @@ export default function Navbar() {
     if (!notificacion.leido) await marcarComoLeida(notificacion.id);
     setNotificaciones(actuales => actuales.map(item => item.id === notificacion.id ? { ...item, leido: true } : item));
     setMostrarNotificaciones(false);
-    if (notificacion.link) navigate(notificacion.link);
+    setNotificacionSeleccionada({ ...notificacion, leido: true });
   };
 
   // 🔔 Contar solicitudes pendientes para el globito
@@ -155,6 +156,15 @@ export default function Navbar() {
             >
               Cerrar sesión
             </button>
+            <button
+              type="button"
+              onClick={onToggleDarkMode}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+              aria-label={darkMode ? "Activar modo claro" : "Activar modo oscuro"}
+              title={darkMode ? "Modo claro" : "Modo oscuro"}
+            >
+              {darkMode ? "☀️" : "🌙"}
+            </button>
           </div>
 
           {/* Mobile */}
@@ -166,14 +176,86 @@ export default function Navbar() {
                 </div>
               </div>
               <button
+                type="button"
+                onClick={() => setMostrarNotificaciones(actual => !actual)}
+                className="relative rounded-lg p-2 text-xl text-slate-600 hover:bg-gray-100"
+                aria-label="Notificaciones"
+              >
+                🔔
+                {notificaciones.filter(item => !item.leido).length > 0 && (
+                  <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-xs text-white">
+                    {notificaciones.filter(item => !item.leido).length}
+                  </span>
+                )}
+              </button>
+              {mostrarNotificaciones && (
+                <div className="fixed right-4 top-16 z-50 w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                  <div className="border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-800">Notificaciones</div>
+                  {notificaciones.length ? (
+                    <div className="max-h-80 overflow-y-auto">
+                      {notificaciones.map(notificacion => (
+                        <button
+                          type="button"
+                          key={notificacion.id}
+                          onClick={() => abrirNotificacion(notificacion)}
+                          className={`block w-full border-b border-slate-100 px-4 py-3 text-left text-sm hover:bg-slate-50 ${notificacion.leido ? 'text-slate-500' : 'bg-blue-50 text-slate-900'}`}
+                        >
+                          <p className="font-semibold">{notificacion.titulo}</p>
+                          <p className="mt-1">{notificacion.mensaje}</p>
+                        </button>
+                      ))}
+                    </div>
+                  ) : <p className="p-4 text-sm text-slate-500">No tenés notificaciones.</p>}
+                </div>
+              )}
+              <button
                 onClick={handleLogout}
                 className="btn-secondary text-sm px-3 py-1.5"
               >
                 Salir
               </button>
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                className="rounded-lg border border-slate-200 px-2 py-1.5 text-lg text-slate-700"
+                aria-label={darkMode ? "Activar modo claro" : "Activar modo oscuro"}
+              >
+                {darkMode ? "☀️" : "🌙"}
+              </button>
             </div>
           )}
         </div>
+
+        {notificacionSeleccionada && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4"
+            onMouseDown={() => setNotificacionSeleccionada(null)}
+          >
+            <div
+              className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-red-600">Notificación</p>
+                  <h2 className="mt-1 text-xl font-bold text-slate-900">{notificacionSeleccionada.titulo}</h2>
+                </div>
+                <button type="button" onClick={() => setNotificacionSeleccionada(null)} className="rounded-lg p-2 text-xl leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Cerrar notificación">
+                  ×
+                </button>
+              </div>
+              <p className="mt-5 whitespace-pre-wrap text-base leading-7 text-slate-700">{notificacionSeleccionada.mensaje}</p>
+              <div className="mt-6 flex justify-end gap-3">
+                <button type="button" className="btn-secondary" onClick={() => setNotificacionSeleccionada(null)}>Cerrar</button>
+                {notificacionSeleccionada.link && (
+                  <button type="button" className="btn-primary" onClick={() => { setNotificacionSeleccionada(null); navigate(notificacionSeleccionada.link); }}>
+                    Ir al módulo
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Navigation - Desktop */}
         <nav className="hidden border-t border-slate-100 lg:block">
@@ -231,6 +313,7 @@ export default function Navbar() {
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div>
                 <div className="text-sm font-medium text-gray-900">{user.nombre}</div>
+
                 <div className="text-xs text-gray-500">{user.email}</div>
                 <div className="text-xs text-gray-400 capitalize mt-1">
                   {user.rol} • {user.lugarTrabajo || 'Municipio'}

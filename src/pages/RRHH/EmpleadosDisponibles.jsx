@@ -50,7 +50,11 @@ export default function EmpleadosDisponibles() {
         query(collection(db, 'solicitudes_traspaso'), where('estado', '==', 'asignacion_pendiente'))
       );
       setPedidosAsignacion(pedidosSnapshot.docs.map(item => ({ id: item.id, ...item.data() }))
-        .filter(item => item.tipoSolicitud === 'solicitud_personal'));
+        .filter(item => item.tipoSolicitud === 'solicitud_personal')
+        .filter(item => (item.necesidades || []).length > 0)
+        .filter(item => (item.necesidades || []).some(necesidad =>
+          Number(necesidad.cantidadAsignada || 0) < Number(necesidad.cantidad || 0)
+        )));
 
     } catch (error) {
       console.error('Error cargando datos:', error);

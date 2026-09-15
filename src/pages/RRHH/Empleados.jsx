@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from "../../firebase";
 import ExportExcel from "../../components/ExportExcel";
 import EmployeeDetailModal from "../../components/EmployeeDetailModal";
 import { fetchEmpleadosPage, fetchAllEmpleados, fetchEmpleadosByLugarTrabajo } from "../../utils/usuarios";
-import { fetchAllAreas, searchAreas, nombreCortoArea } from "../../utils/areas";
+import { fetchAllAreas, searchAreas } from "../../utils/areas";
 
 export default function Empleados() {
   const [empleados, setEmpleados] = useState([]);
@@ -15,12 +15,15 @@ export default function Empleados() {
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [empleadoDetalle, setEmpleadoDetalle] = useState(null);
+  const formularioRef = useRef(null);
+  const legajoRef = useRef(null);
 
   const [nuevo, setNuevo] = useState({
     legajo: "",
     nombre: "",
     apellido: "",
     documento: "",
+    domicilio: "",
     email: "",
     telefono: "",
     lugarTrabajo: "",
@@ -149,6 +152,7 @@ export default function Empleados() {
       nombre: "",
       apellido: "",
       documento: "",
+      domicilio: "",
       email: "",
       telefono: "",
       lugarTrabajo: "",
@@ -177,6 +181,7 @@ export default function Empleados() {
       nombre: emp.nombre || "",
       apellido: emp.apellido || "",
       documento: emp.documento || "",
+      domicilio: emp.domicilio || "",
       email: emp.email || "",
       telefono: emp.telefono || "",
       lugarTrabajo: emp.lugarTrabajo || "",
@@ -198,6 +203,11 @@ export default function Empleados() {
     if (emp.area) {
       setBusquedaArea(emp.area.nombre);
     }
+
+    requestAnimationFrame(() => {
+      formularioRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      legajoRef.current?.focus();
+    });
   }
 
   async function handleEliminar(id) {
@@ -271,6 +281,10 @@ export default function Empleados() {
     "Soporte Técnico",
     "Oficial Albañil",
     "Ayudante Albañil",
+    "Chofer",
+    "Mecánico",
+    "Durlista",
+    "Coordinador",
     "Selección de Personal"
   ];
 
@@ -283,7 +297,7 @@ export default function Empleados() {
   const tiposCargo = [
     { value: "permanente", label: "Planta Permanente" },
     { value: "temporario", label: "Temporario" },
-    { value: "contratado", label: "Contratado" },
+    { value: "contratado", label: "Docentes Provicionales" },
     { value: "pasantia", label: "Pasantía" }
   ];
 
@@ -303,7 +317,7 @@ export default function Empleados() {
 
       <div className="space-y-6">
         {/* Formulario */}
-        <div className="card p-6">
+          <div ref={formularioRef} className="card p-6 scroll-mt-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {editingId ? "✏️ Editar Empleado" : "👥 Agregar Nuevo Empleado"}
           </h3>
@@ -317,6 +331,7 @@ export default function Empleados() {
                 placeholder="Número de legajo" 
                 value={nuevo.legajo} 
                 onChange={(e) => setNuevo({ ...nuevo, legajo: e.target.value })} 
+                ref={legajoRef}
                 required 
               />
             </div>
@@ -347,6 +362,15 @@ export default function Empleados() {
                 placeholder="Número de documento" 
                 value={nuevo.documento} 
                 onChange={(e) => setNuevo({ ...nuevo, documento: e.target.value })} 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Domicilio</label>
+              <input
+                className="input-modern"
+                placeholder="Domicilio del empleado"
+                value={nuevo.domicilio}
+                onChange={(e) => setNuevo({ ...nuevo, domicilio: e.target.value })}
               />
             </div>
             <div>
@@ -634,7 +658,7 @@ export default function Empleados() {
                         </td>
                         <td className="max-w-[22rem] px-4 py-4">
                           <span className="inline-flex max-w-full items-center rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700" title={emp.area?.nombre || emp.lugarTrabajo || "Área no asignada"}>
-                            <span className="truncate">{nombreCortoArea(emp.area?.nombre || emp.lugarTrabajo || "Área no asignada")}</span>
+                            <span className="truncate">{emp.area?.nombre || emp.lugarTrabajo || "Área no asignada"}</span>
                           </span>
                         </td>
                         <td className="px-4 py-4 text-right text-sm font-medium">
