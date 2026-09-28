@@ -69,6 +69,7 @@ export default function Navbar({ darkMode, onToggleDarkMode }) {
       { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🔎" },
       { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
       { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "🙎🏻‍♂️" },
+      { name: "Vacaciones", path: "/rrhh/vacaciones", icon: "🏖️" },
     ],
     subsecretario: [
       { name: "Inicio", path: "/rrhh", icon: "🏠" },
@@ -81,6 +82,7 @@ export default function Navbar({ darkMode, onToggleDarkMode }) {
         badge: solicitudesPendientes > 0 ? solicitudesPendientes : null
       },
       { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "🙎🏻‍♂️" },
+      { name: "Vacaciones", path: "/rrhh/vacaciones", icon: "🏖️" },
     ],
     coordinador_traspasos: [
       { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
@@ -93,6 +95,7 @@ export default function Navbar({ darkMode, onToggleDarkMode }) {
       { name: "Reportes", path: "/admin/reportes", icon: "📊" },
       { name: "Solicitar", path: "/admin/solicitar-traspaso", icon: "📝" },
       { name: "Mis Solicitudes", path: "/admin/mis-solicitudes", icon: "📋" },
+      { name: "Vacaciones", path: "/admin/vacaciones/nueva", icon: "🏖️" },
     ],
   };
 

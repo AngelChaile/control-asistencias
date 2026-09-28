@@ -22,6 +22,10 @@ const DashboardAnalisis = lazy(() => import("./pages/RRHH/DashboardAnalisis"));
 const GestionSolicitudes = lazy(() => import("./pages/RRHH/GestionSolicitudes"));
 const EmpleadosDisponibles = lazy(() => import("./pages/RRHH/EmpleadosDisponibles"));
 
+// 🔹 MÓDULO VACACIONES - Licencia Anual Ordinaria
+const SolicitudVacaciones = lazy(() => import("./pages/RRHH/Vacaciones/SolicitudVacaciones"));
+const ListaVacaciones = lazy(() => import("./pages/RRHH/Vacaciones/ListaVacaciones"));
+
 // 🔹 Páginas Admin (lazy-loaded)
 const HomeAdmin = lazy(() => import("./pages/Admin/HomeAdmin"));
 const AsistenciasAdmin = lazy(() => import("./pages/Admin/AsistenciasAdmin"));
@@ -183,6 +187,24 @@ const getRedirectPath = () => {
   }
 />
 
+          {/* 🔹 MÓDULO VACACIONES */}
+          <Route
+            path="/rrhh/vacaciones/nueva"
+            element={
+              <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario", "admin"]}>
+                <SolicitudVacaciones />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/rrhh/vacaciones"
+            element={
+              <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario"]}>
+                <ListaVacaciones />
+              </ProtectedRoute>
+            }
+          />
+
           {/* 🔹 NUEVAS RUTAS RRHH - Sistema de Traspasos */}
           <Route
             path="/rrhh/dashboard-analisis"
@@ -218,6 +240,16 @@ const getRedirectPath = () => {
               <ProtectedRoute user={user} allowedRoles={["subsecretario"]}>
                 {/* Redirige todo lo que esté en /subsecretario/* a /rrhh/* */}
                 <Navigate to={`/rrhh/${location.pathname.split('/').slice(2).join('/')}`} replace />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 🔹 MÓDULO VACACIONES — ADMIN */}
+          <Route
+            path="/admin/vacaciones/nueva"
+            element={
+              <ProtectedRoute user={user} allowedRoles={["admin"]}>
+                <SolicitudVacaciones />
               </ProtectedRoute>
             }
           />
