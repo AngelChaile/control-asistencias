@@ -31,10 +31,10 @@ export const TABLAS_CONVENIO = {
   Municipal: {
     tipo: "habiles",
     tramos: [
-      { desde: 1,  hasta: 4,   dias: 14, label: "1 AÑO O +"  },
-      { desde: 5,  hasta: 9,   dias: 21, label: "5 AÑOS O +" },
-      { desde: 10, hasta: 19,  dias: 28, label: "10 AÑOS O +" },
-      { desde: 20, hasta: 999, dias: 35, label: "20 AÑOS O +" },
+      { desde: 1,  hasta: 4,   dias: 14, label: "1 a 4 AÑOS"  },
+      { desde: 5,  hasta: 9,   dias: 21, label: "5 a 9 AÑOS" },
+      { desde: 10, hasta: 19,  dias: 28, label: "10 a 19 AÑOS" },
+      { desde: 20, hasta: 999, dias: 35, label: "20 AÑOS O MÁS" },
     ],
     // grilla[mes-1][tramoIndex] — mes 1..12, tramo 0..3
     grilla: [
@@ -56,9 +56,9 @@ export const TABLAS_CONVENIO = {
   Medico: {
     tipo: "corridos",
     tramos: [
-      { desde: 1,  hasta: 4,   dias: 20, label: "1 AÑO O +"  },
-      { desde: 5,  hasta: 9,   dias: 25, label: "5 AÑOS O +" },
-      { desde: 10, hasta: 999, dias: 30, label: "10 AÑOS O +" },
+      { desde: 1,  hasta: 4,   dias: 20, label: "1 a 4 AÑOS"  },
+      { desde: 5,  hasta: 9,   dias: 25, label: "5 a 9 AÑOS" },
+      { desde: 10, hasta: 999, dias: 30, label: "10 AÑOS O MÁS" },
     ],
     grilla: [
       [ 1,  2,  2],  // mes 1
@@ -79,7 +79,7 @@ export const TABLAS_CONVENIO = {
   Radiologo: {
     tipo: "corridos",
     tramos: [
-      { desde: 1, hasta: 999, dias: 50, label: "1 AÑO O +" },
+      { desde: 1, hasta: 999, dias: 50, label: "1 AÑO O MÁS" },
     ],
     // Nota: la grilla de Radiólogos tiene valores > 12 meses (proporcional especial)
     grilla: [
@@ -101,8 +101,8 @@ export const TABLAS_CONVENIO = {
   Docente: {
     tipo: "corridos",
     tramos: [
-      { desde: 1,  hasta: 19,  dias: 30, label: "1 AÑO O +"  },
-      { desde: 20, hasta: 999, dias: 40, label: "20 AÑOS O +" },
+      { desde: 1,  hasta: 19,  dias: 30, label: "1 a 19 AÑOS"  },
+      { desde: 20, hasta: 999, dias: 40, label: "20 AÑOS O MÁS" },
     ],
     grilla: [
       [ 1,  2],  // mes 1
@@ -154,11 +154,26 @@ export function calcularAntiguedad(fechaIngreso, referencia) {
 }
 
 /**
- * Calcula meses completos trabajados desde `fechaDesde` hasta el 31/12 del año vacacional.
+ * Con fecha de corte, cuenta meses completos hasta el inicio de la licencia,
+ * sin acumular meses fuera del año vacacional. Sin corte conserva el cálculo anual.
  */
-export function calcularMesesTrabajados(fechaDesde, anioVacacional) {
+export function calcularMesesTrabajados(fechaDesde, anioVacacional, fechaCorte = null) {
   const inicio = parseFechaLocal(fechaDesde);
   if (!inicio) return 0;
+  if (fechaCorte !== null) {
+    const corte = parseFechaLocal(fechaCorte);
+    if (!corte || Number.isNaN(corte.getTime())) {
+      throw new Error("Fecha de inicio de la licencia inválida.");
+    }
+    const limite = new Date(Number(anioVacacional) + 1, 0, 1);
+    const fin = corte < limite ? corte : limite;
+    const inicioPeriodo = new Date(Number(anioVacacional), 0, 1);
+    const desde = inicio > inicioPeriodo ? inicio : inicioPeriodo;
+    if (desde >= fin) return 0;
+    let meses = (fin.getFullYear() - desde.getFullYear()) * 12 + fin.getMonth() - desde.getMonth();
+    if (fin.getDate() < desde.getDate()) meses -= 1;
+    return Math.max(0, Math.min(12, meses));
+  }
   const fin = new Date(anioVacacional, 11, 31); // 31/12
   if (inicio > fin) return 0;
 
@@ -294,6 +309,7 @@ export function calcularDiasCambioConvenio({
  * @param {string}  params.convenio           — convenio actual
  * @param {string}  params.fechaIngreso        — "yyyy-mm-dd"
  * @param {number}  params.anioVacacional
+ * @param {string}  [params.fechaDesde]        — inicio de licencia, requerido para proporcional por reingreso
  * @param {boolean} [params.esReingreso]
  * @param {string}  [params.fechaReingreso]    — "yyyy-mm-dd", requerido si esReingreso=true
  * @param {boolean} [params.esCambioConvenio]
@@ -312,6 +328,7 @@ export function calcularVacaciones(params) {
     convenioAnterior = null,
     mesesConvenioAnterior = 0,
     mesesConvenioNuevo = 0,
+    fechaDesde = null,
   } = params;
 
   if (esCambioConvenio && convenioAnterior) {
@@ -327,13 +344,30 @@ export function calcularVacaciones(params) {
     });
   }
 
-  if (esReingreso && fechaReingreso) {
-    const ingreso = parseFechaLocal(fechaIngreso);
+  if (esReingreso) {
     const reingreso = parseFechaLocal(fechaReingreso);
-    // Antigüedad al momento del reingreso (referencia = fecha de reingreso)
-    const antiguedadAlReingreso = calcularAntiguedad(ingreso, reingreso);
-    const mesesTrabajados = calcularMesesTrabajados(fechaReingreso, anioVacacional);
-    return calcularDiasReingreso({ convenio, antiguedadAlReingreso, mesesTrabajados });
+    if (!reingreso || Number.isNaN(reingreso.getTime())) {
+      throw new Error("Fecha de reingreso inválida.");
+    }
+    // Solo el período del reingreso lleva proporcional.
+    if (reingreso.getFullYear() === Number(anioVacacional)) {
+      const ingreso = parseFechaLocal(fechaIngreso);
+      const inicioLicencia = parseFechaLocal(fechaDesde);
+      if (!ingreso || Number.isNaN(ingreso.getTime())) {
+        throw new Error("Fecha de ingreso inválida.");
+      }
+      if (!inicioLicencia || Number.isNaN(inicioLicencia.getTime())) {
+        throw new Error("Seleccioná la fecha de inicio de la licencia para calcular el proporcional.");
+      }
+      if (inicioLicencia < reingreso) {
+        throw new Error("La licencia no puede comenzar antes del reingreso.");
+      }
+      const antiguedadAlReingreso = calcularAntiguedad(ingreso, reingreso);
+      const mesesTrabajados = calcularMesesTrabajados(fechaReingreso, anioVacacional, fechaDesde);
+      const resultado = calcularDiasReingreso({ convenio, antiguedadAlReingreso, mesesTrabajados });
+      // Sin meses completos no corresponde asignar la primera fila de la grilla.
+      return mesesTrabajados === 0 ? { ...resultado, dias: 0, mesesTrabajados: 0 } : resultado;
+    }
   }
 
   return calcularDiasNormal({ convenio, fechaIngreso, anioVacacional });
@@ -390,6 +424,7 @@ export async function crearSolicitudVacaciones(datos) {
     convenio,
     fechaIngreso,
     anioVacacional,
+    fechaDesde,
     esReingreso,
     fechaReingreso,
     esCambioConvenio,

@@ -4,7 +4,6 @@ import { useAuth } from "../../../context/AuthContext";
 import { buscarEmpleadoPorLegajo } from "../../../utils/asistencia";
 import {
   calcularVacaciones,
-  calcularMesesTrabajados,
   parseFechaLocal,
   calcularAntiguedad,
   crearSolicitudVacaciones,
@@ -181,14 +180,29 @@ export default function SolicitudVacaciones() {
     }
   };
 
+  // Invalidar resultados y consultas pendientes cuando cambian los datos del cálculo.
+  const calculoVersion = useRef(0);
+  useEffect(() => {
+    calculoVersion.current += 1;
+    setCalculo(null);
+    setSaldo(null);
+    setCargandoSaldo(false);
+    setError("");
+    return () => { calculoVersion.current += 1; };
+  }, [fechaDesde, fechaHasta, convenio, fechaIngreso, fechaReingreso, anioVacacional,
+    legajo, esReingreso, esCambioConvenio, convenioAnterior, mesesConvenioAnterior, mesesConvenioNuevo]);
+
   // ── Calcular días + consultar saldo ──────────────────────────────
   const handleCalcular = useCallback(async () => {
+    const version = ++calculoVersion.current;
     setError("");
     setCalculo(null);
     setSaldo(null);
 
     if (!fechaIngreso) { setError("Ingresá la fecha de ingreso o buscá el empleado por legajo."); return; }
     if (!convenio)     { setError("Seleccioná un convenio."); return; }
+    if (!fechaDesde || !fechaHasta) { setError("Seleccioná el rango de fechas de la licencia antes de calcular."); return; }
+    if (fechaDesde > fechaHasta) { setError("La fecha de inicio no puede ser posterior a la fecha de fin."); return; }
     if (esReingreso && !fechaReingreso) { setError("Ingresá la fecha de reingreso."); return; }
     if (esCambioConvenio && !convenioAnterior) { setError("Seleccioná el convenio anterior."); return; }
 
@@ -196,6 +210,7 @@ export default function SolicitudVacaciones() {
       const resultado = calcularVacaciones({
         convenio,
         fechaIngreso,
+        fechaDesde,
         anioVacacional: Number(anioVacacional),
         esReingreso,
         fechaReingreso: esReingreso ? fechaReingreso : null,
@@ -209,27 +224,22 @@ export default function SolicitudVacaciones() {
       const ref = new Date(Number(anioVacacional), 11, 31);
       const antiguedad = calcularAntiguedad(ingreso, ref);
 
-      let mesesInfo = null;
-      if (esReingreso && fechaReingreso) {
-        mesesInfo = calcularMesesTrabajados(fechaReingreso, Number(anioVacacional));
-      }
-
-      setCalculo({ ...resultado, antiguedad, mesesInfo });
+      setCalculo({ ...resultado, antiguedad });
 
       if (legajo) {
         setCargandoSaldo(true);
         try {
           const saldoData = await fetchDiasDisponibles(legajo, Number(anioVacacional), resultado.dias);
-          setSaldo(saldoData);
+          if (version === calculoVersion.current) setSaldo(saldoData);
         } catch { /* no crítico */ } finally {
-          setCargandoSaldo(false);
+          if (version === calculoVersion.current) setCargandoSaldo(false);
         }
       }
     } catch (e) {
       setError(e.message);
     }
   }, [
-    convenio, fechaIngreso, fechaReingreso, anioVacacional, legajo,
+    convenio, fechaIngreso, fechaReingreso, anioVacacional, legajo, fechaDesde, fechaHasta,
     esReingreso, esCambioConvenio, convenioAnterior, mesesConvenioAnterior, mesesConvenioNuevo,
   ]);
 
@@ -503,8 +513,9 @@ export default function SolicitudVacaciones() {
                   {fechaIngreso && fechaReingreso && (
                     <p className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg px-3 py-2">
                       📌 La antigüedad se calcula desde la fecha de ingreso original ({fechaIngreso}).
-                      El proporcional aplica solo para el período {anioVacacional}.
-                      A partir del año siguiente se usan los años completos de antigüedad.
+                      El proporcional aplica solo al año del reingreso y cuenta los meses completos
+                      hasta el inicio de la licencia, dentro de ese período. Para otros períodos se
+                      usan los días normales según antigüedad.
                     </p>
                   )}
                 </div>
@@ -541,10 +552,32 @@ export default function SolicitudVacaciones() {
             )}
           </section>
 
+          {/* Elegir fechas antes de calcular el proporcional. */}
+          <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 space-y-4">
+            <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200">
+              Fechas de la licencia
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Seleccioná el rango antes de calcular. En el año del reingreso se cuentan
+              los meses completos trabajados hasta el inicio de la licencia, sin exceder ese período.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InputField label="Fecha desde" id="fechaDesde" required>
+                <input id="fechaDesde" type="date" value={fechaDesde}
+                  onChange={e => setFechaDesde(e.target.value)} className="input-base" />
+              </InputField>
+              <InputField label="Fecha hasta" id="fechaHasta" required>
+                <input id="fechaHasta" type="date" value={fechaHasta}
+                  onChange={e => setFechaHasta(e.target.value)} className="input-base" />
+              </InputField>
+            </div>
+            {errorRango && <p className="text-sm text-red-600 dark:text-red-400">⚠️ {errorRango}</p>}
+          </section>
+
           {/* ── Botón calcular ── */}
           <button
             onClick={handleCalcular}
-            disabled={!fechaIngreso}
+            disabled={!fechaIngreso || !fechaDesde || !fechaHasta || !!errorRango}
             className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl transition text-base"
           >
             🧮 Calcular días correspondientes
@@ -628,36 +661,13 @@ export default function SolicitudVacaciones() {
           {calculo && (
             <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 space-y-4">
               <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700 pb-2">
-                Fechas de la licencia
+                Resumen de la licencia
               </h2>
 
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Seleccioná el rango. El sistema calculará automáticamente los días{" "}
-                <strong>{calculo.tipo}</strong> que consume según el convenio{" "}
-                <strong>{convenio}</strong>.
+                El rango consume días <strong>{calculo.tipo}</strong> según el convenio{" "}
+                <strong>{convenio}</strong>. Si modificás las fechas, volvé a calcular.
               </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InputField label="Fecha desde" id="fechaDesde" required>
-                  <input id="fechaDesde" type="date" value={fechaDesde}
-                    onChange={e => setFechaDesde(e.target.value)}
-                    className="input-base"
-                    disabled={saldo && saldo.diasDisponibles === 0}
-                  />
-                </InputField>
-                <InputField label="Fecha hasta" id="fechaHasta" required>
-                  <input id="fechaHasta" type="date" value={fechaHasta}
-                    onChange={e => setFechaHasta(e.target.value)}
-                    className="input-base"
-                    disabled={saldo && saldo.diasDisponibles === 0}
-                  />
-                </InputField>
-              </div>
-
-              {/* Error de rango */}
-              {errorRango && (
-                <p className="text-sm text-red-600 dark:text-red-400">⚠️ {errorRango}</p>
-              )}
 
               {/* Panel de resultado del rango — aparece en cuanto hay fechas válidas */}
               {diasRango && !errorRango && (() => {
@@ -724,7 +734,7 @@ export default function SolicitudVacaciones() {
 
               <button
                 onClick={handleGuardar}
-                disabled={guardando || !diasRango || errorRango || (diasRango && (saldo ? diasRango.cantidad > saldo.diasDisponibles : diasRango.cantidad > calculo.dias))}
+                disabled={guardando || cargandoSaldo || !diasRango || errorRango || (diasRango && (saldo ? diasRango.cantidad > saldo.diasDisponibles : diasRango.cantidad > calculo.dias))}
                 className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl transition text-base"
               >
                 {guardando ? "Guardando..." : "💾 Guardar solicitud"}
