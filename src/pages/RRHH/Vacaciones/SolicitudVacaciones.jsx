@@ -1,5 +1,5 @@
 // src/pages/RRHH/Vacaciones/SolicitudVacaciones.jsx
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { buscarEmpleadoPorLegajo } from "../../../utils/asistencia";
 import {
@@ -9,6 +9,7 @@ import {
   calcularAntiguedad,
   crearSolicitudVacaciones,
   fetchDiasDisponibles,
+  calcularDiasRango,
   TABLAS_CONVENIO,
 } from "../../../utils/vacaciones";
 import FormularioImpresion from "./FormularioImpresion";
@@ -87,10 +88,14 @@ export default function SolicitudVacaciones() {
   const [mesesConvenioNuevo, setMesesConvenioNuevo] = useState("");
 
   // ── Solicitud ─────────────────────────────────────────────────────
-  const [diasSolicitados, setDiasSolicitados] = useState("");
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
   const [observaciones, setObservaciones] = useState("");
+
+  // ── Cálculo del rango de fechas ───────────────────────────────────
+  // diasRango: días que consume el rango según tipo del convenio (hábiles o corridos)
+  const [diasRango, setDiasRango] = useState(null);
+  const [errorRango, setErrorRango] = useState("");
 
   // ── Estado UI ─────────────────────────────────────────────────────
   const [calculo, setCalculo] = useState(null);
@@ -100,6 +105,23 @@ export default function SolicitudVacaciones() {
   const [guardando, setGuardando] = useState(false);
   const [solicitudGuardada, setSolicitudGuardada] = useState(null);
   const [mostrarImpresion, setMostrarImpresion] = useState(false);
+
+  // ── Recalcular días del rango cuando cambian fechas o convenio ───
+  useEffect(() => {
+    setDiasRango(null);
+    setErrorRango("");
+    if (!fechaDesde || !fechaHasta || !convenio) return;
+    if (fechaDesde > fechaHasta) {
+      setErrorRango("La fecha de inicio no puede ser posterior a la fecha de fin.");
+      return;
+    }
+    try {
+      const { diasRango: dr, tipo } = calcularDiasRango(convenio, fechaDesde, fechaHasta);
+      setDiasRango({ cantidad: dr, tipo });
+    } catch (e) {
+      setErrorRango(e.message);
+    }
+  }, [fechaDesde, fechaHasta, convenio]);
 
   // ── Buscar empleado por legajo ────────────────────────────────────
   const handleBuscarEmpleado = useCallback(async (legajoVal) => {
@@ -214,21 +236,19 @@ export default function SolicitudVacaciones() {
   // ── Guardar solicitud ─────────────────────────────────────────────
   const handleGuardar = async () => {
     setError("");
-    if (!legajo)          { setError("Ingresá el legajo."); return; }
-    if (!nombreCompleto)  { setError("Ingresá el nombre completo."); return; }
-    if (!calculo)         { setError("Primero calculá los días correspondientes."); return; }
-    if (!diasSolicitados) { setError("Ingresá la cantidad de días solicitados."); return; }
+    if (!legajo)         { setError("Ingresá el legajo."); return; }
+    if (!nombreCompleto) { setError("Ingresá el nombre completo."); return; }
+    if (!calculo)        { setError("Primero calculá los días correspondientes."); return; }
+    if (!fechaDesde || !fechaHasta) { setError("Seleccioná el rango de fechas de la licencia."); return; }
+    if (!diasRango || diasRango.cantidad < 1) { setError("El rango de fechas no contiene días válidos."); return; }
 
+    // Validar contra saldo disponible
     const diasMax = saldo ? saldo.diasDisponibles : calculo.dias;
-    if (Number(diasSolicitados) > diasMax) {
+    if (diasRango.cantidad > diasMax) {
       const msg = saldo && saldo.diasUsados > 0
-        ? `El empleado ya usó ${saldo.diasUsados} días este período. Solo quedan ${saldo.diasDisponibles} días disponibles.`
-        : `No podés solicitar más días de los que corresponden (${calculo.dias}).`;
+        ? `El rango seleccionado consume ${diasRango.cantidad} días ${diasRango.tipo}, pero solo quedan ${saldo.diasDisponibles} disponibles (ya usó ${saldo.diasUsados}).`
+        : `El rango seleccionado consume ${diasRango.cantidad} días ${diasRango.tipo}, pero solo corresponden ${calculo.dias}.`;
       setError(msg);
-      return;
-    }
-    if (Number(diasSolicitados) < 1) {
-      setError("La cantidad de días solicitados debe ser al menos 1.");
       return;
     }
 
@@ -243,7 +263,7 @@ export default function SolicitudVacaciones() {
         esJerarquico,
         fechaIngreso,
         anioVacacional: Number(anioVacacional),
-        diasSolicitados: Number(diasSolicitados),
+        diasSolicitados: diasRango.cantidad,   // ← calculado automáticamente
         fechaDesde,
         fechaHasta,
         observaciones,
@@ -272,7 +292,8 @@ export default function SolicitudVacaciones() {
     setEsReingreso(false); setReingresoAutoDetectado(false);
     setEsCambioConvenio(false); setConvenioAnterior("");
     setMesesConvenioAnterior(""); setMesesConvenioNuevo("");
-    setDiasSolicitados(""); setFechaDesde(""); setFechaHasta("");
+    setFechaDesde(""); setFechaHasta("");
+    setDiasRango(null); setErrorRango("");
     setObservaciones(""); setError(""); setErrorLegajo("");
     setEmpleadoCargado(false);
     setTimeout(() => legajoRef.current?.focus(), 50);
@@ -603,39 +624,109 @@ export default function SolicitudVacaciones() {
             </div>
           )}
 
-          {/* ── Sección: Datos de la solicitud ── */}
+          {/* ── Sección: Rango de fechas de la licencia ── */}
           {calculo && (
             <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 space-y-4">
               <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700 pb-2">
-                Datos de la solicitud
+                Fechas de la licencia
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <InputField label="Días solicitados" id="diasSol" required
-                  hint={saldo
-                    ? `Disponibles: ${saldo.diasDisponibles} de ${saldo.diasCorresponden} días ${calculo.tipo}`
-                    : `Máximo: ${calculo.dias} días ${calculo.tipo}`
-                  }>
-                  <input id="diasSol" type="number" min="1"
-                    max={saldo ? saldo.diasDisponibles : calculo.dias}
-                    value={diasSolicitados}
-                    onChange={e => setDiasSolicitados(e.target.value)}
+
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Seleccioná el rango. El sistema calculará automáticamente los días{" "}
+                <strong>{calculo.tipo}</strong> que consume según el convenio{" "}
+                <strong>{convenio}</strong>.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <InputField label="Fecha desde" id="fechaDesde" required>
+                  <input id="fechaDesde" type="date" value={fechaDesde}
+                    onChange={e => setFechaDesde(e.target.value)}
                     className="input-base"
                     disabled={saldo && saldo.diasDisponibles === 0}
                   />
                 </InputField>
-                <InputField label="Fecha desde" id="fechaDesde">
-                  <input id="fechaDesde" type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="input-base" />
-                </InputField>
-                <InputField label="Fecha hasta" id="fechaHasta">
-                  <input id="fechaHasta" type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="input-base" />
+                <InputField label="Fecha hasta" id="fechaHasta" required>
+                  <input id="fechaHasta" type="date" value={fechaHasta}
+                    onChange={e => setFechaHasta(e.target.value)}
+                    className="input-base"
+                    disabled={saldo && saldo.diasDisponibles === 0}
+                  />
                 </InputField>
               </div>
+
+              {/* Error de rango */}
+              {errorRango && (
+                <p className="text-sm text-red-600 dark:text-red-400">⚠️ {errorRango}</p>
+              )}
+
+              {/* Panel de resultado del rango — aparece en cuanto hay fechas válidas */}
+              {diasRango && !errorRango && (() => {
+                const disponibles = saldo ? saldo.diasDisponibles : calculo.dias;
+                const excede = diasRango.cantidad > disponibles;
+                const restanDespues = disponibles - diasRango.cantidad;
+                return (
+                  <div className={`rounded-xl border p-4 space-y-3 ${
+                    excede
+                      ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
+                      : "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700"
+                  }`}>
+                    {/* Fila de números clave */}
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Esta solicitud consume</p>
+                        <p className={`text-2xl font-bold ${excede ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                          {diasRango.cantidad}
+                        </p>
+                        <p className="text-xs text-gray-400">días {diasRango.tipo}</p>
+                      </div>
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Disponibles</p>
+                        <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{disponibles}</p>
+                        <p className="text-xs text-gray-400">días {diasRango.tipo}</p>
+                      </div>
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Quedarían</p>
+                        <p className={`text-2xl font-bold ${excede ? "text-red-600 dark:text-red-400" : "text-gray-800 dark:text-white"}`}>
+                          {excede ? "—" : restanDespues}
+                        </p>
+                        <p className="text-xs text-gray-400">días {diasRango.tipo}</p>
+                      </div>
+                    </div>
+
+                    {/* Detalle del conteo */}
+                    <div className="text-xs text-gray-600 dark:text-gray-300 bg-white/60 dark:bg-gray-800/60 rounded-lg px-3 py-2">
+                      {diasRango.tipo === "habiles" ? (
+                        <span>
+                          📅 Del <strong>{fechaDesde}</strong> al <strong>{fechaHasta}</strong>:{" "}
+                          <strong>{diasRango.cantidad} días hábiles</strong> (sin sábados, domingos ni feriados nacionales).
+                        </span>
+                      ) : (
+                        <span>
+                          📅 Del <strong>{fechaDesde}</strong> al <strong>{fechaHasta}</strong>:{" "}
+                          <strong>{diasRango.cantidad} días corridos</strong>.
+                        </span>
+                      )}
+                    </div>
+
+                    {excede && (
+                      <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+                        ⚠️ El rango seleccionado supera los días disponibles. Ajustá las fechas.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
               <InputField label="Observaciones" id="obs">
                 <textarea id="obs" value={observaciones} onChange={e => setObservaciones(e.target.value)}
                   className="input-base resize-none" rows={3} placeholder="Observaciones opcionales..." />
               </InputField>
-              <button onClick={handleGuardar} disabled={guardando}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition text-base">
+
+              <button
+                onClick={handleGuardar}
+                disabled={guardando || !diasRango || errorRango || (diasRango && (saldo ? diasRango.cantidad > saldo.diasDisponibles : diasRango.cantidad > calculo.dias))}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl transition text-base"
+              >
                 {guardando ? "Guardando..." : "💾 Guardar solicitud"}
               </button>
             </section>

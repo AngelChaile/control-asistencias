@@ -150,10 +150,19 @@ export default function FormularioImpresion({ solicitud, onVolver }) {
               Licencia
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px 16px" }}>
-              <Campo label="Días que corresponden" valor={`${diasCorresponden} (${tipoDias})`} />
-              <Campo label="Días solicitados" valor={String(diasSolicitados)} />
+              <Campo label="Días que corresponden al período" valor={`${diasCorresponden} (${tipoDias})`} />
+              <Campo
+                label={`Días de esta licencia (${tipoDias})`}
+                valor={String(diasSolicitados)}
+              />
               <Campo label="Fecha desde" valor={formatFecha(fechaDesde)} />
               <Campo label="Fecha hasta" valor={formatFecha(fechaHasta)} />
+            </div>
+            <div style={{ marginTop: 8, fontSize: 10, color: "#555", background: "#f8f8f8", border: "1px solid #ddd", borderRadius: 4, padding: "6px 10px" }}>
+              {tipoDias === "habiles"
+                ? `Los ${diasSolicitados} días son hábiles (excluye sábados, domingos y feriados nacionales).`
+                : `Los ${diasSolicitados} días son corridos (días calendario).`
+              }
             </div>
           </div>
 

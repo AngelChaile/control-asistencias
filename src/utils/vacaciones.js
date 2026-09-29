@@ -467,6 +467,100 @@ export async function actualizarEstadoSolicitud(id, estado, observaciones = "") 
 }
 
 // ─────────────────────────────────────────────
+// CÁLCULO DE DÍAS EN UN RANGO DE FECHAS
+// ─────────────────────────────────────────────
+
+/**
+ * Feriados nacionales fijos de Argentina (dd-MM).
+ * Se evalúan cada año.
+ */
+const FERIADOS_FIJOS = [
+  "01-01", // Año Nuevo
+  "24-03", // Día de la Memoria
+  "02-04", // Malvinas
+  "01-05", // Día del Trabajador
+  "25-05", // Revolución de Mayo
+  "20-06", // Paso a la Inmortalidad del Gral. Belgrano
+  "09-07", // Independencia
+  "17-08", // Paso a la Inmortalidad del Gral. San Martín (3er lunes de agosto — se trata como fijo al 17)
+  "12-10", // Día del Respeto a la Diversidad Cultural (2do lunes de octubre — se trata como fijo al 12)
+  "20-11", // Día de la Soberanía Nacional (4to lunes de noviembre — se trata como fijo al 20)
+  "08-12", // Inmaculada Concepción
+  "25-12", // Navidad
+];
+
+/**
+ * Devuelve true si la fecha es feriado nacional fijo.
+ * @param {Date} date
+ */
+function esFeriadoFijo(date) {
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return FERIADOS_FIJOS.includes(`${dd}-${mm}`);
+}
+
+/**
+ * Cuenta los días hábiles entre dos fechas (inclusive ambos extremos).
+ * Excluye sábados, domingos y feriados nacionales fijos.
+ * @param {string} desde — "yyyy-mm-dd"
+ * @param {string} hasta — "yyyy-mm-dd"
+ * @param {string[]} [feriadosExtra] — feriados adicionales en formato "yyyy-mm-dd"
+ * @returns {number}
+ */
+export function contarDiasHabiles(desde, hasta, feriadosExtra = []) {
+  const inicio = parseFechaLocal(desde);
+  const fin    = parseFechaLocal(hasta);
+  if (!inicio || !fin || inicio > fin) return 0;
+
+  const extrasSet = new Set(feriadosExtra);
+  let count = 0;
+  const cur = new Date(inicio);
+
+  while (cur <= fin) {
+    const dow = cur.getDay(); // 0=Dom, 6=Sáb
+    const isoStr = cur.toISOString().slice(0, 10);
+    if (dow !== 0 && dow !== 6 && !esFeriadoFijo(cur) && !extrasSet.has(isoStr)) {
+      count++;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
+/**
+ * Cuenta los días corridos entre dos fechas (inclusive ambos extremos).
+ * @param {string} desde — "yyyy-mm-dd"
+ * @param {string} hasta — "yyyy-mm-dd"
+ * @returns {number}
+ */
+export function contarDiasCorridos(desde, hasta) {
+  const inicio = parseFechaLocal(desde);
+  const fin    = parseFechaLocal(hasta);
+  if (!inicio || !fin || inicio > fin) return 0;
+  const diff = fin.getTime() - inicio.getTime();
+  return Math.round(diff / (1000 * 60 * 60 * 24)) + 1;
+}
+
+/**
+ * Dado un convenio y un rango de fechas, devuelve los días que consume ese rango
+ * según el tipo del convenio (hábiles o corridos).
+ * @param {string} convenio
+ * @param {string} desde — "yyyy-mm-dd"
+ * @param {string} hasta — "yyyy-mm-dd"
+ * @param {string[]} [feriadosExtra]
+ * @returns {{ diasRango: number, tipo: string }}
+ */
+export function calcularDiasRango(convenio, desde, hasta, feriadosExtra = []) {
+  const tabla = TABLAS_CONVENIO[convenio];
+  if (!tabla) throw new Error(`Convenio desconocido: ${convenio}`);
+  const tipo = tabla.tipo;
+  const diasRango = tipo === "habiles"
+    ? contarDiasHabiles(desde, hasta, feriadosExtra)
+    : contarDiasCorridos(desde, hasta);
+  return { diasRango, tipo };
+}
+
+// ─────────────────────────────────────────────
 // SALDO DE DÍAS DISPONIBLES
 // ─────────────────────────────────────────────
 
