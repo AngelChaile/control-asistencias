@@ -1,6 +1,7 @@
 // src/pages/RRHH/Vacaciones/SolicitudVacaciones.jsx
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { useAuth } from "../../../context/AuthContext";
+import { buscarEmpleadoPorLegajo } from "../../../utils/asistencia";
 import {
   calcularVacaciones,
   calcularMesesTrabajados,
@@ -15,11 +16,42 @@ import FormularioImpresion from "./FormularioImpresion";
 const CONVENIOS = Object.keys(TABLAS_CONVENIO);
 const ANIO_ACTUAL = new Date().getFullYear();
 
-function InputField({ label, id, required, children, hint }) {
+// ── Mapeo particion → convenio ────────────────────────────────────
+// El campo "particion" en Firestore usa valores como "municipal", "docente", etc.
+const PARTICION_A_CONVENIO = {
+  municipal: "Municipal",
+  docente:   "Docente",
+  medico:    "Medico",
+  radiologo: "Radiologo",
+};
+
+function toISODate(str) {
+  // Convierte "dd/mm/yyyy" o "yyyy-mm-dd" a "yyyy-mm-dd" para input[type=date]
+  if (!str) return "";
+  const local = String(str).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (local) return `${local[3]}-${local[2]}-${local[1]}`;
+  const iso = String(str).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return str;
+  return "";
+}
+
+/**
+ * Detecta automáticamente si el empleado tiene reingreso en el año vacacional.
+ * Condición: fechaReingreso existe Y su año coincide con el año vacacional.
+ */
+function detectarReingreso(fechaReingresoStr, anioVacacional) {
+  if (!fechaReingresoStr) return false;
+  const fr = parseFechaLocal(toISODate(fechaReingresoStr));
+  if (!fr) return false;
+  return fr.getFullYear() === Number(anioVacacional);
+}
+
+function InputField({ label, id, required, children, hint, readOnly }) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label htmlFor={id} className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
         {label} {required && <span className="text-red-500">*</span>}
+        {readOnly && <span className="text-xs text-gray-400 font-normal">(auto)</span>}
       </label>
       {children}
       {hint && <p className="text-xs text-gray-500 dark:text-gray-400">{hint}</p>}
@@ -29,9 +61,14 @@ function InputField({ label, id, required, children, hint }) {
 
 export default function SolicitudVacaciones() {
   const { user } = useAuth();
+  const legajoRef = useRef(null);
 
   // ── Datos del agente ──────────────────────────────────────────────
   const [legajo, setLegajo] = useState("");
+  const [buscandoEmpleado, setBuscandoEmpleado] = useState(false);
+  const [empleadoCargado, setEmpleadoCargado] = useState(false); // flag para mostrar badge
+  const [errorLegajo, setErrorLegajo] = useState("");
+
   const [nombreCompleto, setNombreCompleto] = useState("");
   const [cargo, setCargo] = useState("");
   const [area, setArea] = useState("");
@@ -43,6 +80,7 @@ export default function SolicitudVacaciones() {
   // ── Casos especiales ─────────────────────────────────────────────
   const [esReingreso, setEsReingreso] = useState(false);
   const [fechaReingreso, setFechaReingreso] = useState("");
+  const [reingresoAutoDetectado, setReingresoAutoDetectado] = useState(false);
   const [esCambioConvenio, setEsCambioConvenio] = useState(false);
   const [convenioAnterior, setConvenioAnterior] = useState("");
   const [mesesConvenioAnterior, setMesesConvenioAnterior] = useState("");
@@ -56,12 +94,70 @@ export default function SolicitudVacaciones() {
 
   // ── Estado UI ─────────────────────────────────────────────────────
   const [calculo, setCalculo] = useState(null);
-  const [saldo, setSaldo] = useState(null);          // { diasCorresponden, diasUsados, diasDisponibles }
+  const [saldo, setSaldo] = useState(null);
   const [cargandoSaldo, setCargandoSaldo] = useState(false);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [solicitudGuardada, setSolicitudGuardada] = useState(null);
   const [mostrarImpresion, setMostrarImpresion] = useState(false);
+
+  // ── Buscar empleado por legajo ────────────────────────────────────
+  const handleBuscarEmpleado = useCallback(async (legajoVal) => {
+    const lj = (legajoVal ?? legajo).trim();
+    if (!lj) return;
+
+    setErrorLegajo("");
+    setBuscandoEmpleado(true);
+    setEmpleadoCargado(false);
+    setCalculo(null);
+    setSaldo(null);
+
+    try {
+      const emp = await buscarEmpleadoPorLegajo(lj);
+      if (!emp) {
+        setErrorLegajo(`No se encontró ningún empleado con legajo "${lj}".`);
+        return;
+      }
+
+      // Poblar campos con datos del empleado
+      setNombreCompleto(`${emp.apellido || ""}, ${emp.nombre || ""}`.trim().replace(/^,\s*/, ""));
+      setCargo(emp.funcion || emp.categoria || "");
+      setArea(emp.area?.nombre || emp.lugarTrabajo || emp.secretaria || "");
+
+      // Mapear particion → convenio
+      const convMapeado = PARTICION_A_CONVENIO[String(emp.particion || "").toLowerCase()] || "Municipal";
+      setConvenio(convMapeado);
+
+      // Fechas
+      const fi = toISODate(emp.fechaIngreso || "");
+      const fr = toISODate(emp.fechaReingreso || "");
+      setFechaIngreso(fi);
+      setFechaReingreso(fr);
+
+      // Detectar reingreso automáticamente
+      const hayReingreso = detectarReingreso(emp.fechaReingreso, anioVacacional);
+      setEsReingreso(hayReingreso);
+      setReingresoAutoDetectado(hayReingreso);
+
+      setEmpleadoCargado(true);
+    } catch (e) {
+      setErrorLegajo("Error al buscar el empleado: " + e.message);
+    } finally {
+      setBuscandoEmpleado(false);
+    }
+  }, [legajo, anioVacacional]);
+
+  // Cuando cambia el año vacacional, re-evaluar si hay reingreso
+  const handleAnioChange = (nuevoAnio) => {
+    setAnioVacacional(nuevoAnio);
+    setCalculo(null);
+    setSaldo(null);
+    if (fechaReingreso) {
+      const hayReingreso = detectarReingreso(fechaReingreso, nuevoAnio);
+      setEsReingreso(hayReingreso);
+      setReingresoAutoDetectado(hayReingreso);
+    }
+  };
 
   // ── Calcular días + consultar saldo ──────────────────────────────
   const handleCalcular = useCallback(async () => {
@@ -69,7 +165,7 @@ export default function SolicitudVacaciones() {
     setCalculo(null);
     setSaldo(null);
 
-    if (!fechaIngreso) { setError("Ingresá la fecha de ingreso."); return; }
+    if (!fechaIngreso) { setError("Ingresá la fecha de ingreso o buscá el empleado por legajo."); return; }
     if (!convenio)     { setError("Seleccioná un convenio."); return; }
     if (esReingreso && !fechaReingreso) { setError("Ingresá la fecha de reingreso."); return; }
     if (esCambioConvenio && !convenioAnterior) { setError("Seleccioná el convenio anterior."); return; }
@@ -87,12 +183,10 @@ export default function SolicitudVacaciones() {
         mesesConvenioNuevo: esCambioConvenio ? Number(mesesConvenioNuevo) : 0,
       });
 
-      // Calcular antigüedad para mostrar
       const ingreso = parseFechaLocal(fechaIngreso);
       const ref = new Date(Number(anioVacacional), 11, 31);
       const antiguedad = calcularAntiguedad(ingreso, ref);
 
-      // Meses trabajados para reingreso
       let mesesInfo = null;
       if (esReingreso && fechaReingreso) {
         mesesInfo = calcularMesesTrabajados(fechaReingreso, Number(anioVacacional));
@@ -100,15 +194,12 @@ export default function SolicitudVacaciones() {
 
       setCalculo({ ...resultado, antiguedad, mesesInfo });
 
-      // Consultar saldo si hay legajo cargado
       if (legajo) {
         setCargandoSaldo(true);
         try {
           const saldoData = await fetchDiasDisponibles(legajo, Number(anioVacacional), resultado.dias);
           setSaldo(saldoData);
-        } catch {
-          // saldo no crítico, no bloquea el flujo
-        } finally {
+        } catch { /* no crítico */ } finally {
           setCargandoSaldo(false);
         }
       }
@@ -116,9 +207,8 @@ export default function SolicitudVacaciones() {
       setError(e.message);
     }
   }, [
-    convenio, fechaIngreso, anioVacacional, legajo,
-    esReingreso, fechaReingreso,
-    esCambioConvenio, convenioAnterior, mesesConvenioAnterior, mesesConvenioNuevo,
+    convenio, fechaIngreso, fechaReingreso, anioVacacional, legajo,
+    esReingreso, esCambioConvenio, convenioAnterior, mesesConvenioAnterior, mesesConvenioNuevo,
   ]);
 
   // ── Guardar solicitud ─────────────────────────────────────────────
@@ -129,7 +219,6 @@ export default function SolicitudVacaciones() {
     if (!calculo)         { setError("Primero calculá los días correspondientes."); return; }
     if (!diasSolicitados) { setError("Ingresá la cantidad de días solicitados."); return; }
 
-    // Validación contra saldo disponible (si ya se consultó) o contra el total calculado
     const diasMax = saldo ? saldo.diasDisponibles : calculo.dias;
     if (Number(diasSolicitados) > diasMax) {
       const msg = saldo && saldo.diasUsados > 0
@@ -175,25 +264,23 @@ export default function SolicitudVacaciones() {
   };
 
   const handleNueva = () => {
-    setSolicitudGuardada(null);
-    setCalculo(null);
-    setSaldo(null);
+    setSolicitudGuardada(null); setCalculo(null); setSaldo(null);
     setLegajo(""); setNombreCompleto(""); setCargo(""); setArea("");
-    setConvenio("Municipal"); setEsJerarquico(false); setFechaIngreso("");
-    setAnioVacacional(ANIO_ACTUAL); setEsReingreso(false); setFechaReingreso("");
-    setEsCambioConvenio(false); setConvenioAnterior(""); setMesesConvenioAnterior("");
-    setMesesConvenioNuevo(""); setDiasSolicitados(""); setFechaDesde("");
-    setFechaHasta(""); setObservaciones(""); setError("");
+    setConvenio("Municipal"); setEsJerarquico(false);
+    setFechaIngreso(""); setFechaReingreso("");
+    setAnioVacacional(ANIO_ACTUAL);
+    setEsReingreso(false); setReingresoAutoDetectado(false);
+    setEsCambioConvenio(false); setConvenioAnterior("");
+    setMesesConvenioAnterior(""); setMesesConvenioNuevo("");
+    setDiasSolicitados(""); setFechaDesde(""); setFechaHasta("");
+    setObservaciones(""); setError(""); setErrorLegajo("");
+    setEmpleadoCargado(false);
+    setTimeout(() => legajoRef.current?.focus(), 50);
   };
 
   // ── Vista de impresión ────────────────────────────────────────────
   if (mostrarImpresion && solicitudGuardada) {
-    return (
-      <FormularioImpresion
-        solicitud={solicitudGuardada}
-        onVolver={() => setMostrarImpresion(false)}
-      />
-    );
+    return <FormularioImpresion solicitud={solicitudGuardada} onVolver={() => setMostrarImpresion(false)} />;
   }
 
   // ── Solicitud guardada con éxito ──────────────────────────────────
@@ -202,9 +289,7 @@ export default function SolicitudVacaciones() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 flex items-center justify-center">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
           <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-            Solicitud generada
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Solicitud generada</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-1">Número de solicitud:</p>
           <p className="text-3xl font-mono font-bold text-blue-600 dark:text-blue-400 mb-6">
             {solicitudGuardada.nroSolicitud}
@@ -218,16 +303,12 @@ export default function SolicitudVacaciones() {
             <p><span className="font-medium">Período:</span> {solicitudGuardada.anioVacacional}</p>
           </div>
           <div className="flex gap-3">
-            <button
-              onClick={() => setMostrarImpresion(true)}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl transition"
-            >
+            <button onClick={() => setMostrarImpresion(true)}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl transition">
               🖨️ Imprimir formulario
             </button>
-            <button
-              onClick={handleNueva}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 px-4 rounded-xl transition"
-            >
+            <button onClick={handleNueva}
+              className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 px-4 rounded-xl transition">
               Nueva solicitud
             </button>
           </div>
@@ -241,11 +322,9 @@ export default function SolicitudVacaciones() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-            📋 Solicitud de Licencia Anual Ordinaria
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">📋 Solicitud de Licencia Anual Ordinaria</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Completá los datos del agente para generar la solicitud de vacaciones.
+            Ingresá el legajo para cargar los datos del agente automáticamente.
           </p>
         </div>
 
@@ -256,46 +335,107 @@ export default function SolicitudVacaciones() {
         )}
 
         <div className="space-y-6">
-          {/* ── Sección: Datos del agente ── */}
+
+          {/* ── Sección: Búsqueda por legajo ── */}
+          <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 space-y-4">
+            <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700 pb-2">
+              Búsqueda del agente
+            </h2>
+
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <InputField label="Legajo" id="legajo" required>
+                  <input
+                    ref={legajoRef}
+                    id="legajo" type="text" value={legajo}
+                    onChange={e => { setLegajo(e.target.value); setEmpleadoCargado(false); setErrorLegajo(""); }}
+                    onKeyDown={e => { if (e.key === "Enter") handleBuscarEmpleado(); }}
+                    className="input-base" placeholder="Ej: 1234 — Enter para buscar"
+                  />
+                </InputField>
+              </div>
+              <button
+                onClick={() => handleBuscarEmpleado()}
+                disabled={buscandoEmpleado || !legajo.trim()}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-xl transition whitespace-nowrap"
+              >
+                {buscandoEmpleado ? "Buscando..." : "🔍 Buscar"}
+              </button>
+            </div>
+
+            {errorLegajo && (
+              <p className="text-sm text-red-600 dark:text-red-400">⚠️ {errorLegajo}</p>
+            )}
+
+            {empleadoCargado && (
+              <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl px-4 py-2">
+                <span>✅</span>
+                <span>Datos del agente cargados correctamente.</span>
+                {reingresoAutoDetectado && (
+                  <span className="ml-2 bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 text-xs font-semibold px-2 py-0.5 rounded-full">
+                    Reingreso detectado automáticamente
+                  </span>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* ── Sección: Datos del agente (readonly si vienen de Firestore) ── */}
           <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 space-y-4">
             <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700 pb-2">
               Datos del agente
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <InputField label="Legajo" id="legajo" required>
-                <input id="legajo" type="text" value={legajo} onChange={e => setLegajo(e.target.value)}
-                  className="input-base" placeholder="Ej: 1234" />
+              <InputField label="Nombre completo" id="nombre" required readOnly={empleadoCargado}>
+                <input id="nombre" type="text" value={nombreCompleto}
+                  onChange={e => setNombreCompleto(e.target.value)}
+                  className={`input-base ${empleadoCargado ? "bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300" : ""}`}
+                  placeholder="Apellido, Nombre"
+                  readOnly={empleadoCargado}
+                />
               </InputField>
-              <InputField label="Nombre completo" id="nombre" required>
-                <input id="nombre" type="text" value={nombreCompleto} onChange={e => setNombreCompleto(e.target.value)}
-                  className="input-base" placeholder="Apellido, Nombre" />
+              <InputField label="Cargo / Función" id="cargo" readOnly={empleadoCargado}>
+                <input id="cargo" type="text" value={cargo}
+                  onChange={e => setCargo(e.target.value)}
+                  className={`input-base ${empleadoCargado ? "bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300" : ""}`}
+                  placeholder="Ej: Administrativo"
+                  readOnly={empleadoCargado}
+                />
               </InputField>
-              <InputField label="Cargo" id="cargo">
-                <input id="cargo" type="text" value={cargo} onChange={e => setCargo(e.target.value)}
-                  className="input-base" placeholder="Ej: Administrativo" />
+              <InputField label="Área / Secretaría" id="area" readOnly={empleadoCargado}>
+                <input id="area" type="text" value={area}
+                  onChange={e => setArea(e.target.value)}
+                  className={`input-base ${empleadoCargado ? "bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300" : ""}`}
+                  placeholder="Ej: Sec. de Salud"
+                  readOnly={empleadoCargado}
+                />
               </InputField>
-              <InputField label="Área / Secretaría" id="area">
-                <input id="area" type="text" value={area} onChange={e => setArea(e.target.value)}
-                  className="input-base" placeholder="Ej: Sec. de Salud" />
-              </InputField>
-              <InputField label="Convenio" id="convenio" required>
-                <select id="convenio" value={convenio} onChange={e => setConvenio(e.target.value)} className="input-base">
+              <InputField label="Convenio" id="convenio" required readOnly={empleadoCargado}>
+                <select id="convenio" value={convenio}
+                  onChange={e => setConvenio(e.target.value)}
+                  className="input-base"
+                  disabled={empleadoCargado}
+                >
                   {CONVENIOS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </InputField>
-              <InputField label="Fecha de ingreso" id="fechaIngreso" required>
-                <input id="fechaIngreso" type="date" value={fechaIngreso} onChange={e => setFechaIngreso(e.target.value)}
-                  className="input-base" />
+              <InputField label="Fecha de ingreso" id="fechaIngreso" required readOnly={empleadoCargado}>
+                <input id="fechaIngreso" type="date" value={fechaIngreso}
+                  onChange={e => setFechaIngreso(e.target.value)}
+                  className={`input-base ${empleadoCargado ? "bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300" : ""}`}
+                  readOnly={empleadoCargado}
+                />
               </InputField>
               <InputField label="Año vacacional" id="anio" required>
-                <input id="anio" type="number" value={anioVacacional} onChange={e => setAnioVacacional(e.target.value)}
-                  className="input-base" min="2020" max="2099" />
+                <input id="anio" type="number" value={anioVacacional}
+                  onChange={e => handleAnioChange(e.target.value)}
+                  className="input-base" min="2020" max="2099"
+                />
               </InputField>
               {convenio === "Municipal" && (
                 <InputField label="¿Cargo jerárquico?" id="jerarquico">
                   <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                    <input type="checkbox" checked={esJerarquico} onChange={e => setEsJerarquico(e.target.checked)}
-                      className="w-4 h-4 rounded" />
+                    <input type="checkbox" checked={esJerarquico} onChange={e => setEsJerarquico(e.target.checked)} className="w-4 h-4 rounded" />
                     <span className="text-sm text-gray-600 dark:text-gray-300">Sí, es cargo jerárquico</span>
                   </label>
                 </InputField>
@@ -310,27 +450,52 @@ export default function SolicitudVacaciones() {
             </h2>
 
             {/* Reingreso */}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={esReingreso} onChange={e => { setEsReingreso(e.target.checked); if (e.target.checked) setEsCambioConvenio(false); }}
-                className="w-4 h-4 rounded" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Reingreso (dejó de trabajar y volvió)
-              </span>
-            </label>
-            {esReingreso && (
-              <div className="ml-6 mt-2">
-                <InputField label="Fecha de reingreso" id="fechaReingreso" required
-                  hint="Se calculará el proporcional según la grilla oficial.">
-                  <input id="fechaReingreso" type="date" value={fechaReingreso} onChange={e => setFechaReingreso(e.target.value)}
-                    className="input-base max-w-xs" />
-                </InputField>
-              </div>
-            )}
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={esReingreso}
+                  onChange={e => { setEsReingreso(e.target.checked); if (e.target.checked) setEsCambioConvenio(false); }}
+                  className="w-4 h-4 rounded"
+                />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Reingreso (dejó de trabajar y volvió)
+                </span>
+                {reingresoAutoDetectado && (
+                  <span className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 px-2 py-0.5 rounded-full font-semibold">
+                    Auto-detectado
+                  </span>
+                )}
+              </label>
+              {esReingreso && (
+                <div className="ml-6 mt-3 space-y-2">
+                  <InputField label="Fecha de reingreso" id="fechaReingreso" required
+                    readOnly={reingresoAutoDetectado}
+                    hint={reingresoAutoDetectado
+                      ? "Cargada automáticamente desde el legajo. El proporcional se calcula según la grilla oficial."
+                      : "Se calculará el proporcional según la grilla oficial."
+                    }>
+                    <input id="fechaReingreso" type="date" value={fechaReingreso}
+                      onChange={e => setFechaReingreso(e.target.value)}
+                      className={`input-base max-w-xs ${reingresoAutoDetectado ? "bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300" : ""}`}
+                      readOnly={reingresoAutoDetectado}
+                    />
+                  </InputField>
+                  {fechaIngreso && fechaReingreso && (
+                    <p className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg px-3 py-2">
+                      📌 La antigüedad se calcula desde la fecha de ingreso original ({fechaIngreso}).
+                      El proporcional aplica solo para el período {anioVacacional}.
+                      A partir del año siguiente se usan los años completos de antigüedad.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Cambio de convenio */}
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={esCambioConvenio} onChange={e => { setEsCambioConvenio(e.target.checked); if (e.target.checked) setEsReingreso(false); }}
-                className="w-4 h-4 rounded" />
+              <input type="checkbox" checked={esCambioConvenio}
+                onChange={e => { setEsCambioConvenio(e.target.checked); if (e.target.checked) setEsReingreso(false); }}
+                className="w-4 h-4 rounded"
+              />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Cambio de convenio en el año vacacional
               </span>
@@ -358,7 +523,8 @@ export default function SolicitudVacaciones() {
           {/* ── Botón calcular ── */}
           <button
             onClick={handleCalcular}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition text-base"
+            disabled={!fechaIngreso}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl transition text-base"
           >
             🧮 Calcular días correspondientes
           </button>
@@ -368,7 +534,6 @@ export default function SolicitudVacaciones() {
             <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-2xl p-5 space-y-4">
               <h3 className="font-semibold text-indigo-800 dark:text-indigo-200">Resultado del cálculo</h3>
 
-              {/* Fila principal */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                 <div className="bg-white dark:bg-gray-800 rounded-xl p-3 text-center shadow-sm">
                   <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Antigüedad</p>
@@ -387,11 +552,9 @@ export default function SolicitudVacaciones() {
                 </div>
               </div>
 
-              {/* Saldo de días */}
+              {/* Saldo */}
               {cargandoSaldo && (
-                <p className="text-xs text-indigo-500 dark:text-indigo-400 animate-pulse">
-                  Consultando saldo de días anteriores...
-                </p>
+                <p className="text-xs text-indigo-500 dark:text-indigo-400 animate-pulse">Consultando saldo de días anteriores...</p>
               )}
               {saldo && !cargandoSaldo && (
                 <div className={`rounded-xl p-4 border ${
@@ -405,16 +568,9 @@ export default function SolicitudVacaciones() {
                     Saldo del período {anioVacacional}
                   </p>
                   <div className="flex gap-6 flex-wrap text-sm">
-                    <span>
-                      <span className="font-medium text-gray-700 dark:text-gray-200">Total: </span>
-                      <span className="font-bold">{saldo.diasCorresponden} días</span>
-                    </span>
-                    <span>
-                      <span className="font-medium text-gray-700 dark:text-gray-200">Ya usados: </span>
-                      <span className="font-bold text-amber-600 dark:text-amber-400">{saldo.diasUsados} días</span>
-                    </span>
-                    <span>
-                      <span className="font-medium text-gray-700 dark:text-gray-200">Disponibles: </span>
+                    <span><span className="font-medium text-gray-700 dark:text-gray-200">Total: </span><span className="font-bold">{saldo.diasCorresponden} días</span></span>
+                    <span><span className="font-medium text-gray-700 dark:text-gray-200">Ya usados: </span><span className="font-bold text-amber-600 dark:text-amber-400">{saldo.diasUsados} días</span></span>
+                    <span><span className="font-medium text-gray-700 dark:text-gray-200">Disponibles: </span>
                       <span className={`font-bold ${saldo.diasDisponibles === 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
                         {saldo.diasDisponibles} días
                       </span>
@@ -433,7 +589,6 @@ export default function SolicitudVacaciones() {
                 </div>
               )}
 
-              {/* Notas de casos especiales */}
               {calculo.caso === "reingreso" && (
                 <p className="text-xs text-indigo-600 dark:text-indigo-300">
                   📌 Proporcional por reingreso: {calculo.mesesTrabajados} mes(es) trabajados en {anioVacacional}.
@@ -456,13 +611,11 @@ export default function SolicitudVacaciones() {
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <InputField label="Días solicitados" id="diasSol" required
-                  hint={
-                    saldo
-                      ? `Disponibles: ${saldo.diasDisponibles} de ${saldo.diasCorresponden} días ${calculo.tipo}`
-                      : `Máximo: ${calculo.dias} días ${calculo.tipo}`
+                  hint={saldo
+                    ? `Disponibles: ${saldo.diasDisponibles} de ${saldo.diasCorresponden} días ${calculo.tipo}`
+                    : `Máximo: ${calculo.dias} días ${calculo.tipo}`
                   }>
-                  <input
-                    id="diasSol" type="number" min="1"
+                  <input id="diasSol" type="number" min="1"
                     max={saldo ? saldo.diasDisponibles : calculo.dias}
                     value={diasSolicitados}
                     onChange={e => setDiasSolicitados(e.target.value)}
@@ -471,24 +624,18 @@ export default function SolicitudVacaciones() {
                   />
                 </InputField>
                 <InputField label="Fecha desde" id="fechaDesde">
-                  <input id="fechaDesde" type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)}
-                    className="input-base" />
+                  <input id="fechaDesde" type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="input-base" />
                 </InputField>
                 <InputField label="Fecha hasta" id="fechaHasta">
-                  <input id="fechaHasta" type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)}
-                    className="input-base" />
+                  <input id="fechaHasta" type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="input-base" />
                 </InputField>
               </div>
               <InputField label="Observaciones" id="obs">
                 <textarea id="obs" value={observaciones} onChange={e => setObservaciones(e.target.value)}
                   className="input-base resize-none" rows={3} placeholder="Observaciones opcionales..." />
               </InputField>
-
-              <button
-                onClick={handleGuardar}
-                disabled={guardando}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition text-base"
-              >
+              <button onClick={handleGuardar} disabled={guardando}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition text-base">
                 {guardando ? "Guardando..." : "💾 Guardar solicitud"}
               </button>
             </section>
