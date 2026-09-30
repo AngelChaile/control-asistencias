@@ -14,6 +14,7 @@ export default function Empleados() {
   const [filter, setFilter] = useState({ legajo: "", nombre: "", area: "" });
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [empleadoDetalle, setEmpleadoDetalle] = useState(null);
   const formularioRef = useRef(null);
   const legajoRef = useRef(null);
@@ -140,6 +141,7 @@ export default function Empleados() {
       }
       
       resetForm();
+      setMostrarFormulario(false);
       await loadFirstPage({ area: filter.area || null });
     } catch (err) {
       console.error(err);
@@ -174,8 +176,23 @@ export default function Empleados() {
     setEditingId(null);
   }
 
+  function handleCrear() {
+    resetForm();
+    setMostrarFormulario(true);
+    requestAnimationFrame(() => {
+      formularioRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      legajoRef.current?.focus();
+    });
+  }
+
+  function handleCancelar() {
+    resetForm();
+    setMostrarFormulario(false);
+  }
+
   function handleEditar(emp) {
     setEditingId(emp.id);
+    setMostrarFormulario(true);
     setNuevo({
       legajo: emp.legajo || "",
       nombre: emp.nombre || "",
@@ -317,7 +334,7 @@ export default function Empleados() {
 
       <div className="space-y-6">
         {/* Formulario */}
-          <div ref={formularioRef} className="card p-6 scroll-mt-6">
+          {mostrarFormulario && <div ref={formularioRef} className="card p-6 scroll-mt-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {editingId ? "✏️ Editar Empleado" : "👥 Agregar Nuevo Empleado"}
           </h3>
@@ -546,18 +563,16 @@ export default function Empleados() {
               <button type="submit" className="btn-primary flex-1">
                 {editingId ? "💾 Guardar Cambios" : "➕ Crear Empleado"}
               </button>
-              {editingId && (
-                <button 
-                  type="button" 
-                  onClick={resetForm} 
-                  className="btn-secondary px-4 py-2"
-                >
-                  Cancelar
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleCancelar}
+                className="btn-secondary px-4 py-2"
+              >
+                Cancelar
+              </button>
             </div>
           </form>
-        </div>
+        </div>}
 
         {/* Lista de Empleados */}
         <div className="card p-6">
@@ -570,6 +585,11 @@ export default function Empleados() {
               <ExportExcel data={filtered} filename="empleados_completo.xlsx">
                 📊 Exportar
               </ExportExcel>
+              {!mostrarFormulario && (
+                <button onClick={handleCrear} className="btn-primary px-4 py-2">
+                  ➕ Crear empleado
+                </button>
+              )}
             </div>
           </div>
 
