@@ -1,217 +1,125 @@
 // src/pages/RRHH/Vacaciones/FormularioImpresion.jsx
-// Vista de impresión del formulario de Licencia Anual Ordinaria
 import React, { useRef } from "react";
 
-function formatFecha(str) {
-  if (!str) return "—";
-  // yyyy-mm-dd → dd/mm/yyyy
-  const m = String(str).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
-  return str;
+function fechaEs(valor) {
+  if (!valor) return "-";
+  const coincidencia = String(valor).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!coincidencia) return String(valor);
+  return new Date(Number(coincidencia[1]), Number(coincidencia[2]) - 1, Number(coincidencia[3])).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+function parteFecha(valor, parte) {
+  const coincidencia = String(valor || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!coincidencia) return "-";
+  if (parte === "dia") return coincidencia[3];
+  if (parte === "mes") return coincidencia[2];
+  return coincidencia[1];
+}
+
+function diaSemana(valor) {
+  const coincidencia = String(valor || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!coincidencia) return "-";
+  return new Date(Number(coincidencia[1]), Number(coincidencia[2]) - 1, Number(coincidencia[3])).toLocaleDateString("es-AR", { weekday: "short" }).replace(".", "");
+}
+
+const seccion = { border: "1px solid #1f2937", marginBottom: 14 };
+const encabezadoSeccion = { background: "#e5e7eb", borderBottom: "1px solid #1f2937", fontWeight: 700, fontSize: 11, padding: "6px 10px", textTransform: "uppercase" };
+
 export default function FormularioImpresion({ solicitud, onVolver }) {
-  const printRef = useRef();
-
-  const handlePrint = () => {
-    const contenido = printRef.current.innerHTML;
-    const ventana = window.open("", "_blank", "width=900,height=700");
-    ventana.document.write(`
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8" />
-        <title>Licencia Anual Ordinaria - ${solicitud.nroSolicitud}</title>
-        <style>
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #fff; }
-          .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 18mm; }
-          h1 { font-size: 16px; text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-          .subtitulo { text-align: center; font-size: 11px; color: #444; margin-bottom: 20px; }
-          .nro { text-align: right; font-size: 11px; margin-bottom: 16px; }
-          .seccion { margin-bottom: 16px; }
-          .seccion-titulo { font-size: 11px; font-weight: bold; text-transform: uppercase;
-            border-bottom: 1px solid #000; padding-bottom: 3px; margin-bottom: 10px; letter-spacing: 0.5px; }
-          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
-          .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 20px; }
-          .campo { margin-bottom: 8px; }
-          .campo label { font-size: 10px; color: #555; display: block; margin-bottom: 2px; }
-          .campo .valor { border-bottom: 1px solid #999; min-height: 20px; padding: 2px 4px; font-size: 12px; }
-          .resaltado { background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; padding: 8px 12px;
-            display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-          .resaltado .num { font-size: 28px; font-weight: bold; }
-          .resaltado .desc { font-size: 11px; color: #333; }
-          .firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; }
-          .firma-box { text-align: center; }
-          .firma-linea { border-top: 1px solid #000; margin-top: 60px; padding-top: 6px; font-size: 11px; }
-          .obs { border: 1px solid #ccc; border-radius: 4px; min-height: 50px; padding: 8px; font-size: 11px; color: #333; }
-          .badge { display: inline-block; background: #e8e8e8; border-radius: 4px; padding: 2px 8px;
-            font-size: 10px; font-weight: bold; text-transform: uppercase; }
-          .pie { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px;
-            font-size: 9px; color: #888; text-align: center; }
-          @media print {
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .page { padding: 15mm 15mm; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="page">${contenido}</div>
-      </body>
-      </html>
-    `);
-    ventana.document.close();
-    ventana.focus();
-    setTimeout(() => { ventana.print(); ventana.close(); }, 400);
-  };
-
+  const printRef = useRef(null);
   const {
-    nroSolicitud, legajo, nombreCompleto, cargo, area, convenio,
-    esJerarquico, fechaIngreso, anioVacacional,
-    diasCorresponden, tipoDias, diasSolicitados,
-    fechaDesde, fechaHasta, observaciones,
-    esReingreso, fechaReingreso, esCambioConvenio,
-    calculoDetalle,
+    nroSolicitud, legajo, nombreCompleto, area, convenio, esJerarquico,
+    fechaIngreso, anioVacacional, diasCorresponden, tipoDias, diasSolicitados,
+    fechaDesde, fechaHasta, observaciones, esReingreso, fechaReingreso,
+    esCambioConvenio, calculoDetalle,
   } = solicitud;
 
+  const imprimir = () => {
+    const ventana = window.open("", "_blank", "width=900,height=900");
+    if (!ventana) return;
+    ventana.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>Licencia Anual Ordinaria - ${nroSolicitud}</title><style>
+      *{box-sizing:border-box}body{margin:0;background:#fff;color:#111827;font-family:Arial,Helvetica,sans-serif;font-size:12px}.page{width:210mm;min-height:297mm;margin:0 auto;padding:15mm 14mm}.no-print{display:none!important}.auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.period-table{border-collapse:collapse;width:100%}.period-table td,.period-table th{border:1px solid #1f2937;padding:5px;text-align:center}.period-table th{background:#e5e7eb;font-weight:700}@media print{.page{margin:0;padding:12mm 13mm}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+    </style></head><body><main class="page">${printRef.current.innerHTML}</main></body></html>`);
+    ventana.document.close();
+    ventana.focus();
+    ventana.onafterprint = () => ventana.close();
+    setTimeout(() => ventana.print(), 350);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
-      {/* Barra de acciones (no se imprime) */}
-      <div className="max-w-4xl mx-auto mb-4 flex gap-3 print:hidden">
-        <button
-          onClick={onVolver}
-          className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-2 px-4 rounded-xl transition"
-        >
-          ← Volver
-        </button>
-        <button
-          onClick={handlePrint}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-xl transition"
-        >
-          🖨️ Imprimir / Guardar PDF
-        </button>
+    <div className="min-h-screen bg-slate-100 p-4 print:bg-white">
+      <div className="mx-auto mb-4 flex max-w-4xl gap-3 print:hidden">
+        <button onClick={onVolver} className="rounded-xl bg-slate-200 px-4 py-2 font-semibold text-slate-800 hover:bg-slate-300">← Volver</button>
+        <button onClick={imprimir} className="rounded-xl bg-blue-700 px-5 py-2 font-semibold text-white hover:bg-blue-800">🖨️ Imprimir / Guardar PDF</button>
       </div>
 
-      {/* Formulario imprimible */}
-      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-2xl p-8 print:shadow-none print:rounded-none">
+      <div className="mx-auto max-w-4xl rounded-2xl bg-white p-7 shadow-lg print:rounded-none print:shadow-none">
         <div ref={printRef}>
-          {/* Encabezado */}
-          <h1 style={{ fontSize: 18, textAlign: "center", textTransform: "uppercase", fontWeight: "bold", letterSpacing: 1, marginBottom: 4 }}>
-            Licencia Anual Ordinaria
-          </h1>
-          <p style={{ textAlign: "center", fontSize: 12, color: "#555", marginBottom: 20 }}>
-            Municipalidad — Solicitud de Vacaciones
-          </p>
-          <p style={{ textAlign: "right", fontSize: 11, marginBottom: 16 }}>
-            <strong>N° Solicitud:</strong> {nroSolicitud} &nbsp;|&nbsp;
-            <strong>Período:</strong> {anioVacacional}
-          </p>
-
-          {/* Datos del agente */}
-          <div style={{ marginBottom: 16 }}>
-            <p style={{ fontWeight: "bold", fontSize: 11, textTransform: "uppercase", borderBottom: "1px solid #000", paddingBottom: 3, marginBottom: 10 }}>
-              Datos del agente
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
-              <Campo label="Apellido y Nombre" valor={nombreCompleto} />
-              <Campo label="Legajo" valor={legajo} />
-              <Campo label="Cargo" valor={cargo || "—"} />
-              <Campo label="Área / Secretaría" valor={area || "—"} />
-              <Campo label="Convenio" valor={`${convenio}${esJerarquico ? " (Jerárquico)" : ""}`} />
-              <Campo label="Fecha de ingreso" valor={formatFecha(fechaIngreso)} />
+          <header style={{ borderBottom: "3px double #111827", paddingBottom: 8, marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div style={{ width: 42, height: 48, border: "1px solid #111827", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 22 }}>M</div>
+                <div><p style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>MEMO N°</p><p style={{ margin: "3px 0 0", fontWeight: 700 }}>Solicitud N°: {nroSolicitud}</p></div>
+              </div>
+              <div style={{ textAlign: "right", fontSize: 11 }}><p style={{ margin: 0 }}>SECRETARÍA DE ADMINISTRACIÓN</p><p style={{ margin: "3px 0 0", fontWeight: 800, fontSize: 12 }}>DIRECCIÓN DE RECURSOS HUMANOS</p></div>
             </div>
+          </header>
+
+          <h1 style={{ margin: "0 0 16px", textAlign: "center", fontSize: 20, letterSpacing: ".2px" }}>Formulario de Solicitud de Licencia Anual Ordinaria</h1>
+
+          <section style={seccion}>
+            <div style={encabezadoSeccion}>Datos personales</div>
+            <div style={{ display: "grid", gridTemplateColumns: "170px 1fr", gap: 18, padding: "14px 12px" }}>
+              <p style={{ margin: 0 }}><strong>Legajo:</strong> {legajo}</p>
+              <p style={{ margin: 0 }}><strong>Apellido y nombres:</strong> {nombreCompleto}</p>
+            </div>
+          </section>
+
+          <section style={seccion}>
+            <div style={encabezadoSeccion}>Lugar donde presta servicios</div>
+            <div style={{ padding: "12px" }}>
+              <p style={{ margin: "0 0 9px" }}><strong>Área / dependencia:</strong> {area || "-"}</p>
+              <p style={{ margin: "0 0 9px" }}><strong>Convenio:</strong> {convenio || "-"}{esJerarquico ? " (Jerárquico)" : ""}</p>
+              <p style={{ margin: 0 }}><strong>Fecha de ingreso:</strong> {fechaEs(fechaIngreso)}</p>
+            </div>
+          </section>
+
+          <section style={{ ...seccion, maxWidth: "62%" }}>
+            <div style={encabezadoSeccion}>Licencia anual ordinaria</div>
+            <div style={{ padding: "14px 16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}><span>Anual: ☒</span><span>Año: <strong>{anioVacacional}</strong></span></div>
+              <p style={{ margin: "0 0 14px" }}>Cantidad de días solicitados: <strong>{diasSolicitados}</strong> ({tipoDias || "días"})</p>
+              <table className="period-table"><thead><tr><th>Duración</th><th>Día</th><th>Mes</th><th>Año</th></tr></thead><tbody>
+                <tr><td>Desde</td><td>{parteFecha(fechaDesde, "dia")} ({diaSemana(fechaDesde)})</td><td>{parteFecha(fechaDesde, "mes")}</td><td>{parteFecha(fechaDesde, "anio")}</td></tr>
+                <tr><td>Hasta</td><td>{parteFecha(fechaHasta, "dia")} ({diaSemana(fechaHasta)})</td><td>{parteFecha(fechaHasta, "mes")}</td><td>{parteFecha(fechaHasta, "anio")}</td></tr>
+              </tbody></table>
+              <p style={{ margin: "12px 0 0", fontSize: 10 }}>Días que corresponden al período: {diasCorresponden} ({tipoDias || "-"}).</p>
+              {(esReingreso || esCambioConvenio) && <p style={{ margin: "7px 0 0", fontSize: 10 }}><strong>Situación especial:</strong> {esReingreso ? `Reingreso: ${fechaEs(fechaReingreso)}. ` : ""}{esCambioConvenio ? `Cambio de convenio. ${calculoDetalle?.desglose ? "Cálculo proporcional aplicado." : ""}` : ""}</p>}
+              <div style={{ borderTop: "1px solid #111827", margin: "42px 20px 0", paddingTop: 6, textAlign: "center" }}>Firma del solicitante</div>
+            </div>
+          </section>
+
+          {observaciones && <section style={seccion}><div style={encabezadoSeccion}>Observaciones</div><p style={{ minHeight: 36, margin: 0, padding: "10px 12px" }}>{observaciones}</p></section>}
+
+          <div className="auth-grid">
+            <PanelAutorizacion titulo="A completar por la autoridad del área a la que pertenece" opciones={["Autorizada", "Rechazada por razones de servicio"]} />
+            <PanelAutorizacion titulo="A completar por la Dirección de RR.HH." opciones={["Autorizada", "Interrumpida por otros motivos"]} />
           </div>
-
-          {/* Casos especiales */}
-          {(esReingreso || esCambioConvenio) && (
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontWeight: "bold", fontSize: 11, textTransform: "uppercase", borderBottom: "1px solid #000", paddingBottom: 3, marginBottom: 10 }}>
-                Situación especial
-              </p>
-              {esReingreso && (
-                <p style={{ fontSize: 11, marginBottom: 6 }}>
-                  <strong>Reingreso:</strong> {formatFecha(fechaReingreso)} —
-                  Proporcional por {calculoDetalle?.mesesTrabajados ?? "—"} mes(es) trabajados.
-                </p>
-              )}
-              {esCambioConvenio && calculoDetalle?.desglose && (
-                <p style={{ fontSize: 11, marginBottom: 6 }}>
-                  <strong>Cambio de convenio:</strong>{" "}
-                  {calculoDetalle.desglose.convenioAnterior} ({calculoDetalle.desglose.mesesAnterior} meses, {calculoDetalle.desglose.diasAnterior} días) +{" "}
-                  {calculoDetalle.desglose.convenioNuevo} ({calculoDetalle.desglose.mesesNuevo} meses, {calculoDetalle.desglose.diasNuevo} días)
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Días de vacaciones */}
-          <div style={{ marginBottom: 16 }}>
-            <p style={{ fontWeight: "bold", fontSize: 11, textTransform: "uppercase", borderBottom: "1px solid #000", paddingBottom: 3, marginBottom: 10 }}>
-              Licencia
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px 16px" }}>
-              <Campo label="Días que corresponden al período" valor={`${diasCorresponden} (${tipoDias})`} />
-              <Campo
-                label={`Días de esta licencia (${tipoDias})`}
-                valor={String(diasSolicitados)}
-              />
-              <Campo label="Fecha desde" valor={formatFecha(fechaDesde)} />
-              <Campo label="Fecha hasta" valor={formatFecha(fechaHasta)} />
-            </div>
-            <div style={{ marginTop: 8, fontSize: 10, color: "#555", background: "#f8f8f8", border: "1px solid #ddd", borderRadius: 4, padding: "6px 10px" }}>
-              {tipoDias === "habiles"
-                ? `Los ${diasSolicitados} días son hábiles (excluye sábados, domingos y feriados nacionales).`
-                : `Los ${diasSolicitados} días son corridos (días calendario).`
-              }
-            </div>
+          <div className="auth-grid" style={{ marginTop: 54 }}>
+            <Firma texto="Autorización del Director / Secretario / Subsecretario" />
+            <Firma texto="Autorización de la Dirección de RR.HH." />
           </div>
-
-          {/* Observaciones */}
-          {observaciones && (
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontWeight: "bold", fontSize: 11, textTransform: "uppercase", borderBottom: "1px solid #000", paddingBottom: 3, marginBottom: 8 }}>
-                Observaciones
-              </p>
-              <p style={{ fontSize: 11, border: "1px solid #ccc", borderRadius: 4, padding: "8px 10px", minHeight: 40 }}>
-                {observaciones}
-              </p>
-            </div>
-          )}
-
-          {/* Firmas */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, marginTop: 50 }}>
-            <FirmaBox titulo="Firma del Responsable del Área" subtitulo="Aclaración y sello" />
-            <FirmaBox titulo="Firma del Empleado" subtitulo="Aclaración" />
-          </div>
-
-          {/* Pie */}
-          <p style={{ marginTop: 30, borderTop: "1px solid #ccc", paddingTop: 10, fontSize: 9, color: "#888", textAlign: "center" }}>
-            Documento generado por el Sistema de Control de Asistencias — {new Date().toLocaleDateString("es-AR")}
-          </p>
+          <div style={{ borderTop: "1px solid #9ca3af", marginTop: 26, paddingTop: 8, textAlign: "center", color: "#4b5563", fontSize: 9 }}>Documento generado por el Sistema de Control de Asistencias - {new Date().toLocaleDateString("es-AR")}</div>
         </div>
       </div>
     </div>
   );
 }
 
-function Campo({ label, valor }) {
-  return (
-    <div style={{ marginBottom: 8 }}>
-      <p style={{ fontSize: 10, color: "#666", marginBottom: 2 }}>{label}</p>
-      <p style={{ borderBottom: "1px solid #999", minHeight: 20, padding: "2px 4px", fontSize: 12 }}>
-        {valor}
-      </p>
-    </div>
-  );
+function PanelAutorizacion({ titulo, opciones }) {
+  return <section style={{ ...seccion, marginBottom: 0, background: "#f3f4f6", minHeight: 160 }}><div style={encabezadoSeccion}>{titulo}</div><div style={{ padding: "14px 12px", fontSize: 11 }}><p style={{ margin: "0 0 12px" }}>Esta licencia se encuentra:</p>{opciones.map(opcion => <p key={opcion} style={{ margin: "0 0 10px", textAlign: "right" }}>{opcion} &nbsp; □</p>)}<p style={{ margin: "16px 0 0" }}>Especificar: __________________________________</p><p style={{ margin: "10px 0 0" }}>____________________________________________</p></div></section>;
 }
 
-function FirmaBox({ titulo, subtitulo }) {
-  return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{ borderTop: "1px solid #000", marginTop: 70, paddingTop: 6 }}>
-        <p style={{ fontSize: 11, fontWeight: "bold" }}>{titulo}</p>
-        <p style={{ fontSize: 10, color: "#666" }}>{subtitulo}</p>
-      </div>
-    </div>
-  );
+function Firma({ texto }) {
+  return <div style={{ borderTop: "1px solid #111827", paddingTop: 6, textAlign: "center", fontSize: 10 }}>{texto}</div>;
 }
