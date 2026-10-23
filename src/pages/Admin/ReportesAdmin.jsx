@@ -1,9 +1,43 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ExportExcel from "../../components/ExportExcel";
 import { fetchAsistenciasByRange } from "../../utils/asistencia";
 import { formatAsistenciasMensuales } from "../../utils/excelFormats";
 import { formatearHora24 } from "../../utils/fechas";
+
+function minutosDesdeHora(hora) {
+  const partes = String(hora || "").match(/^(\d{1,2}):(\d{2})/);
+  return partes ? Number(partes[1]) * 60 + Number(partes[2]) : -1;
+}
+
+function agruparPorJornada(registros) {
+  const grupos = new Map();
+
+  registros.forEach((registro) => {
+    const clave = `${registro.legajo || "sin-legajo"}|${registro.fecha || "sin-fecha"}`;
+    const existente = grupos.get(clave) || {
+      clave,
+      nombre: registro.nombre,
+      apellido: registro.apellido,
+      legajo: registro.legajo,
+      fecha: registro.fecha,
+      lugarTrabajo: registro.lugarTrabajo,
+      entrada: null,
+      salida: null,
+    };
+    const minutos = minutosDesdeHora(registro.hora);
+
+    if (registro.tipo === "ENTRADA" && (!existente.entrada || minutos < minutosDesdeHora(existente.entrada.hora))) {
+      existente.entrada = registro;
+    }
+    if (registro.tipo === "SALIDA" && (!existente.salida || minutos > minutosDesdeHora(existente.salida.hora))) {
+      existente.salida = registro;
+    }
+    grupos.set(clave, existente);
+  });
+
+  return [...grupos.values()];
+}
 
 export default function ReportesAdmin() {
   const { user } = useAuth();
@@ -16,6 +50,7 @@ export default function ReportesAdmin() {
   });
   const [result, setResult] = useState([]);
   const [loading, setLoading] = useState(false);
+  const jornadas = useMemo(() => agruparPorJornada(result), [result]);
 
   // Función para normalizar filtros (trim + preparar para búsqueda)
   const normalizeFilters = (filters) => {
@@ -197,8 +232,8 @@ async function handleSearch() {
             {/* Resumen del Reporte */}
             <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{result.length}</div>
-                <div className="text-sm text-gray-600">Total registros</div>
+                <div className="text-2xl font-bold text-gray-900">{jornadas.length}</div>
+                <div className="text-sm text-gray-600">Jornadas</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
@@ -229,56 +264,50 @@ async function handleSearch() {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrada</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salida</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {result.map((r) => (
-                    <tr key={r.id || `${r.legajo}-${r.fecha}-${r.hora}`} className="hover:bg-gray-50 transition-colors">
+                  {jornadas.map((jornada) => (
+                    <tr key={jornada.clave} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="shrink-0 h-10 w-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
                             <span className="text-gray-600 font-medium text-sm">
-                              {r.nombre?.[0]}{r.apellido?.[0]}
+                              {jornada.nombre?.[0]}{jornada.apellido?.[0]}
                             </span>
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
-                              {r.nombre} {r.apellido}
+                              {jornada.nombre} {jornada.apellido}
                             </div>
-                            <div className="text-sm text-gray-500">Legajo: {r.legajo}</div>
+                            <div className="text-sm text-gray-500">Legajo: {jornada.legajo}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {r.fecha}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatearHora24(r.hora)}
+                        {jornada.fecha}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          r.tipo === 'ENTRADA' 
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {r.tipo}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {r.lugarTrabajo}
+                        {jornada.entrada ? (
+                          <div className="inline-flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+                            <span className="font-semibold">ENTRADA</span>
+                            <span className="font-mono font-bold">{formatearHora24(jornada.entrada.hora)}</span>
+                          </div>
+                        ) : <span className="text-sm text-gray-400">Sin registro</span>}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          r.justificado 
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {r.justificado ? 'Justificado' : 'Normal'}
-                        </span>
+                        {jornada.salida ? (
+                          <div className="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                            <span className="font-semibold">SALIDA</span>
+                            <span className="font-mono font-bold">{formatearHora24(jornada.salida.hora)}</span>
+                          </div>
+                        ) : <span className="text-sm text-gray-400">Sin registro</span>}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {jornada.lugarTrabajo}
                       </td>
                     </tr>
                   ))}
@@ -289,7 +318,7 @@ async function handleSearch() {
             {/* Pie del Reporte */}
             <div className="text-sm text-gray-600 text-center">
               Reporte generado el {new Date().toLocaleDateString('es-AR')} • 
-              Mostrando {result.length} registros
+              Mostrando {jornadas.length} jornadas agrupadas ({result.length} fichadas)
               {user?.rol === "admin" && ` • Área: ${user?.lugarTrabajo}`}
             </div>
           </div>
