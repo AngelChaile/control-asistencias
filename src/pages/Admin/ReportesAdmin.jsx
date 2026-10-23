@@ -293,7 +293,6 @@ async function handleSearch() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {jornada.entrada ? (
                           <div className="inline-flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
-                            <span className="font-semibold">ENTRADA</span>
                             <span className="font-mono font-bold">{formatearHora24(jornada.entrada.hora)}</span>
                           </div>
                         ) : <span className="text-sm text-gray-400">Sin registro</span>}
@@ -301,7 +300,6 @@ async function handleSearch() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {jornada.salida ? (
                           <div className="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">
-                            <span className="font-semibold">SALIDA</span>
                             <span className="font-mono font-bold">{formatearHora24(jornada.salida.hora)}</span>
                           </div>
                         ) : <span className="text-sm text-gray-400">Sin registro</span>}
