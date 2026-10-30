@@ -130,9 +130,6 @@ export default function Navbar({ darkMode, onToggleDarkMode }) {
               </div>
               <div className="hidden sm:block">
                 <div className="truncate text-lg font-semibold leading-tight text-slate-900">Control de Asistencias</div>
-                <div className="truncate text-xs capitalize leading-tight text-slate-500">
-                  {user.nombre} {user.apellido} • {user.rol === 'subsecretario' ? 'Subsecretario' : user.rol}
-                </div>
               </div>
             </div>
           </div>
