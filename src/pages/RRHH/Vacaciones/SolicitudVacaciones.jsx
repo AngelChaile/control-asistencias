@@ -221,7 +221,10 @@ export default function SolicitudVacaciones() {
         try {
           const saldoData = await fetchDiasDisponibles(legajo, Number(anioVacacional), resultado.dias);
           setSaldo(saldoData);
-        } catch { /* no crítico */ } finally {
+        } catch (errorSaldo) {
+          console.error("Error consultando saldo de vacaciones:", errorSaldo);
+          setError("No se pudo consultar el saldo de vacaciones. Volvé a calcular antes de guardar la solicitud.");
+        } finally {
           setCargandoSaldo(false);
         }
       }
@@ -239,13 +242,14 @@ export default function SolicitudVacaciones() {
     if (!legajo)         { setError("Ingresá el legajo."); return; }
     if (!nombreCompleto) { setError("Ingresá el nombre completo."); return; }
     if (!calculo)        { setError("Primero calculá los días correspondientes."); return; }
+    if (!saldo)          { setError("No se pudo confirmar el saldo disponible. Volvé a calcular antes de guardar."); return; }
     if (!fechaDesde || !fechaHasta) { setError("Seleccioná el rango de fechas de la licencia."); return; }
     if (!diasRango || diasRango.cantidad < 1) { setError("El rango de fechas no contiene días válidos."); return; }
 
     // Validar contra saldo disponible
-    const diasMax = saldo ? saldo.diasDisponibles : calculo.dias;
+    const diasMax = saldo.diasDisponibles;
     if (diasRango.cantidad > diasMax) {
-      const msg = saldo && saldo.diasUsados > 0
+      const msg = saldo.diasUsados > 0
         ? `El rango seleccionado consume ${diasRango.cantidad} días ${diasRango.tipo}, pero solo quedan ${saldo.diasDisponibles} disponibles (ya usó ${saldo.diasUsados}).`
         : `El rango seleccionado consume ${diasRango.cantidad} días ${diasRango.tipo}, pero solo corresponden ${calculo.dias}.`;
       setError(msg);
@@ -599,7 +603,7 @@ export default function SolicitudVacaciones() {
                   </div>
                   {saldo.solicitudesAnteriores.length > 0 && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      {saldo.solicitudesAnteriores.length} solicitud(es) previa(s) en este período.
+                      {saldo.solicitudesAnteriores.length} licencia(s) aprobada(s) previamente en este período.
                     </p>
                   )}
                   {saldo.diasDisponibles === 0 && (
@@ -661,7 +665,7 @@ export default function SolicitudVacaciones() {
 
               {/* Panel de resultado del rango — aparece en cuanto hay fechas válidas */}
               {diasRango && !errorRango && (() => {
-                const disponibles = saldo ? saldo.diasDisponibles : calculo.dias;
+                const disponibles = saldo?.diasDisponibles ?? 0;
                 const excede = diasRango.cantidad > disponibles;
                 const restanDespues = disponibles - diasRango.cantidad;
                 return (
@@ -724,7 +728,7 @@ export default function SolicitudVacaciones() {
 
               <button
                 onClick={handleGuardar}
-                disabled={guardando || !diasRango || errorRango || (diasRango && (saldo ? diasRango.cantidad > saldo.diasDisponibles : diasRango.cantidad > calculo.dias))}
+                disabled={guardando || !saldo || !diasRango || errorRango || (diasRango && diasRango.cantidad > saldo.diasDisponibles)}
                 className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white font-semibold py-3 rounded-xl transition text-base"
               >
                 {guardando ? "Guardando..." : "💾 Guardar solicitud"}

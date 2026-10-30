@@ -9,8 +9,8 @@ import {
   query,
   where,
   orderBy,
-  updateDoc,
   doc,
+  runTransaction,
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -31,10 +31,10 @@ export const TABLAS_CONVENIO = {
   Municipal: {
     tipo: "habiles",
     tramos: [
-      { desde: 1,  hasta: 4,   dias: 14, label: "1 AÑO O +"  },
-      { desde: 5,  hasta: 9,   dias: 21, label: "5 AÑOS O +" },
-      { desde: 10, hasta: 19,  dias: 28, label: "10 AÑOS O +" },
-      { desde: 20, hasta: 999, dias: 35, label: "20 AÑOS O +" },
+      { desde: 1,  hasta: 4,   dias: 14, label: "1 a 4 AÑOS"  },
+      { desde: 5,  hasta: 9,   dias: 21, label: "5 a 9 AÑOS" },
+      { desde: 10, hasta: 19,  dias: 28, label: "10 a 19 AÑOS" },
+      { desde: 20, hasta: 999, dias: 35, label: "20 AÑOS O MÁS" },
     ],
     // grilla[mes-1][tramoIndex] — mes 1..12, tramo 0..3
     grilla: [
@@ -56,9 +56,9 @@ export const TABLAS_CONVENIO = {
   Medico: {
     tipo: "corridos",
     tramos: [
-      { desde: 1,  hasta: 4,   dias: 20, label: "1 AÑO O +"  },
-      { desde: 5,  hasta: 9,   dias: 25, label: "5 AÑOS O +" },
-      { desde: 10, hasta: 999, dias: 30, label: "10 AÑOS O +" },
+      { desde: 1,  hasta: 4,   dias: 20, label: "1 a 4 AÑOS"  },
+      { desde: 5,  hasta: 9,   dias: 25, label: "5 a 9 AÑOS" },
+      { desde: 10, hasta: 999, dias: 30, label: "10 a 999 AÑOS" },
     ],
     grilla: [
       [ 1,  2,  2],  // mes 1
@@ -79,7 +79,7 @@ export const TABLAS_CONVENIO = {
   Radiologo: {
     tipo: "corridos",
     tramos: [
-      { desde: 1, hasta: 999, dias: 50, label: "1 AÑO O +" },
+      { desde: 1, hasta: 999, dias: 50, label: "1 AÑO O MÁS" },
     ],
     // Nota: la grilla de Radiólogos tiene valores > 12 meses (proporcional especial)
     grilla: [
@@ -101,8 +101,8 @@ export const TABLAS_CONVENIO = {
   Docente: {
     tipo: "corridos",
     tramos: [
-      { desde: 1,  hasta: 19,  dias: 30, label: "1 AÑO O +"  },
-      { desde: 20, hasta: 999, dias: 40, label: "20 AÑOS O +" },
+      { desde: 1,  hasta: 19,  dias: 30, label: "1 a 19 AÑOS"  },
+      { desde: 20, hasta: 999, dias: 40, label: "20 AÑOS O MÁS" },
     ],
     grilla: [
       [ 1,  2],  // mes 1
@@ -463,7 +463,49 @@ export async function fetchSolicitudesVacaciones({ legajo = "", area = "", anio 
  */
 export async function actualizarEstadoSolicitud(id, estado, observaciones = "") {
   const ref = doc(collection(db, "solicitudesVacaciones"), id);
-  await updateDoc(ref, { estado, observaciones, updatedAt: serverTimestamp() });
+
+  return runTransaction(db, async (transaction) => {
+    const solicitudSnap = await transaction.get(ref);
+    if (!solicitudSnap.exists()) throw new Error("La solicitud de vacaciones ya no existe.");
+
+    const solicitud = solicitudSnap.data();
+    if (solicitud.estado === estado) return { ...solicitud, estado };
+
+    // Sólo al aprobar se descuenta el saldo. Las pendientes no consumen días.
+    if (estado === "aprobada") {
+      const solicitudesRef = collection(db, "solicitudesVacaciones");
+      const solicitudesQuery = query(solicitudesRef, where("legajo", "==", String(solicitud.legajo)));
+      const solicitudesSnap = await transaction.get(solicitudesQuery);
+      const diasYaAprobados = solicitudesSnap.docs
+        .filter((item) => item.id !== id)
+        .map((item) => item.data())
+        .filter((item) => item.estado === "aprobada" && Number(item.anioVacacional) === Number(solicitud.anioVacacional))
+        .reduce((total, item) => total + (Number(item.diasSolicitados) || 0), 0);
+      const diasDisponibles = Math.max(0, (Number(solicitud.diasCorresponden) || 0) - diasYaAprobados);
+
+      if ((Number(solicitud.diasSolicitados) || 0) > diasDisponibles) {
+        throw new Error(`No se puede aprobar: el agente tiene ${diasDisponibles} día(s) disponible(s) para el período ${solicitud.anioVacacional}.`);
+      }
+
+      transaction.update(ref, {
+        estado,
+        observaciones,
+        diasDescontados: Number(solicitud.diasSolicitados) || 0,
+        saldoRestante: diasDisponibles - (Number(solicitud.diasSolicitados) || 0),
+        fechaAprobacion: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      return { ...solicitud, estado, diasDescontados: Number(solicitud.diasSolicitados) || 0, saldoRestante: diasDisponibles - (Number(solicitud.diasSolicitados) || 0) };
+    }
+
+    transaction.update(ref, {
+      estado,
+      observaciones,
+      fechaRechazo: estado === "rechazada" ? serverTimestamp() : null,
+      updatedAt: serverTimestamp(),
+    });
+    return { ...solicitud, estado };
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -568,8 +610,8 @@ export function calcularDiasRango(convenio, desde, hasta, feriadosExtra = []) {
  * Calcula los días disponibles para un empleado en un período dado.
  *
  * Lógica:
- *  - Trae todas las solicitudes NO rechazadas del legajo para el año vacacional.
- *  - Suma los días ya solicitados en esas solicitudes.
+ *  - Trae todas las solicitudes APROBADAS del legajo para el año vacacional.
+ *  - Suma los días ya descontados en esas solicitudes.
  *  - Devuelve: { diasCorresponden, diasUsados, diasDisponibles, solicitudesAnteriores }
  *
  * @param {string} legajo
@@ -578,16 +620,15 @@ export function calcularDiasRango(convenio, desde, hasta, feriadosExtra = []) {
  * @returns {Promise<{ diasCorresponden: number, diasUsados: number, diasDisponibles: number, solicitudesAnteriores: Array }>}
  */
 export async function fetchDiasDisponibles(legajo, anioVacacional, diasCorresponden) {
-  const q = query(
-    collection(db, "solicitudesVacaciones"),
-    where("legajo", "==", String(legajo)),
-    where("anioVacacional", "==", Number(anioVacacional))
-  );
+  // Se consulta por legajo y se filtra el período en cliente. Así evitamos
+  // depender de un índice compuesto de Firestore para el cálculo del saldo.
+  const q = query(collection(db, "solicitudesVacaciones"), where("legajo", "==", String(legajo)));
   const snap = await getDocs(q);
-  const todas = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const todas = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    .filter((solicitud) => Number(solicitud.anioVacacional) === Number(anioVacacional));
 
-  // Solo cuentan las que NO fueron rechazadas
-  const validas = todas.filter((s) => s.estado !== "rechazada");
+  // Las pendientes no descuentan días: el impacto se produce al aprobar RRHH.
+  const validas = todas.filter((s) => s.estado === "aprobada");
   const diasUsados = validas.reduce((acc, s) => acc + (Number(s.diasSolicitados) || 0), 0);
   const diasDisponibles = Math.max(0, diasCorresponden - diasUsados);
 
