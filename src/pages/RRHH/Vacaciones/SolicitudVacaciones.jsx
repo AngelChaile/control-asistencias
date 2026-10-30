@@ -36,6 +36,11 @@ function toISODate(str) {
   return "";
 }
 
+function formatFechaHumana(fecha) {
+  const match = String(fecha || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : fecha;
+}
+
 /**
  * Detecta automáticamente si el empleado tiene reingreso en el año vacacional.
  * Condición: fechaReingreso existe Y su año coincide con el año vacacional.
@@ -701,12 +706,12 @@ export default function SolicitudVacaciones() {
                     <div className="text-xs text-gray-600 dark:text-gray-300 bg-white/60 dark:bg-gray-800/60 rounded-lg px-3 py-2">
                       {diasRango.tipo === "habiles" ? (
                         <span>
-                          📅 Del <strong>{fechaDesde}</strong> al <strong>{fechaHasta}</strong>:{" "}
+                          📅 Del <strong>{formatFechaHumana(fechaDesde)}</strong> al <strong>{formatFechaHumana(fechaHasta)}</strong>:{" "}
                           <strong>{diasRango.cantidad} días hábiles</strong> (sin sábados, domingos ni feriados nacionales).
                         </span>
                       ) : (
                         <span>
-                          📅 Del <strong>{fechaDesde}</strong> al <strong>{fechaHasta}</strong>:{" "}
+                          📅 Del <strong>{formatFechaHumana(fechaDesde)}</strong> al <strong>{formatFechaHumana(fechaHasta)}</strong>:{" "}
                           <strong>{diasRango.cantidad} días corridos</strong>.
                         </span>
                       )}

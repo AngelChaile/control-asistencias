@@ -5,6 +5,7 @@
 import {
   collection,
   addDoc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -464,6 +465,36 @@ export async function fetchSolicitudesVacaciones({ legajo = "", area = "", anio 
 export async function actualizarEstadoSolicitud(id, estado, observaciones = "") {
   const ref = doc(collection(db, "solicitudesVacaciones"), id);
 
+  // Firestore Web no permite leer una consulta de colección dentro de una
+  // transacción. Este cálculo sólo inicializa el saldo histórico; a partir de
+  // allí el documento de saldo se modifica de forma atómica.
+  const solicitudInicial = await getDoc(ref);
+  if (!solicitudInicial.exists()) throw new Error("La solicitud de vacaciones ya no existe.");
+
+  const datosIniciales = solicitudInicial.data();
+  let diasAprobadosHistoricos = 0;
+  if (estado === "aprobada" && datosIniciales.estado !== "aprobada") {
+    const solicitudesQuery = query(
+      collection(db, "solicitudesVacaciones"),
+      where("legajo", "==", String(datosIniciales.legajo))
+    );
+    const solicitudesSnap = await getDocs(solicitudesQuery);
+    diasAprobadosHistoricos = solicitudesSnap.docs
+      .filter((item) => item.id !== id)
+      .map((item) => item.data())
+      .filter((item) => (
+        item.estado === "aprobada"
+        && Number(item.anioVacacional) === Number(datosIniciales.anioVacacional)
+      ))
+      .reduce((total, item) => total + (Number(item.diasSolicitados) || 0), 0);
+  }
+
+  const saldoRef = doc(
+    db,
+    "saldosVacaciones",
+    `vacaciones_${String(datosIniciales.legajo)}_${Number(datosIniciales.anioVacacional)}`
+  );
+
   return runTransaction(db, async (transaction) => {
     const solicitudSnap = await transaction.get(ref);
     if (!solicitudSnap.exists()) throw new Error("La solicitud de vacaciones ya no existe.");
@@ -473,29 +504,38 @@ export async function actualizarEstadoSolicitud(id, estado, observaciones = "") 
 
     // Sólo al aprobar se descuenta el saldo. Las pendientes no consumen días.
     if (estado === "aprobada") {
-      const solicitudesRef = collection(db, "solicitudesVacaciones");
-      const solicitudesQuery = query(solicitudesRef, where("legajo", "==", String(solicitud.legajo)));
-      const solicitudesSnap = await transaction.get(solicitudesQuery);
-      const diasYaAprobados = solicitudesSnap.docs
-        .filter((item) => item.id !== id)
-        .map((item) => item.data())
-        .filter((item) => item.estado === "aprobada" && Number(item.anioVacacional) === Number(solicitud.anioVacacional))
-        .reduce((total, item) => total + (Number(item.diasSolicitados) || 0), 0);
-      const diasDisponibles = Math.max(0, (Number(solicitud.diasCorresponden) || 0) - diasYaAprobados);
+      const saldoSnap = await transaction.get(saldoRef);
+      const diasCorresponden = Number(solicitud.diasCorresponden) || 0;
+      const diasYaAprobados = saldoSnap.exists()
+        ? (Number(saldoSnap.data().diasUsados) || 0)
+        : diasAprobadosHistoricos;
+      const diasDisponibles = Math.max(0, diasCorresponden - diasYaAprobados);
+      const diasSolicitados = Number(solicitud.diasSolicitados) || 0;
 
-      if ((Number(solicitud.diasSolicitados) || 0) > diasDisponibles) {
+      if (diasSolicitados > diasDisponibles) {
         throw new Error(`No se puede aprobar: el agente tiene ${diasDisponibles} día(s) disponible(s) para el período ${solicitud.anioVacacional}.`);
       }
+
+      const saldoActualizado = {
+        legajo: String(solicitud.legajo),
+        anioVacacional: Number(solicitud.anioVacacional),
+        diasCorresponden,
+        diasUsados: diasYaAprobados + diasSolicitados,
+        diasDisponibles: diasDisponibles - diasSolicitados,
+        updatedAt: serverTimestamp(),
+      };
+      if (saldoSnap.exists()) transaction.update(saldoRef, saldoActualizado);
+      else transaction.set(saldoRef, { ...saldoActualizado, createdAt: serverTimestamp() });
 
       transaction.update(ref, {
         estado,
         observaciones,
-        diasDescontados: Number(solicitud.diasSolicitados) || 0,
-        saldoRestante: diasDisponibles - (Number(solicitud.diasSolicitados) || 0),
+        diasDescontados: diasSolicitados,
+        saldoRestante: saldoActualizado.diasDisponibles,
         fechaAprobacion: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      return { ...solicitud, estado, diasDescontados: Number(solicitud.diasSolicitados) || 0, saldoRestante: diasDisponibles - (Number(solicitud.diasSolicitados) || 0) };
+      return { ...solicitud, estado, diasDescontados: diasSolicitados, saldoRestante: saldoActualizado.diasDisponibles };
     }
 
     transaction.update(ref, {
