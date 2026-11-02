@@ -36,6 +36,7 @@ export default function EmpleadosAdmin() {
     apellido: "",
     documento: "",
     domicilio: "",
+    localidad: "",
     email: "",
     telefono: "",
     lugarTrabajo: area,
@@ -112,6 +113,7 @@ export default function EmpleadosAdmin() {
       apellido: "",
       documento: "",
       domicilio: "",
+      localidad: "",
       email: "",
       telefono: "",
       lugarTrabajo: area,
@@ -155,6 +157,7 @@ export default function EmpleadosAdmin() {
       apellido: emp.apellido || "",
       documento: emp.documento || "",
       domicilio: emp.domicilio || "",
+      localidad: emp.localidad || "",
       email: emp.email || "",
       telefono: emp.telefono || "",
       lugarTrabajo: emp.lugarTrabajo || area,
@@ -323,6 +326,11 @@ export default function EmpleadosAdmin() {
                 value={nuevo.domicilio}
                 onChange={(e) => setNuevo({ ...nuevo, domicilio: e.target.value })}
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Localidad de residencia</label>
+              <input className="input-modern" placeholder="Ej.: Morón, Castelar, Haedo" value={nuevo.localidad}
+                onChange={(e) => setNuevo({ ...nuevo, localidad: e.target.value })} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>

@@ -25,6 +25,7 @@ const EmpleadosDisponibles = lazy(() => import("./pages/RRHH/EmpleadosDisponible
 // 🔹 MÓDULO VACACIONES - Licencia Anual Ordinaria
 const SolicitudVacaciones = lazy(() => import("./pages/RRHH/Vacaciones/SolicitudVacaciones"));
 const ListaVacaciones = lazy(() => import("./pages/RRHH/Vacaciones/ListaVacaciones"));
+const Asistente = lazy(() => import("./pages/Asistente"));
 
 // 🔹 Páginas Admin (lazy-loaded)
 const HomeAdmin = lazy(() => import("./pages/Admin/HomeAdmin"));
@@ -112,6 +113,11 @@ const getRedirectPath = () => {
 
       <Suspense fallback={<div className="p-6">Cargando...</div>}>
         <Routes>
+          <Route path="/asistente" element={
+            <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario", "admin", "coordinador_traspasos"]}>
+              <Asistente />
+            </ProtectedRoute>
+          } />
           {/* ===========================
                🔹 RUTAS PÚBLICAS
           =========================== */}
