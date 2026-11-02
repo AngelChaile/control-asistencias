@@ -99,11 +99,7 @@ export default function Navbar({ darkMode, onToggleDarkMode }) {
     ],
   };
 
-  const currentMenus = [...(menus[user?.rol] || []), ...(
-    ["rrhh", "subsecretario", "admin", "coordinador_traspasos"].includes(user?.rol)
-      ? [{ name: "Asistente", path: "/asistente", icon: "✦" }]
-      : []
-  )];
+  const currentMenus = menus[user?.rol] || [];
 
   async function handleLogout() {
     await logout();
