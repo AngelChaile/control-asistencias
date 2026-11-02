@@ -261,7 +261,7 @@ export default function EmpleadosAdmin() {
 
   return (
     <div className="app-container">
-      <div className="text-center mb-8">
+      <div className="page-heading">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Empleados</h1>
         <p className="text-gray-600">Administración del personal - Área {area}</p>
       </div>

@@ -1,5 +1,6 @@
 // src/pages/RRHH/Vacaciones/ListaVacaciones.jsx
 import React, { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { fetchSolicitudesVacaciones, actualizarEstadoSolicitud } from "../../../utils/vacaciones";
 import FormularioImpresion from "./FormularioImpresion";
 
@@ -66,36 +67,40 @@ export default function ListaVacaciones() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-            📋 Solicitudes de Licencia Anual Ordinaria
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Gestión y seguimiento de solicitudes de vacaciones.
-          </p>
+    <div className="app-container">
+      <div>
+        <div className="page-heading flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+              Solicitudes de vacaciones
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+              Gestión y seguimiento de solicitudes de vacaciones.
+            </p>
+          </div>
+          <Link to="/rrhh/vacaciones/nueva" className="btn-primary self-start sm:self-auto">+ Nueva solicitud</Link>
         </div>
 
         {/* Filtros */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 mb-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <input
-              type="text" placeholder="Legajo..." value={filtroLegajo}
+              type="text" aria-label="Filtrar por legajo" placeholder="Legajo..." value={filtroLegajo}
               onChange={e => setFiltroLegajo(e.target.value)}
               className="input-base text-sm"
             />
             <input
-              type="text" placeholder="Área..." value={filtroArea}
+              type="text" aria-label="Filtrar por área" placeholder="Área..." value={filtroArea}
               onChange={e => setFiltroArea(e.target.value)}
               className="input-base text-sm"
             />
             <input
-              type="number" placeholder="Año..." value={filtroAnio}
+              type="number" aria-label="Período vacacional" placeholder="Año..." value={filtroAnio}
               onChange={e => setFiltroAnio(e.target.value)}
               className="input-base text-sm" min="2020" max="2099"
             />
             <select
+              aria-label="Estado de la solicitud"
               value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
               className="input-base text-sm"
             >

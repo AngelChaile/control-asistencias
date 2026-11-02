@@ -78,8 +78,8 @@ export default function MisSolicitudes() {
 
   return (
     <div className="app-container">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">📋 Mis Solicitudes de Traspaso</h1>
+      <div className="page-heading">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Mis solicitudes de traspaso</h1>
         <p className="text-gray-600">Seguimiento de tus solicitudes de traspaso de personal</p>
       </div>
 

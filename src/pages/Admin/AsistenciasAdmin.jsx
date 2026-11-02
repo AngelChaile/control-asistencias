@@ -39,7 +39,7 @@ export default function AsistenciasAdmin() {
   return (
     <div className="app-container">
       {/* Header */}
-      <div className="text-center mb-8">
+      <div className="page-heading">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Asistencias</h1>
         <p className="text-gray-600">Registros del día - Área {user?.lugarTrabajo}</p>
       </div>

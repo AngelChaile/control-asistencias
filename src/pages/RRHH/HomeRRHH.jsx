@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { fetchAsistenciasToday, fetchAsistenciasTodayPage } from "../../utils/asistencia";
+import AppIcon from "../../components/AppIcon";
 
 export default function HomeRRHH() {
   const [asistencias, setAsistencias] = useState([]);
@@ -98,30 +99,17 @@ export default function HomeRRHH() {
   return (
     <div className="app-container">
       {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Panel de Recursos Humanos</h1>
-        <p className="text-gray-600">Gestión integral de personal y asistencias</p>
+      <div className="page-heading flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div><p className="page-eyebrow">Vista general</p><h1 className="text-gray-900">Panel de Recursos Humanos</h1>
+          <p className="text-sm text-gray-600">Actividad y registros de asistencia de hoy.</p></div>
+        <span className="date-label"><AppIcon name="calendar" size={17} />{new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })}</span>
       </div>
 
       {/* Tarjetas de Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="card p-6 text-center">
-          <div className="text-2xl font-bold text-gray-900 mb-2">{stats.salidas}</div>
-          <div className="text-gray-600">Salidas Registradas</div>
-          <div className="w-12 h-1 bg-blue-500 rounded mx-auto mt-3"></div>
-        </div>
-        
-        <div className="card p-6 text-center">
-          <div className="text-2xl font-bold text-green-600 mb-2">{stats.entradas}</div>
-          <div className="text-gray-600">Entradas Registradas</div>
-          <div className="w-12 h-1 bg-green-500 rounded mx-auto mt-3"></div>
-        </div>
-        
-        <div className="card p-6 text-center">
-          <div className="text-2xl font-bold text-purple-600 mb-2">{stats.areas}</div>
-          <div className="text-gray-600">Áreas Activas</div>
-          <div className="w-12 h-1 bg-purple-500 rounded mx-auto mt-3"></div>
-        </div>
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="metric-card"><div><p className="metric-label">Entradas registradas</p><p className="metric-value">{stats.entradas}</p><p className="metric-hint">Durante el día de hoy</p></div><span className="metric-icon bg-green-50 text-green-700"><AppIcon name="entry" /></span></div>
+        <div className="metric-card"><div><p className="metric-label">Salidas registradas</p><p className="metric-value">{stats.salidas}</p><p className="metric-hint">Durante el día de hoy</p></div><span className="metric-icon bg-blue-50 text-blue-700"><AppIcon name="exit" /></span></div>
+        <div className="metric-card"><div><p className="metric-label">Áreas con actividad</p><p className="metric-value">{stats.areas}</p><p className="metric-hint">Con registros de asistencia</p></div><span className="metric-icon bg-purple-50 text-purple-700"><AppIcon name="building" /></span></div>
       </div>
 
       {/* Tabla de Asistencias */}
@@ -131,7 +119,7 @@ export default function HomeRRHH() {
             <h3 className="text-lg font-semibold text-gray-900">Asistencias del Día</h3>
             <p className="text-gray-600">Registros de entrada y salida</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="text-sm text-gray-600">
               {filtered.length} de {asistencias.length} cargados • Total: {totalCount}
             </div>
@@ -140,16 +128,17 @@ export default function HomeRRHH() {
               disabled={loading}
               className="btn-secondary text-sm px-3 py-1"
             >
-              🔄 Actualizar
+              <AppIcon name="refresh" size={16} className={loading ? "animate-spin" : ""} /> Actualizar
             </button>
           </div>
         </div>
 
         {/* Filtros */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="filter-panel mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Buscar por legajo</label>
+            <label htmlFor="inicio-legajo" className="block text-sm font-medium text-gray-700 mb-2">Buscar por legajo</label>
             <input 
+              id="inicio-legajo"
               className="input-modern" 
               placeholder="Número de legajo..." 
               value={filter.legajo} 
@@ -157,8 +146,9 @@ export default function HomeRRHH() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Buscar por nombre</label>
+            <label htmlFor="inicio-nombre" className="block text-sm font-medium text-gray-700 mb-2">Buscar por nombre</label>
             <input 
+              id="inicio-nombre"
               className="input-modern" 
               placeholder="Nombre o apellido..." 
               value={filter.nombre} 
@@ -166,8 +156,9 @@ export default function HomeRRHH() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filtrar por área</label>
+            <label htmlFor="inicio-area" className="block text-sm font-medium text-gray-700 mb-2">Filtrar por área</label>
             <input 
+              id="inicio-area"
               className="input-modern" 
               placeholder="Área o departamento..." 
               value={filter.lugarTrabajo} 

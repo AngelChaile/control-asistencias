@@ -349,10 +349,10 @@ export default function SolicitudVacaciones() {
 
   // ── Formulario principal ──────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
+    <div className="app-container">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">📋 Solicitud de Licencia Anual Ordinaria</h1>
+        <div className="page-heading">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Solicitud de vacaciones</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
             Ingresá el legajo para cargar los datos del agente automáticamente.
           </p>

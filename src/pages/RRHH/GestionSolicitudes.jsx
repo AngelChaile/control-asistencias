@@ -163,8 +163,8 @@ export default function GestionSolicitudes() {
 
   return (
     <div className="app-container">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">📋 Gestión de Solicitudes de Traspaso</h1>
+      <div className="page-heading">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Solicitudes de traspaso</h1>
         <p className="text-gray-600">Administra las solicitudes de traspaso de personal</p>
         {user?.rol === 'subsecretario' && (
           <p className="text-sm text-blue-600 mt-2">👑 Aprobación final - Subsecretaría</p>

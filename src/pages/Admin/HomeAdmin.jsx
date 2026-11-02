@@ -4,6 +4,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../firebase";
 import QrGenerator from "../../components/QrGenerator";
 import { useAuth } from "../../context/AuthContext";
+import AppIcon from "../../components/AppIcon";
 
 export default function HomeAdmin() {
   const { user } = useAuth();
@@ -86,44 +87,31 @@ export default function HomeAdmin() {
   return (
     <div className="app-container space-y-6">
       {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Panel {rol === "rrhh" ? "Recursos Humanos" : `Administración - ${area}`}
+      <div className="page-heading">
+        <p className="page-eyebrow">Vista general</p>
+        <h1 className="text-gray-900">
+          {rol === "rrhh" ? "Panel de Recursos Humanos" : "Panel de tu área"}
         </h1>
-        <p className="text-gray-600">Resumen y gestión de asistencias en tiempo real</p>
+        <p className="text-gray-600">{area || "Resumen y gestión de asistencias"}</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="card p-6 text-center">
-          <div className="text-2xl font-bold text-gray-900 mb-2">{stats.totalEmpleados}</div>
-          <div className="text-gray-600">Total Empleados</div>
-          <div className="w-12 h-1 bg-blue-500 rounded mx-auto mt-3"></div>
-        </div>
-
-        <div className="card p-6 text-center">
-          <div className="text-2xl font-bold text-green-600 mb-2">{stats.presentes}</div>
-          <div className="text-gray-600">Presentes Hoy (Entradas)</div>
-          <div className="w-12 h-1 bg-green-500 rounded mx-auto mt-3"></div>
-        </div>
-
-        <div className="card p-6 text-center">
-          <div className="text-2xl font-bold text-red-600 mb-2">{stats.ausentes}</div>
-          <div className="text-gray-600">Ausentes Hoy</div>
-          <div className="w-12 h-1 bg-red-500 rounded mx-auto mt-3"></div>
-        </div>
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="metric-card"><div><p className="metric-label">Total de empleados</p><p className="metric-value">{stats.totalEmpleados}</p><p className="metric-hint">Personal del área</p></div><span className="metric-icon bg-blue-50 text-blue-700"><AppIcon name="users" /></span></div>
+        <div className="metric-card"><div><p className="metric-label">Presentes hoy</p><p className="metric-value">{stats.presentes}</p><p className="metric-hint">Con una entrada registrada</p></div><span className="metric-icon bg-green-50 text-green-700"><AppIcon name="check" /></span></div>
+        <div className="metric-card"><div><p className="metric-label">Sin entrada hoy</p><p className="metric-value">{stats.ausentes}</p><p className="metric-hint">Según registros de asistencia</p></div><span className="metric-icon bg-amber-50 text-amber-700"><AppIcon name="clock" /></span></div>
       </div>
 
       {/* QR Generator Section - TEXTO CENTRADO */}
       {rol !== "empleado" && (
         <div className="card p-6 mb-8">
           {/* Header Centrado */}
-          <div className="text-center mb-6">
+          <div className="mb-6">
 {/*             <div className="w-16 h-16 bg-gradient-to-r from-municipio-500 to-municipio-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="text-white text-2xl">📱</span>
             </div> */}
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Generador de QR</h3>
-            <p className="text-gray-600 text-lg">Genera códigos QR para registrar asistencias</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Registro de asistencia por QR</h3>
+            <p className="text-gray-600 text-sm">Generá un código para que el personal registre su asistencia.</p>
           </div>
           <QrGenerator area={area} user={user} />
         </div>

@@ -76,7 +76,7 @@ export default function ExportExcel({ data = [], filename = "report.xlsx", child
   };
 
   return (
-    <button type="button" onClick={onClick} className="bg-municipio-500 text-white px-3 py-1 rounded shadow hover:bg-municipio-600">
+    <button type="button" onClick={onClick} className="btn-secondary">
       {children || "Exportar Excel"}
     </button>
   );

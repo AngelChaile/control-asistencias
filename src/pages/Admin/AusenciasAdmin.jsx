@@ -159,7 +159,7 @@ export default function AusenciasAdmin() {
   return (
     <div className="app-container">
       {/* Header */}
-      <div className="text-center mb-8">
+      <div className="page-heading">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Ausencias</h1>
         <p className="text-gray-600">Control y justificación de faltas - Área {lugar}</p>
       </div>

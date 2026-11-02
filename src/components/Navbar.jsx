@@ -1,337 +1,194 @@
-// src/components/Navbar.jsx
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db, collection, query, where, getDocs } from "../firebase";
 import { getNotificaciones, marcarComoLeida } from "../utils/notificaciones";
+import AppIcon from "./AppIcon";
+
+const MENU_RRHH = [
+  { name: "Inicio", path: "/rrhh", icon: "home" },
+  { name: "Empleados", path: "/rrhh/empleados", icon: "users" },
+  { name: "Ausencias", path: "/rrhh/ausencias", icon: "calendar" },
+  { name: "Reportes", path: "/rrhh/reportes", icon: "chart" },
+  { name: "Usuarios", path: "/rrhh/usuarios", icon: "user" },
+  { name: "QR", path: "/rrhh/qr", icon: "qr" },
+  { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "search" },
+  { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "clipboard" },
+  { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "available" },
+  { name: "Vacaciones", path: "/rrhh/vacaciones", icon: "vacation" },
+];
+const MENU_ADMIN = [
+  { name: "Inicio", path: "/admin", icon: "home" },
+  { name: "Empleados", path: "/admin/empleados", icon: "users" },
+  { name: "Asistencias", path: "/admin/asistencias", icon: "check" },
+  { name: "Ausencias", path: "/admin/ausencias", icon: "calendar" },
+  { name: "Reportes", path: "/admin/reportes", icon: "chart" },
+  { name: "Solicitar traspaso", path: "/admin/solicitar-traspaso", icon: "send" },
+  { name: "Mis solicitudes", path: "/admin/mis-solicitudes", icon: "clipboard" },
+  { name: "Vacaciones", path: "/admin/vacaciones/nueva", icon: "vacation" },
+];
+const ROLES = { rrhh: "Recursos Humanos", subsecretario: "Subsecretario", admin: "Administrador de área", coordinador_traspasos: "Coordinador de traspasos" };
 
 export default function Navbar({ darkMode, onToggleDarkMode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const toolbarRef = useRef(null);
+  const dialogRef = useRef(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [mostrarPerfil, setMostrarPerfil] = useState(false);
   const [solicitudesPendientes, setSolicitudesPendientes] = useState(0);
   const [notificaciones, setNotificaciones] = useState([]);
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
   const [notificacionSeleccionada, setNotificacionSeleccionada] = useState(null);
 
   useEffect(() => {
+    let vigente = true;
+    setNotificaciones([]);
     if (!user?.uid) return;
-    const cargarNotificaciones = async () => setNotificaciones(await getNotificaciones(user.uid));
-    cargarNotificaciones();
-    const interval = setInterval(cargarNotificaciones, 30000);
-    return () => clearInterval(interval);
+    const cargar = async () => {
+      try {
+        const datos = await getNotificaciones(user.uid);
+        if (vigente) setNotificaciones(datos);
+      } catch (error) { console.error("Error cargando notificaciones:", error); }
+    };
+    cargar();
+    const interval = setInterval(cargar, 30000);
+    return () => { vigente = false; clearInterval(interval); };
   }, [user?.uid]);
 
-  const abrirNotificacion = async (notificacion) => {
-    if (!notificacion.leido) await marcarComoLeida(notificacion.id);
-    setNotificaciones(actuales => actuales.map(item => item.id === notificacion.id ? { ...item, leido: true } : item));
-    setMostrarNotificaciones(false);
-    setNotificacionSeleccionada({ ...notificacion, leido: true });
-  };
-
-  // 🔔 Contar solicitudes pendientes para el globito
   useEffect(() => {
-    if (!user) return;
-    
-    const contarSolicitudes = async () => {
+    let vigente = true;
+    setSolicitudesPendientes(0);
+    if (!db || !["rrhh", "subsecretario"].includes(user?.rol)) return;
+    const contar = async () => {
       try {
-        let q;
-        if (user.rol === 'subsecretario') {
-          q = query(collection(db, 'solicitudes_traspaso'), where('estado', '==', 'rrhh_aprobado'));
-        } else if (user.rol === 'rrhh') {
-          q = query(collection(db, 'solicitudes_traspaso'), where('estado', '==', 'pendiente'));
-        } else {
-          return;
-        }
-        const snapshot = await getDocs(q);
-        setSolicitudesPendientes(snapshot.size);
-      } catch (error) {
-        console.error('Error contando solicitudes:', error);
-      }
+        const estado = user.rol === "subsecretario" ? "rrhh_aprobado" : "pendiente";
+        const snapshot = await getDocs(query(collection(db, "solicitudes_traspaso"), where("estado", "==", estado)));
+        if (vigente) setSolicitudesPendientes(snapshot.size);
+      } catch (error) { console.error("Error contando solicitudes:", error); }
     };
+    contar();
+    const interval = setInterval(contar, 30000);
+    return () => { vigente = false; clearInterval(interval); };
+  }, [user?.uid, user?.rol]);
 
-    contarSolicitudes();
-    const interval = setInterval(contarSolicitudes, 30000); // Actualizar cada 30s
-    return () => clearInterval(interval);
-  }, [user]);
+  useEffect(() => {
+    setIsMenuOpen(false);
+    setMostrarPerfil(false);
+    setMostrarNotificaciones(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const cerrarFuera = event => {
+      if (!toolbarRef.current?.contains(event.target)) { setMostrarPerfil(false); setMostrarNotificaciones(false); }
+    };
+    const cerrarEscape = event => {
+      if (event.key === "Escape") { setIsMenuOpen(false); setMostrarPerfil(false); setMostrarNotificaciones(false); }
+    };
+    document.addEventListener("pointerdown", cerrarFuera);
+    document.addEventListener("keydown", cerrarEscape);
+    return () => { document.removeEventListener("pointerdown", cerrarFuera); document.removeEventListener("keydown", cerrarEscape); };
+  }, []);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (notificacionSeleccionada && !dialog?.open) dialog?.showModal();
+    else if (!notificacionSeleccionada && dialog?.open) dialog.close();
+  }, [notificacionSeleccionada]);
 
   if (!user) return null;
-
+  const nombre = [user.nombre, user.apellido].filter(Boolean).join(" ").trim() || "Mi cuenta";
+  const iniciales = [user.nombre?.trim()[0], user.apellido?.trim()[0]].filter(Boolean).join("").toUpperCase() || "U";
+  const rol = ROLES[user.rol] || user.rol;
+  const noLeidas = notificaciones.filter(n => !n.leido).length;
   const menus = {
-    rrhh: [
-      { name: "Inicio", path: "/rrhh", icon: "🏠" },
-      { name: "Empleados", path: "/rrhh/empleados", icon: "👥" },
-      { name: "Ausencias", path: "/rrhh/ausencias", icon: "📅" },
-      { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
-      { name: "Usuarios", path: "/rrhh/usuarios", icon: "👤" },
-      { name: "QR", path: "/rrhh/qr", icon: "📱" },
-      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🔎" },
-      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
-      { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "🙎🏻‍♂️" },
-      { name: "Vacaciones", path: "/rrhh/vacaciones", icon: "🏖️" },
-    ],
-    subsecretario: [
-      { name: "Inicio", path: "/rrhh", icon: "🏠" },
-      { name: "Empleados", path: "/rrhh/empleados", icon: "👥" },
-      { name: "Ausencias", path: "/rrhh/ausencias", icon: "📅" },
-      { name: "Reportes", path: "/rrhh/reportes", icon: "📊" },
-      { name: "Análisis", path: "/rrhh/dashboard-analisis", icon: "🔎" },
-      { 
-        name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋",
-        badge: solicitudesPendientes > 0 ? solicitudesPendientes : null
-      },
-      { name: "Disponibles", path: "/rrhh/empleados-disponibles", icon: "🙎🏻‍♂️" },
-      { name: "Vacaciones", path: "/rrhh/vacaciones", icon: "🏖️" },
-    ],
-    coordinador_traspasos: [
-      { name: "Solicitudes", path: "/rrhh/gestion-solicitudes", icon: "📋" },
-    ],
-    admin: [
-      { name: "Inicio", path: "/admin", icon: "🏠" },
-      { name: "Empleados", path: "/admin/empleados", icon: "👥" },
-      { name: "Asistencias", path: "/admin/asistencias", icon: "✅" },
-      { name: "Ausencias", path: "/admin/ausencias", icon: "📅" },
-      { name: "Reportes", path: "/admin/reportes", icon: "📊" },
-      { name: "Solicitar", path: "/admin/solicitar-traspaso", icon: "📝" },
-      { name: "Mis Solicitudes", path: "/admin/mis-solicitudes", icon: "📋" },
-      { name: "Vacaciones", path: "/admin/vacaciones/nueva", icon: "🏖️" },
-    ],
+    rrhh: MENU_RRHH,
+    subsecretario: MENU_RRHH.filter(item => !["Usuarios", "QR"].includes(item.name)),
+    coordinador_traspasos: MENU_RRHH.filter(item => item.name === "Solicitudes"),
+    admin: MENU_ADMIN,
   };
+  const currentMenus = menus[user.rol] || [];
 
-  const currentMenus = menus[user?.rol] || [];
+  const abrirNotificacion = async notificacion => {
+    try {
+      if (!notificacion.leido) await marcarComoLeida(notificacion.id);
+      setNotificaciones(actuales => actuales.map(item => item.id === notificacion.id ? { ...item, leido: true } : item));
+    } catch (error) { console.error("Error marcando notificación:", error); }
+    setMostrarNotificaciones(false);
+    setNotificacionSeleccionada(notificacion);
+  };
 
   async function handleLogout() {
     await logout();
     navigate("/login", { replace: true });
   }
 
-  return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
-      <div className="mx-auto max-w-[90rem] px-4 sm:px-6 lg:px-8">
-        <div className="flex min-h-16 items-center justify-between gap-4 py-2">
-          {/* Logo */}
-          <div className="flex min-w-0 items-center space-x-3">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              aria-label="Abrir menú"
-            >
-              <div className="w-6 h-6 flex flex-col justify-center space-y-1">
-                <span className={`block h-0.5 w-6 bg-gray-600 transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></span>
-                <span className={`block h-0.5 w-6 bg-gray-600 transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`}></span>
-                <span className={`block h-0.5 w-6 bg-gray-600 transition-transform ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
-              </div>
-            </button>
+  const enlace = item => {
+    const inicio = item.path === "/rrhh" || item.path === "/admin";
+    const activo = location.pathname === item.path || (!inicio && location.pathname.startsWith(`${item.path}/`));
+    return <Link key={item.path} to={item.path} className={`module-link ${activo ? "is-active" : ""}`} aria-current={activo ? "page" : undefined} onClick={() => setIsMenuOpen(false)}>
+      <AppIcon name={item.icon} size={17} /><span>{item.name}</span>
+      {item.name === "Solicitudes" && solicitudesPendientes > 0 && <span className="ml-auto rounded-full bg-municipio-600 px-1.5 py-0.5 text-[10px] text-white">{solicitudesPendientes}</span>}
+    </Link>;
+  };
 
-            <div className="flex min-w-0 items-center space-x-3">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-municipio-500 to-municipio-600 shadow-sm">
-                <span className="text-white font-bold text-lg">M</span>
-              </div>
-              <div className="hidden sm:block">
-                <div className="truncate text-lg font-semibold leading-tight text-slate-900">Control de Asistencias</div>
-                <div className="truncate text-xs capitalize leading-tight text-slate-500">
-                  {user.nombre} {user.apellido} • {user.rol === 'subsecretario' ? 'Subsecretario' : user.rol}
-                </div>
-              </div>
+  return <>
+    <header className="app-navbar">
+      <div className="navbar-inner">
+        <div className="navbar-top">
+          <div className="navbar-brand">
+            <button type="button" className="icon-button navbar-menu-trigger" onClick={() => setIsMenuOpen(actual => !actual)} aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={isMenuOpen} aria-controls="menu-movil">
+              <AppIcon name={isMenuOpen ? "close" : "menu"} />
+            </button>
+            <span className="brand-mark" aria-hidden="true">M</span>
+            <div className="min-w-0">
+              <div className="brand-title"><span className="hidden sm:inline">Control de </span>Asistencias</div>
+              <div className="brand-subtitle hidden sm:block">Gestión de personal</div>
             </div>
           </div>
 
-          {/* User & Logout - Desktop */}
-          <div className="hidden flex-shrink-0 items-center gap-3 lg:flex">
-            <div className="relative">
-              <button type="button" onClick={() => setMostrarNotificaciones(actual => !actual)} className="relative rounded-lg p-2 text-xl text-slate-600 hover:bg-slate-100" aria-label="Notificaciones">
-                🔔
-                {notificaciones.filter(item => !item.leido).length > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-xs text-white">{notificaciones.filter(item => !item.leido).length}</span>}
-              </button>
-              {mostrarNotificaciones && <div className="absolute right-0 top-12 z-50 w-96 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                <div className="border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-800">Notificaciones</div>
-                {notificaciones.length ? <div className="max-h-96 overflow-y-auto">{notificaciones.map(notificacion => <button type="button" key={notificacion.id} onClick={() => abrirNotificacion(notificacion)} className={`block w-full border-b border-slate-100 px-4 py-3 text-left text-sm hover:bg-slate-50 ${notificacion.leido ? 'text-slate-500' : 'bg-blue-50 text-slate-900'}`}><p className="font-semibold">{notificacion.titulo}</p><p className="mt-1">{notificacion.mensaje}</p></button>)}</div> : <p className="p-4 text-sm text-slate-500">No tenés notificaciones.</p>}
-              </div>}
-            </div>
-            <div className="hidden text-right xl:block">
-              <div className="text-sm font-semibold text-slate-800">{user.nombre} {user.apellido}</div>
-              <div className="text-xs capitalize text-slate-500">{user.rol === 'subsecretario' ? 'Subsecretario' : user.rol}</div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="btn-secondary cursor-pointer whitespace-nowrap text-sm"
-            >
-              Cerrar sesión
+          <div className="navbar-tools" ref={toolbarRef}>
+            <button type="button" className="icon-button" onClick={onToggleDarkMode} aria-label={darkMode ? "Activar modo claro" : "Activar modo oscuro"} title={darkMode ? "Modo claro" : "Modo oscuro"}>
+              <AppIcon name={darkMode ? "sun" : "moon"} />
             </button>
-            <button
-              type="button"
-              onClick={onToggleDarkMode}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
-              aria-label={darkMode ? "Activar modo claro" : "Activar modo oscuro"}
-              title={darkMode ? "Modo claro" : "Modo oscuro"}
-            >
-              {darkMode ? "☀️" : "🌙"}
+            <button type="button" className="icon-button" onClick={() => { setMostrarNotificaciones(actual => !actual); setMostrarPerfil(false); }} aria-label={`Notificaciones${noLeidas ? `, ${noLeidas} sin leer` : ""}`} aria-expanded={mostrarNotificaciones} aria-controls="panel-notificaciones">
+              <AppIcon name="bell" />{noLeidas > 0 && <span className="notification-count">{noLeidas > 99 ? "99+" : noLeidas}</span>}
             </button>
-          </div>
+            <span className="toolbar-divider" aria-hidden="true" />
+            <button type="button" className="account-trigger" onClick={() => { setMostrarPerfil(actual => !actual); setMostrarNotificaciones(false); }} aria-label="Opciones de mi cuenta" aria-expanded={mostrarPerfil} aria-controls="panel-cuenta">
+              <span className="user-avatar" aria-hidden="true">{iniciales}</span>
+              <span className="hidden sm:block"><span className="account-name block">{nombre}</span><span className="account-role block">{rol}</span></span>
+              <AppIcon name="chevron" size={14} className="hidden sm:block" />
+            </button>
 
-          {/* Mobile */}
-          {!isMenuOpen && (
-            <div className="lg:hidden flex items-center space-x-3">
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">
-                  {user.nombre.split(' ')[0]}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMostrarNotificaciones(actual => !actual)}
-                className="relative rounded-lg p-2 text-xl text-slate-600 hover:bg-gray-100"
-                aria-label="Notificaciones"
-              >
-                🔔
-                {notificaciones.filter(item => !item.leido).length > 0 && (
-                  <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-xs text-white">
-                    {notificaciones.filter(item => !item.leido).length}
-                  </span>
-                )}
-              </button>
-              {mostrarNotificaciones && (
-                <div className="fixed right-4 top-16 z-50 w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                  <div className="border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-800">Notificaciones</div>
-                  {notificaciones.length ? (
-                    <div className="max-h-80 overflow-y-auto">
-                      {notificaciones.map(notificacion => (
-                        <button
-                          type="button"
-                          key={notificacion.id}
-                          onClick={() => abrirNotificacion(notificacion)}
-                          className={`block w-full border-b border-slate-100 px-4 py-3 text-left text-sm hover:bg-slate-50 ${notificacion.leido ? 'text-slate-500' : 'bg-blue-50 text-slate-900'}`}
-                        >
-                          <p className="font-semibold">{notificacion.titulo}</p>
-                          <p className="mt-1">{notificacion.mensaje}</p>
-                        </button>
-                      ))}
-                    </div>
-                  ) : <p className="p-4 text-sm text-slate-500">No tenés notificaciones.</p>}
-                </div>
-              )}
-              <button
-                onClick={handleLogout}
-                className="btn-secondary text-sm px-3 py-1.5"
-              >
-                Salir
-              </button>
-              <button
-                type="button"
-                onClick={onToggleDarkMode}
-                className="rounded-lg border border-slate-200 px-2 py-1.5 text-lg text-slate-700"
-                aria-label={darkMode ? "Activar modo claro" : "Activar modo oscuro"}
-              >
-                {darkMode ? "☀️" : "🌙"}
-              </button>
-            </div>
-          )}
+            {mostrarPerfil && <div id="panel-cuenta" className="toolbar-popover account-popover">
+              <div className="px-3 py-2 sm:hidden"><p className="account-name">{nombre}</p><p className="account-role">{rol}</p></div>
+              {user.lugarTrabajo && <p className="px-3 py-2 text-xs leading-5 text-muted">{user.lugarTrabajo}</p>}
+              <button type="button" onClick={handleLogout} className="logout-action"><AppIcon name="logout" size={18} />Cerrar sesión</button>
+            </div>}
+
+            {mostrarNotificaciones && <section id="panel-notificaciones" className="toolbar-popover" aria-label="Notificaciones">
+              <div className="popover-heading flex items-center justify-between gap-3"><span>Notificaciones</span><span className="text-xs font-normal text-muted">{noLeidas ? `${noLeidas} sin leer` : "Al día"}</span></div>
+              {notificaciones.length ? <div className="max-h-[60dvh] overflow-y-auto">{notificaciones.map(n => <button key={n.id} type="button" onClick={() => abrirNotificacion(n)} className={`notification-item ${!n.leido ? "is-unread" : ""}`}><p className="font-semibold">{n.titulo}</p><p className="mt-1 line-clamp-3">{n.mensaje}</p></button>)}</div>
+                : <div className="p-8 text-center text-muted"><AppIcon name="bell" size={28} className="mx-auto mb-3 opacity-50" /><p className="text-sm font-medium">Estás al día</p><p className="mt-1 text-xs">Tus nuevas notificaciones aparecerán acá.</p></div>}
+            </section>}
+          </div>
         </div>
-
-        {notificacionSeleccionada && (
-          <div
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4"
-            onMouseDown={() => setNotificacionSeleccionada(null)}
-          >
-            <div
-              className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
-              onMouseDown={(event) => event.stopPropagation()}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-red-600">Notificación</p>
-                  <h2 className="mt-1 text-xl font-bold text-slate-900">{notificacionSeleccionada.titulo}</h2>
-                </div>
-                <button type="button" onClick={() => setNotificacionSeleccionada(null)} className="rounded-lg p-2 text-xl leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Cerrar notificación">
-                  ×
-                </button>
-              </div>
-              <p className="mt-5 whitespace-pre-wrap text-base leading-7 text-slate-700">{notificacionSeleccionada.mensaje}</p>
-              <div className="mt-6 flex justify-end gap-3">
-                <button type="button" className="btn-secondary" onClick={() => setNotificacionSeleccionada(null)}>Cerrar</button>
-                {notificacionSeleccionada.link && (
-                  <button type="button" className="btn-primary" onClick={() => { setNotificacionSeleccionada(null); navigate(notificacionSeleccionada.link); }}>
-                    Ir al módulo
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Navigation - Desktop */}
-        <nav className="hidden border-t border-slate-100 lg:block">
-          <div className="flex items-center gap-1 overflow-x-auto py-2 [scrollbar-width:thin]">
-            {currentMenus.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? 'bg-municipio-50 text-municipio-700 ring-1 ring-inset ring-municipio-200'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-                >
-                  <span className="text-base">{item.icon}</span>
-                  <span>{item.name}</span>
-                  {item.badge && <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">{item.badge}</span>}
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="lg:hidden border-t border-gray-200 pt-4 pb-4">
-            <nav className="grid grid-cols-2 gap-2 mb-4">
-              {currentMenus.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.path}
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center space-x-2 p-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'bg-municipio-50 text-municipio-700 border border-municipio-200'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="text-base">{item.icon}</span>
-                    <span>{item.name}</span>
-                    {item.badge && (
-                      <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div>
-                <div className="text-sm font-medium text-gray-900">{user.nombre}</div>
-
-                <div className="text-xs text-gray-500">{user.email}</div>
-                <div className="text-xs text-gray-400 capitalize mt-1">
-                  {user.rol} • {user.lugarTrabajo || 'Municipio'}
-                </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="btn-secondary text-sm px-3 py-1.5"
-              >
-                Cerrar sesión
-              </button>
-            </div>
-          </div>
-        )}
+        <nav className="desktop-navigation hidden lg:block" aria-label="Módulos"><div className="navigation-links">{currentMenus.map(enlace)}</div></nav>
+        {isMenuOpen && <nav id="menu-movil" className="menu-panel lg:hidden" aria-label="Módulos en celular"><p className="page-eyebrow px-2">Módulos del sistema</p><div className="grid grid-cols-2 gap-1">{currentMenus.map(enlace)}</div></nav>}
       </div>
     </header>
-  );
+
+    <dialog ref={dialogRef} className="notification-dialog" aria-labelledby="notificacion-titulo" onClose={() => setNotificacionSeleccionada(null)} onClick={event => { if (event.target === event.currentTarget) setNotificacionSeleccionada(null); }}>
+      {notificacionSeleccionada && <>
+        <div className="flex items-start justify-between gap-4"><div><p className="page-eyebrow">Notificación</p><h2 id="notificacion-titulo" className="text-xl font-semibold leading-snug">{notificacionSeleccionada.titulo}</h2></div>
+          <button type="button" onClick={() => setNotificacionSeleccionada(null)} className="icon-button" aria-label="Cerrar notificación"><AppIcon name="close" /></button></div>
+        <p className="my-6 whitespace-pre-wrap text-sm leading-7 text-muted">{notificacionSeleccionada.mensaje}</p>
+        <div className="flex flex-wrap justify-end gap-2"><button type="button" className="btn-secondary" onClick={() => setNotificacionSeleccionada(null)}>Cerrar</button>
+          {notificacionSeleccionada.link && <button type="button" className="btn-primary" onClick={() => { navigate(notificacionSeleccionada.link); setNotificacionSeleccionada(null); }}>Ir al módulo</button>}
+        </div>
+      </>}
+    </dialog>
+  </>;
 }

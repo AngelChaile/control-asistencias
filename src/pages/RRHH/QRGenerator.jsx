@@ -8,7 +8,7 @@ export default function QRPage() {
   return (
     <div className="app-container">
       {/* Header */}
-      <div className="text-center mb-8">
+      <div className="page-heading">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Generador de Códigos QR</h1>
         <p className="text-gray-600">Crea códigos QR para registro de asistencias</p>
       </div>

@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Sistema de Control de Asistencias Municipal - Gestión de personal mediante QR" />
   <meta name="theme-color" content="#e11d1d" />
+  <script>
+    // Aplicar la preferencia antes de pintar para evitar destellos al cargar.
+    try {
+      const savedTheme = localStorage.getItem("control-asistencias-theme");
+      const initialDark = savedTheme ? savedTheme === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.classList.toggle("dark", initialDark);
+      document.querySelector('meta[name="theme-color"]').setAttribute("content", initialDark ? "#12171f" : "#ffffff");
+    } catch (_) {}
+  </script>
   
   <!-- Favicons básicos -->
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -16,9 +25,6 @@
   
   <!-- PWA Manifest -->
   <link rel="manifest" href="/site.webmanifest" crossorigin="use-credentials" />
-  
-  <!-- Color de barra para Chrome en Android -->
-  <meta name="theme-color" content="#e11d1d">
   
   <title>Control de Asistencias</title>
 

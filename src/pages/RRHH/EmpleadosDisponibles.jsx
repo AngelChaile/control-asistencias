@@ -128,7 +128,7 @@ export default function EmpleadosDisponibles() {
 
   return (
     <div className="app-container">
-      <div className="text-center mb-8">
+      <div className="page-heading">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-red-600">Gestión de personal</p>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Empleados disponibles</h1>
         <p className="text-slate-600">Personal que se encuentra a disposición para nuevos destinos</p>

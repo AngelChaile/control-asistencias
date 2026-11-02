@@ -219,7 +219,7 @@ export default function QrGenerator({ area = "", user }) {
 
           {/* Imagen del QR */}
           <div className="flex justify-center">
-            <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-300 hover:shadow-md">
+            <div className="qr-paper p-4 bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-300 hover:shadow-md">
               <img
                 src={qrLink.quickUrl}
                 alt="Código QR para registro de asistencia"

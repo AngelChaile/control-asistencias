@@ -97,7 +97,7 @@ export default function SolicitudTraspaso() {
   }) : [];
   const resultadosAreas = areas.filter(area => `${area.nombre} ${area.ruta || ''}`.toLowerCase().includes(busquedaArea.toLowerCase())).slice(0, 30);
   const titulo = tipo === 'solicitud_personal' ? 'Pedido de Personal' : tipo === 'enviar_disposicion' ? 'Enviar personal a disposición' : 'Solicitud de Traspaso';
-  return <div className="app-container"><div className="text-center mb-8"><h1 className="text-3xl font-bold text-gray-900 mb-2">📝 {titulo}</h1><p className="text-gray-600">Los pedidos requieren aprobación de RRHH y Subsecretaría.</p></div>
+  return <div className="app-container"><div className="page-heading"><h1 className="text-3xl font-bold text-gray-900 mb-2">{titulo}</h1><p className="text-gray-600">Los pedidos requieren aprobación de RRHH y Subsecretaría.</p></div>
     {solicitudEnviada && <div className="card p-4 mb-6 bg-green-50 border border-green-200 text-green-800">✅ Solicitud enviada correctamente.</div>}
     <div className="card p-6 max-w-4xl mx-auto"><form onSubmit={handleSubmit} className="space-y-6">
       <div><label className="block text-sm font-medium text-gray-700 mb-2">Tipo de solicitud *</label><select className="input-modern" value={tipo} onChange={e => { setTipo(e.target.value); setSolicitudEnviada(false); }}><option value="traspaso_individual">Traspasar un empleado a otra área</option><option value="solicitud_personal">Solicitar personal a RRHH</option><option value="enviar_disposicion">Enviar empleado a disposición de Personal</option></select></div>

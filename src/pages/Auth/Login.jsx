@@ -64,20 +64,18 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-red-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="auth-page min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto w-20 h-20 bg-gradient-to-r from-red-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg mb-6">
-            <span className="text-white text-2xl font-bold">M</span>
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900">Sistema de Asistencias</h2>
-          <p className="mt-2 text-gray-600">Municipio - Ingresa a tu cuenta</p>
+          <span className="brand-mark mx-auto mb-5" aria-hidden="true">M</span>
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900">Control de Asistencias</h2>
+          <p className="mt-2 text-sm text-gray-600">Ingresá a tu cuenta para continuar.</p>
         </div>
 
         {/* Form */}
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100/60 p-8 space-y-6">
+          <div className="auth-card space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Correo electrónico
@@ -90,7 +88,7 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm placeholder-gray-400"
+                className="input-modern"
                 placeholder="usuario@municipio.com"
               />
             </div>
@@ -107,7 +105,7 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 bg-white/80 backdrop-blur-sm placeholder-gray-400"
+                className="input-modern"
                 placeholder="••••••••"
               />
             </div>
@@ -115,7 +113,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              className="btn-primary w-full py-3"
             >
               {loading ? (
                 <div className="flex items-center justify-center">
@@ -131,7 +129,7 @@ export default function Login() {
           {/* Footer */}
           <div className="text-center">
             <p className="text-xs text-gray-500">
-              © 2025 Municipalidad - Sistema seguro de gestión de asistencias
+              © {new Date().getFullYear()} Municipalidad · Gestión de asistencias
             </p>
           </div>
         </form>

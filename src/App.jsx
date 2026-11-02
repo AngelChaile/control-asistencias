@@ -78,6 +78,9 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
     localStorage.setItem("control-asistencias-theme", darkMode ? "dark" : "light");
+    document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
+      meta.setAttribute("content", darkMode ? "#12171f" : "#ffffff");
+    });
   }, [darkMode]);
 
   async function logout() {
@@ -105,7 +108,7 @@ const getRedirectPath = () => {
 };
 
   return (
-    <div className={darkMode ? "dark" : ""}>
+    <div className={darkMode ? "app-shell dark" : "app-shell"}>
     <BrowserRouter>
       {/* Navbar: mostramos para todos los roles excepto empleado */}
       {user && user.rol !== "empleado" && <Navbar darkMode={darkMode} onToggleDarkMode={() => setDarkMode(actual => !actual)} />}

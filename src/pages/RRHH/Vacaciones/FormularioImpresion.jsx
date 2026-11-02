@@ -56,7 +56,7 @@ export default function FormularioImpresion({ solicitud, onVolver }) {
         <button onClick={imprimir} className="rounded-xl bg-blue-700 px-5 py-2 font-semibold text-white hover:bg-blue-800">🖨️ Imprimir / Guardar PDF</button>
       </div>
 
-      <div className="mx-auto max-w-4xl rounded-2xl bg-white p-7 shadow-lg print:rounded-none print:shadow-none">
+      <div className="print-paper mx-auto max-w-4xl rounded-2xl bg-white p-7 shadow-lg print:rounded-none print:shadow-none">
         <div ref={printRef}>
           <header style={{ borderBottom: "3px double #111827", paddingBottom: 8, marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>

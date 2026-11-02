@@ -117,7 +117,7 @@ async function handleSearch() {
   return (
     <div className="app-container">
       {/* Header */}
-      <div className="text-center mb-8">
+      <div className="page-heading">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Reportes y Consultas</h1>
         <p className="text-gray-600">Genera reportes personalizados de asistencias</p>
       </div>
@@ -195,7 +195,7 @@ async function handleSearch() {
 
         {/* Controles de Acción */}
         <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <button onClick={handleSearch} className="btn-primary">
               🔍 Generar Reporte
             </button>
