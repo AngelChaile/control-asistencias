@@ -4,6 +4,7 @@ import ExportExcel from "../../components/ExportExcel";
 import EmployeeDetailModal from "../../components/EmployeeDetailModal";
 import { fetchEmpleadosPage, fetchAllEmpleados, fetchEmpleadosByLugarTrabajo } from "../../utils/usuarios";
 import { fetchAllAreas, searchAreas } from "../../utils/areas";
+import { CATEGORIAS_VACACIONES } from "../../utils/vacacionesCalculo.mjs";
 
 export default function Empleados() {
   const [empleados, setEmpleados] = useState([]);
@@ -271,16 +272,8 @@ export default function Empleados() {
   );
 
   // Opciones para selectores
-  const categorias = [
-    "ADMINISTRATIVO CAT 4 35 HS",
-    "ADMINISTRATIVO CAT 5 35 HS",
-    "ADMINISTRATIVO CAT 6 35 HS",
-    "OBRERO CAT 5 40 HS",
-    "OBRERO CAT 6 40 HS",
-    "TECNICO CAT 7 35 HS",
-    "TECNICO CAT 9 35 HS",
-    "PROFESIONAL CAT 9 35 HS",
-  ];
+  const categorias = nuevo.categoria && !CATEGORIAS_VACACIONES.includes(nuevo.categoria)
+    ? [nuevo.categoria, ...CATEGORIAS_VACACIONES] : CATEGORIAS_VACACIONES;
 
   const funciones = [
     "Administrativo",
@@ -314,8 +307,9 @@ export default function Empleados() {
   const tiposCargo = [
     { value: "permanente", label: "Planta Permanente" },
     { value: "temporario", label: "Temporario" },
-    { value: "contratado", label: "Docentes Provicionales" },
-    { value: "pasantia", label: "Pasantía" }
+    { value: "contratado", label: "Docentes Provisionales" },
+    { value: "pasantia", label: "Pasantía" },
+    { value: "interino", label: "Interino" }
   ];
 
   const estados = [
@@ -465,17 +459,16 @@ export default function Empleados() {
 
             {/* Categoría y Función */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
-              <select
+              <label htmlFor="empleado-categoria" className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
+              <input
+                id="empleado-categoria"
+                list="categorias-empleado"
                 className="input-modern"
                 value={nuevo.categoria}
+                placeholder="Escribí para buscar una categoría…"
                 onChange={(e) => setNuevo({ ...nuevo, categoria: e.target.value })}
-              >
-                <option value="">Seleccionar categoría...</option>
-                {categorias.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
+              />
+              <datalist id="categorias-empleado">{categorias.map(cat => <option key={cat} value={cat} />)}</datalist>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Función</label>

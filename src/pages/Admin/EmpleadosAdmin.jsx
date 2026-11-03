@@ -256,7 +256,8 @@ export default function EmpleadosAdmin() {
     { value: "permanente", label: "Planta Permanente" },
     { value: "temporario", label: "Temporario" },
     { value: "contratado", label: "Contratado" },
-    { value: "pasantia", label: "Pasantía" }
+    { value: "pasantia", label: "Pasantía" },
+    { value: "interino", label: "Interino" }
   ];
 
   return (

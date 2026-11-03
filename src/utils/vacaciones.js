@@ -1,681 +1,186 @@
-// src/utils/vacaciones.js
-// Lógica de cálculo de Licencia Anual Ordinaria (vacaciones)
-// Convenios: Municipal, Medico, Radiologo, Docente
-
 import {
-  collection,
-  addDoc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  doc,
-  runTransaction,
-  serverTimestamp,
+  collection, addDoc, getDoc, getDocs, query, where, orderBy, doc,
+  runTransaction, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { mismoPerfilVacacional } from "./regimenVacaciones.mjs";
+import { calcularVacaciones, calcularDiasRango, calcularSaldoVacacional, consumoVacacional, parseFechaLocal } from "./vacacionesCalculo.mjs";
+export * from "./vacacionesCalculo.mjs";
 
-// ─────────────────────────────────────────────
-// TABLAS DE DÍAS POR ANTIGÜEDAD (fuente: grilla oficial)
-// ─────────────────────────────────────────────
-
-/**
- * Cada tabla define tramos de antigüedad con sus días totales anuales.
- * La propiedad `tipo` indica si los días son "habiles" o "corridos".
- * La propiedad `grilla` es la tabla proporcional para reingresos:
- *   grilla[mes - 1][tramoIndex] = días proporcionales
- *   (mes va de 1 a 12, tramoIndex corresponde al orden de `tramos`)
- */
-
-export const TABLAS_CONVENIO = {
-  Municipal: {
-    tipo: "habiles",
-    tramos: [
-      { desde: 1,  hasta: 4,   dias: 14, label: "1 a 4 AÑOS"  },
-      { desde: 5,  hasta: 9,   dias: 21, label: "5 a 9 AÑOS" },
-      { desde: 10, hasta: 19,  dias: 28, label: "10 a 19 AÑOS" },
-      { desde: 20, hasta: 999, dias: 35, label: "20 AÑOS O MÁS" },
-    ],
-    // grilla[mes-1][tramoIndex] — mes 1..12, tramo 0..3
-    grilla: [
-      [ 1,  1,  2,  3],  // mes 1
-      [ 2,  3,  4,  6],  // mes 2
-      [ 3,  4,  7,  9],  // mes 3
-      [ 5,  7,  9, 12],  // mes 4
-      [ 6,  8, 11, 15],  // mes 5
-      [ 7, 10, 14, 18],  // mes 6
-      [ 8, 11, 16, 20],  // mes 7
-      [ 9, 14, 18, 23],  // mes 8
-      [10, 15, 21, 26],  // mes 9
-      [12, 17, 23, 29],  // mes 10
-      [13, 18, 25, 32],  // mes 11
-      [14, 21, 28, 35],  // mes 12
-    ],
-  },
-
-  Medico: {
-    tipo: "corridos",
-    tramos: [
-      { desde: 1,  hasta: 4,   dias: 20, label: "1 a 4 AÑOS"  },
-      { desde: 5,  hasta: 9,   dias: 25, label: "5 a 9 AÑOS" },
-      { desde: 10, hasta: 999, dias: 30, label: "10 a 999 AÑOS" },
-    ],
-    grilla: [
-      [ 1,  2,  2],  // mes 1
-      [ 3,  4,  5],  // mes 2
-      [ 5,  6,  7],  // mes 3
-      [ 7,  8, 10],  // mes 4
-      [ 8, 10, 12],  // mes 5
-      [10, 12, 15],  // mes 6
-      [12, 15, 17],  // mes 7
-      [13, 17, 20],  // mes 8
-      [15, 19, 22],  // mes 9
-      [17, 21, 25],  // mes 10
-      [18, 23, 27],  // mes 11
-      [20, 25, 30],  // mes 12
-    ],
-  },
-
-  Radiologo: {
-    tipo: "corridos",
-    tramos: [
-      { desde: 1, hasta: 999, dias: 50, label: "1 AÑO O MÁS" },
-    ],
-    // Nota: la grilla de Radiólogos tiene valores > 12 meses (proporcional especial)
-    grilla: [
-      [ 4],  // mes 1
-      [ 8],  // mes 2
-      [12],  // mes 3
-      [16],  // mes 4
-      [20],  // mes 5
-      [24],  // mes 6
-      [29],  // mes 7
-      [33],  // mes 8
-      [37],  // mes 9
-      [41],  // mes 10
-      [45],  // mes 11
-      [50],  // mes 12
-    ],
-  },
-
-  Docente: {
-    tipo: "corridos",
-    tramos: [
-      { desde: 1,  hasta: 19,  dias: 30, label: "1 a 19 AÑOS"  },
-      { desde: 20, hasta: 999, dias: 40, label: "20 AÑOS O MÁS" },
-    ],
-    grilla: [
-      [ 1,  2],  // mes 1
-      [ 3,  5],  // mes 2
-      [ 6,  8],  // mes 3
-      [ 9, 12],  // mes 4
-      [12, 16],  // mes 5
-      [15, 20],  // mes 6
-      [18, 24],  // mes 7
-      [21, 28],  // mes 8
-      [24, 32],  // mes 9
-      [27, 36],  // mes 10
-      [30, 40],  // mes 11
-      [30, 40],  // mes 12 (igual a 11 según grilla — sin dato explícito)
-    ],
-  },
-};
-
-// ─────────────────────────────────────────────
-// HELPERS DE FECHA
-// ─────────────────────────────────────────────
-
-/**
- * Parsea "yyyy-mm-dd" o "dd/mm/yyyy" a Date local (sin shift UTC).
- */
-export function parseFechaLocal(str) {
-  if (!str) return null;
-  if (str instanceof Date) return new Date(str.getFullYear(), str.getMonth(), str.getDate());
-  const s = String(str).trim();
-  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3]);
-  const local = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (local) return new Date(+local[3], +local[2] - 1, +local[1]);
-  return null;
-}
-
-/**
- * Calcula años completos entre dos fechas (antigüedad).
- * @param {Date} fechaIngreso
- * @param {Date} [referencia] — por defecto 31/12 del año vacacional
- */
-export function calcularAntiguedad(fechaIngreso, referencia) {
-  const ref = referencia || new Date();
-  const años = ref.getFullYear() - fechaIngreso.getFullYear();
-  const cumplioAniversario =
-    ref.getMonth() > fechaIngreso.getMonth() ||
-    (ref.getMonth() === fechaIngreso.getMonth() && ref.getDate() >= fechaIngreso.getDate());
-  return cumplioAniversario ? años : años - 1;
-}
-
-/**
- * Calcula meses completos trabajados desde `fechaDesde` hasta el 31/12 del año vacacional.
- */
-export function calcularMesesTrabajados(fechaDesde, anioVacacional) {
-  const inicio = parseFechaLocal(fechaDesde);
-  if (!inicio) return 0;
-  const fin = new Date(anioVacacional, 11, 31); // 31/12
-  if (inicio > fin) return 0;
-
-  let meses = (fin.getFullYear() - inicio.getFullYear()) * 12 + (fin.getMonth() - inicio.getMonth());
-  // Si el día de inicio es posterior al 1, el primer mes no es completo
-  if (inicio.getDate() > 1) meses -= 1;
-  return Math.max(0, Math.min(12, meses));
-}
-
-// ─────────────────────────────────────────────
-// LÓGICA PRINCIPAL DE CÁLCULO
-// ─────────────────────────────────────────────
-
-/**
- * Obtiene el índice del tramo de antigüedad dentro de la tabla del convenio.
- */
-function getTramoIndex(tabla, antiguedad) {
-  const idx = tabla.tramos.findIndex(
-    (t) => antiguedad >= t.desde && antiguedad <= t.hasta
-  );
-  return idx === -1 ? tabla.tramos.length - 1 : idx;
-}
-
-/**
- * Obtiene los días anuales completos según convenio y antigüedad.
- * @param {string} convenio — "Municipal" | "Medico" | "Radiologo" | "Docente"
- * @param {number} antiguedad — años completos
- * @returns {{ dias: number, tipo: string, label: string }}
- */
-export function getDiasAnuales(convenio, antiguedad) {
-  const tabla = TABLAS_CONVENIO[convenio];
-  if (!tabla) throw new Error(`Convenio desconocido: ${convenio}`);
-  const idx = getTramoIndex(tabla, antiguedad);
-  const tramo = tabla.tramos[idx];
-  return { dias: tramo.dias, tipo: tabla.tipo, label: tramo.label };
-}
-
-/**
- * CASO NORMAL: calcula días de vacaciones sin casos especiales.
- * @param {object} params
- * @param {string} params.convenio
- * @param {string} params.fechaIngreso — "yyyy-mm-dd"
- * @param {number} params.anioVacacional — ej: 2025
- * @returns {{ dias: number, tipo: string, antiguedad: number, label: string }}
- */
-export function calcularDiasNormal({ convenio, fechaIngreso, anioVacacional }) {
-  const ingreso = parseFechaLocal(fechaIngreso);
-  if (!ingreso) throw new Error("Fecha de ingreso inválida.");
-
-  // La antigüedad se calcula al 31/12 del año vacacional
-  const ref = new Date(anioVacacional, 11, 31);
-  const antiguedad = calcularAntiguedad(ingreso, ref);
-
-  if (antiguedad < 1) {
-    // Menos de 1 año: proporcional por meses trabajados en el año vacacional
-    const meses = calcularMesesTrabajados(fechaIngreso, anioVacacional);
-    return calcularDiasReingreso({ convenio, antiguedadAlReingreso: 0, mesesTrabajados: meses });
-  }
-
-  const { dias, tipo, label } = getDiasAnuales(convenio, antiguedad);
-  return { dias, tipo, antiguedad, label, caso: "normal" };
-}
-
-/**
- * CASO REINGRESO: calcula días proporcionales según grilla oficial.
- * @param {object} params
- * @param {string} params.convenio
- * @param {number} params.antiguedadAlReingreso — años completos al momento del reingreso
- * @param {number} params.mesesTrabajados — meses completos trabajados en el año de reingreso (1-12)
- * @returns {{ dias: number, tipo: string, label: string }}
- */
-export function calcularDiasReingreso({ convenio, antiguedadAlReingreso, mesesTrabajados }) {
-  const tabla = TABLAS_CONVENIO[convenio];
-  if (!tabla) throw new Error(`Convenio desconocido: ${convenio}`);
-
-  const mes = Math.max(1, Math.min(12, mesesTrabajados));
-  const tramoIdx = getTramoIndex(tabla, Math.max(1, antiguedadAlReingreso));
-  const dias = tabla.grilla[mes - 1][tramoIdx];
-
-  return {
-    dias,
-    tipo: tabla.tipo,
-    label: tabla.tramos[tramoIdx].label,
-    caso: "reingreso",
-    mesesTrabajados: mes,
-    antiguedadAlReingreso,
-  };
-}
-
-/**
- * CASO CAMBIO DE CONVENIO: calcula días proporcionales combinando dos convenios.
- * @param {object} params
- * @param {string} params.convenioAnterior
- * @param {string} params.convenioNuevo
- * @param {number} params.mesesConvenioAnterior — meses bajo el convenio anterior en el año vacacional
- * @param {number} params.mesesConvenioNuevo — meses bajo el convenio nuevo en el año vacacional
- * @param {number} params.antiguedad — años completos al 31/12 del año vacacional
- * @returns {{ dias: number, desglose: object }}
- */
-export function calcularDiasCambioConvenio({
-  convenioAnterior,
-  convenioNuevo,
-  mesesConvenioAnterior,
-  mesesConvenioNuevo,
-  antiguedad,
-}) {
-  const { dias: diasAnt, tipo: tipoAnt } = getDiasAnuales(convenioAnterior, antiguedad);
-  const { dias: diasNuevo, tipo: tipoNuevo } = getDiasAnuales(convenioNuevo, antiguedad);
-
-  const propAnt = Math.round((diasAnt / 12) * mesesConvenioAnterior);
-  const propNuevo = Math.round((diasNuevo / 12) * mesesConvenioNuevo);
-  const total = propAnt + propNuevo;
-
-  return {
-    dias: total,
-    caso: "cambioConvenio",
-    desglose: {
-      convenioAnterior,
-      diasAnterior: propAnt,
-      tipoAnterior: tipoAnt,
-      mesesAnterior: mesesConvenioAnterior,
-      convenioNuevo,
-      diasNuevo: propNuevo,
-      tipoNuevo,
-      mesesNuevo: mesesConvenioNuevo,
-    },
-  };
-}
-
-/**
- * Función principal unificada: decide qué caso aplicar y devuelve el resultado.
- * @param {object} params
- * @param {string}  params.convenio           — convenio actual
- * @param {string}  params.fechaIngreso        — "yyyy-mm-dd"
- * @param {number}  params.anioVacacional
- * @param {boolean} [params.esReingreso]
- * @param {string}  [params.fechaReingreso]    — "yyyy-mm-dd", requerido si esReingreso=true
- * @param {boolean} [params.esCambioConvenio]
- * @param {string}  [params.convenioAnterior]  — requerido si esCambioConvenio=true
- * @param {number}  [params.mesesConvenioAnterior]
- * @param {number}  [params.mesesConvenioNuevo]
- */
-export function calcularVacaciones(params) {
-  const {
-    convenio,
-    fechaIngreso,
-    anioVacacional,
-    esReingreso = false,
-    fechaReingreso = null,
-    esCambioConvenio = false,
-    convenioAnterior = null,
-    mesesConvenioAnterior = 0,
-    mesesConvenioNuevo = 0,
-  } = params;
-
-  if (esCambioConvenio && convenioAnterior) {
-    const ref = new Date(anioVacacional, 11, 31);
-    const ingreso = parseFechaLocal(fechaIngreso);
-    const antiguedad = calcularAntiguedad(ingreso, ref);
-    return calcularDiasCambioConvenio({
-      convenioAnterior,
-      convenioNuevo: convenio,
-      mesesConvenioAnterior,
-      mesesConvenioNuevo,
-      antiguedad,
-    });
-  }
-
-  if (esReingreso && fechaReingreso) {
-    const ingreso = parseFechaLocal(fechaIngreso);
-    const reingreso = parseFechaLocal(fechaReingreso);
-    // Antigüedad al momento del reingreso (referencia = fecha de reingreso)
-    const antiguedadAlReingreso = calcularAntiguedad(ingreso, reingreso);
-    const mesesTrabajados = calcularMesesTrabajados(fechaReingreso, anioVacacional);
-    return calcularDiasReingreso({ convenio, antiguedadAlReingreso, mesesTrabajados });
-  }
-
-  return calcularDiasNormal({ convenio, fechaIngreso, anioVacacional });
-}
-
-// ─────────────────────────────────────────────
-// FIRESTORE — CRUD DE SOLICITUDES
-// ─────────────────────────────────────────────
-
-/**
- * Genera un número de solicitud único: "VAC-YYYY-NNNNN"
- */
 async function generarNroSolicitud(anio) {
-  const q = query(
-    collection(db, "solicitudesVacaciones"),
-    where("anioVacacional", "==", anio),
-    orderBy("createdAt", "desc")
-  );
-  const snap = await getDocs(q);
-  const siguiente = snap.size + 1;
-  return `VAC-${anio}-${String(siguiente).padStart(5, "0")}`;
+  const snap = await getDocs(query(collection(db, "solicitudesVacaciones"), where("anioVacacional", "==", anio), orderBy("createdAt", "desc")));
+  return `VAC-${anio}-${String(snap.size + 1).padStart(5, "0")}`;
 }
 
-/**
- * Crea una nueva solicitud de vacaciones en Firestore.
- * Calcula automáticamente los días y asigna el número de solicitud.
- */
+async function solicitudesDelPeriodo(legajo, anio) {
+  const snap = await getDocs(query(collection(db, "solicitudesVacaciones"), where("legajo", "==", String(legajo).trim())));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id })).filter(s => Number(s.anioVacacional) === Number(anio));
+}
+
+function planDeSolicitud(solicitud) {
+  if (solicitud.versionRegimen !== 2 || !solicitud.perfilActual) return null;
+  return { perfilActual: solicitud.perfilActual, perfilAnterior: solicitud.perfilAnterior || null,
+    esCambioConvenio: !!solicitud.esCambioConvenio, esReingreso: !!solicitud.esReingreso,
+    fechaReingreso: solicitud.fechaReingreso || null,
+    mesesConvenioAnterior: Number(solicitud.mesesConvenioAnterior) || 0,
+    mesesConvenioNuevo: Number(solicitud.mesesConvenioNuevo) || 0,
+    diasPorTipo: solicitud.diasPorTipo, calculoDetalle: solicitud.calculoDetalle,
+    nroSolicitud: solicitud.nroSolicitud || "" };
+}
+
+function planAprobado(solicitudes) {
+  const fecha = s => s.fechaAprobacion?.toMillis?.() || (s.fechaAprobacion?.seconds || 0) * 1000;
+  const candidatas = solicitudes.filter(s => s.estado === "aprobada" && s.versionRegimen === 2 && s.perfilActual && (s.esCambioConvenio || s.esReingreso));
+  candidatas.sort((a,b) => fecha(b) - fecha(a) || String(b.nroSolicitud || "").localeCompare(String(a.nroSolicitud || "")));
+  return candidatas.length ? planDeSolicitud(candidatas[0]) : null;
+}
+
+export async function fetchPlanVacacional(legajo, anio) {
+  return planAprobado(await solicitudesDelPeriodo(legajo, anio));
+}
+
+export async function fetchDiasDisponibles(legajo, anioVacacional, diasPorTipo) {
+  return calcularSaldoVacacional(diasPorTipo, await solicitudesDelPeriodo(legajo, anioVacacional));
+}
+
 export async function crearSolicitudVacaciones(datos) {
-  const {
-    legajo,
-    nombreCompleto,
-    cargo,
-    area,
-    convenio,
-    esJerarquico = false,
-    fechaIngreso,
-    anioVacacional,
-    diasSolicitados,
-    fechaDesde,
-    fechaHasta,
-    observaciones = "",
-    solicitadoPor,
-    // casos especiales
-    esReingreso = false,
-    fechaReingreso = null,
-    esCambioConvenio = false,
-    convenioAnterior = null,
-    mesesConvenioAnterior = 0,
-    mesesConvenioNuevo = 0,
-  } = datos;
-
-  // Calcular días que corresponden
-  const resultado = calcularVacaciones({
-    convenio,
-    fechaIngreso,
-    anioVacacional,
-    esReingreso,
-    fechaReingreso,
-    esCambioConvenio,
-    convenioAnterior,
-    mesesConvenioAnterior,
-    mesesConvenioNuevo,
-  });
-
-  const nroSolicitud = await generarNroSolicitud(anioVacacional);
-
+  const legajo = String(datos.legajo || "").trim();
+  if (!legajo || !datos.nombreCompleto?.trim()) throw new Error("Completá el legajo y el nombre del agente.");
+  const anio = Number(datos.anioVacacional);
+  const historicas = await solicitudesDelPeriodo(legajo, anio);
+  const plan = planAprobado(historicas);
+  // Al volver a solicitar, conservar el proporcional aprobado del año.
+  if (plan && !datos.esCambioConvenio && !datos.esReingreso) {
+    if (!mismoPerfilVacacional(plan.perfilActual, datos.perfilActual)) throw new Error("El año tiene un régimen especial aprobado para otra situación. Completá los cambios del período antes de solicitar.");
+    datos = { ...datos, perfilAnterior: plan.perfilAnterior, esCambioConvenio: plan.esCambioConvenio,
+      mesesConvenioAnterior: plan.mesesConvenioAnterior, mesesConvenioNuevo: plan.mesesConvenioNuevo,
+      esReingreso: plan.esReingreso, fechaReingreso: plan.fechaReingreso };
+  }
+  const resultado = calcularVacaciones(datos);
+  const tipo = datos.tipoDias || resultado.tipo;
+  if (!["habiles", "corridos"].includes(tipo)) throw new Error("Elegí de qué saldo se descontará esta licencia.");
+  const dias = calcularDiasRango(tipo, datos.fechaDesde, datos.fechaHasta).diasRango;
+  if (!parseFechaLocal(datos.fechaDesde) || !parseFechaLocal(datos.fechaHasta) || dias < 1) throw new Error("Seleccioná un rango válido de licencia.");
+  if (Number(datos.diasSolicitados) !== dias) throw new Error("El conteo de la licencia cambió. Volvé a calcular antes de guardar.");
+  const saldo = calcularSaldoVacacional(resultado.diasPorTipo, historicas);
+  if (dias > saldo.porTipo[tipo].diasDisponibles) throw new Error(`Sólo quedan ${saldo.porTipo[tipo].diasDisponibles} días ${tipo === "habiles" ? "hábiles" : "corridos"} disponibles. Volvé a consultar el saldo.`);
   const docData = {
-    nroSolicitud,
-    legajo: String(legajo),
-    nombreCompleto,
-    cargo: cargo || "",
-    area: area || "",
-    convenio,
-    esJerarquico,
-    fechaIngreso,
-    anioVacacional,
-    diasCorresponden: resultado.dias,
-    tipoDias: resultado.tipo,
-    diasSolicitados: Number(diasSolicitados),
-    fechaDesde: fechaDesde || "",
-    fechaHasta: fechaHasta || "",
+    nroSolicitud: await generarNroSolicitud(anio),
+    legajo,
+    nombreCompleto: datos.nombreCompleto.trim(),
+    cargo: datos.perfilActual.categoria || "",
+    categoria: datos.perfilActual.categoria || "",
+    tipoCargo: datos.perfilActual.tipoCargo || "",
+    particion: datos.perfilActual.particion || "",
+    area: datos.area || "",
+    convenio: resultado.regimen.convenio,
+    esJerarquico: resultado.regimen.convenio === "Municipal" && resultado.regimen.tipo === "corridos",
+    fechaIngreso: datos.fechaIngreso,
+    anioVacacional: anio,
+    versionRegimen: 2,
+    diasCorresponden: resultado.diasPorTipo[tipo],
+    diasPorTipo: resultado.diasPorTipo,
+    tipoDias: tipo,
+    diasSolicitados: dias,
+    consumoPorTipo: { habiles: tipo === "habiles" ? dias : 0, corridos: tipo === "corridos" ? dias : 0 },
+    fechaDesde: datos.fechaDesde,
+    fechaHasta: datos.fechaHasta,
     estado: "pendiente",
-    observaciones,
-    solicitadoPor: solicitadoPor || "",
-    // casos especiales
-    esReingreso,
-    fechaReingreso: fechaReingreso || null,
-    esCambioConvenio,
-    convenioAnterior: convenioAnterior || null,
-    mesesConvenioAnterior,
-    mesesConvenioNuevo,
+    observaciones: datos.observaciones || "",
+    solicitadoPor: datos.solicitadoPor || "",
+    esReingreso: !!datos.esReingreso,
+    fechaReingreso: datos.esReingreso ? datos.fechaReingreso : null,
+    esCambioConvenio: !!datos.esCambioConvenio,
+    perfilActual: datos.perfilActual,
+    perfilAnterior: datos.esCambioConvenio ? datos.perfilAnterior : null,
+    convenioAnterior: resultado.desglose?.convenioAnterior || null,
+    mesesConvenioAnterior: Number(datos.mesesConvenioAnterior) || 0,
+    mesesConvenioNuevo: Number(datos.mesesConvenioNuevo) || 0,
     calculoDetalle: resultado,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
-
   const ref = await addDoc(collection(db, "solicitudesVacaciones"), docData);
-  return { id: ref.id, ...docData };
+  return { ...docData, id: ref.id };
 }
 
-/**
- * Trae todas las solicitudes de vacaciones, con filtros opcionales.
- */
 export async function fetchSolicitudesVacaciones({ legajo = "", area = "", anio = null, estado = "" } = {}) {
   const constraints = [];
   if (anio) constraints.push(where("anioVacacional", "==", Number(anio)));
   if (estado) constraints.push(where("estado", "==", estado));
-
-  const q = query(collection(db, "solicitudesVacaciones"), ...constraints, orderBy("createdAt", "desc"));
-  const snap = await getDocs(q);
-  let rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-  if (legajo) {
-    const lj = String(legajo).trim().toLowerCase();
-    rows = rows.filter((r) => String(r.legajo || "").toLowerCase().includes(lj));
-  }
-  if (area) {
-    const a = area.trim().toLowerCase();
-    rows = rows.filter((r) => String(r.area || "").toLowerCase().includes(a));
-  }
-
+  const snap = await getDocs(query(collection(db, "solicitudesVacaciones"), ...constraints, orderBy("createdAt", "desc")));
+  let rows = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+  if (legajo) rows = rows.filter(r => String(r.legajo || "").toLowerCase().includes(legajo.trim().toLowerCase()));
+  if (area) rows = rows.filter(r => String(r.area || "").toLowerCase().includes(area.trim().toLowerCase()));
   return rows;
 }
 
-/**
- * Actualiza el estado de una solicitud ("aprobada" | "rechazada").
- */
+function diasOtorgados(solicitud) {
+  // Las solicitudes anteriores se descuentan del tipo que tenían al aprobarse.
+  if (solicitud.versionRegimen === 2 && solicitud.diasPorTipo) return solicitud.diasPorTipo;
+  if (!["habiles", "corridos"].includes(solicitud.tipoDias)) throw new Error("La solicitud histórica no tiene un tipo de días definido. RRHH debe revisarla.");
+  return { habiles: solicitud.tipoDias === "habiles" ? Number(solicitud.diasCorresponden) : 0,
+    corridos: solicitud.tipoDias === "corridos" ? Number(solicitud.diasCorresponden) : 0 };
+}
+
 export async function actualizarEstadoSolicitud(id, estado, observaciones = "") {
-  const ref = doc(collection(db, "solicitudesVacaciones"), id);
-
-  // Firestore Web no permite leer una consulta de colección dentro de una
-  // transacción. Este cálculo sólo inicializa el saldo histórico; a partir de
-  // allí el documento de saldo se modifica de forma atómica.
-  const solicitudInicial = await getDoc(ref);
-  if (!solicitudInicial.exists()) throw new Error("La solicitud de vacaciones ya no existe.");
-
-  const datosIniciales = solicitudInicial.data();
-  let diasAprobadosHistoricos = 0;
-  if (estado === "aprobada" && datosIniciales.estado !== "aprobada") {
-    const solicitudesQuery = query(
-      collection(db, "solicitudesVacaciones"),
-      where("legajo", "==", String(datosIniciales.legajo))
-    );
-    const solicitudesSnap = await getDocs(solicitudesQuery);
-    diasAprobadosHistoricos = solicitudesSnap.docs
-      .filter((item) => item.id !== id)
-      .map((item) => item.data())
-      .filter((item) => (
-        item.estado === "aprobada"
-        && Number(item.anioVacacional) === Number(datosIniciales.anioVacacional)
-      ))
-      .reduce((total, item) => total + (Number(item.diasSolicitados) || 0), 0);
-  }
-
-  const saldoRef = doc(
-    db,
-    "saldosVacaciones",
-    `vacaciones_${String(datosIniciales.legajo)}_${Number(datosIniciales.anioVacacional)}`
-  );
-
-  return runTransaction(db, async (transaction) => {
-    const solicitudSnap = await transaction.get(ref);
-    if (!solicitudSnap.exists()) throw new Error("La solicitud de vacaciones ya no existe.");
-
-    const solicitud = solicitudSnap.data();
-    if (solicitud.estado === estado) return { ...solicitud, estado };
-
-    // Sólo al aprobar se descuenta el saldo. Las pendientes no consumen días.
-    if (estado === "aprobada") {
-      const saldoSnap = await transaction.get(saldoRef);
-      const diasCorresponden = Number(solicitud.diasCorresponden) || 0;
-      const diasYaAprobados = saldoSnap.exists()
-        ? (Number(saldoSnap.data().diasUsados) || 0)
-        : diasAprobadosHistoricos;
-      const diasDisponibles = Math.max(0, diasCorresponden - diasYaAprobados);
-      const diasSolicitados = Number(solicitud.diasSolicitados) || 0;
-
-      if (diasSolicitados > diasDisponibles) {
-        throw new Error(`No se puede aprobar: el agente tiene ${diasDisponibles} día(s) disponible(s) para el período ${solicitud.anioVacacional}.`);
-      }
-
-      const saldoActualizado = {
-        legajo: String(solicitud.legajo),
-        anioVacacional: Number(solicitud.anioVacacional),
-        diasCorresponden,
-        diasUsados: diasYaAprobados + diasSolicitados,
-        diasDisponibles: diasDisponibles - diasSolicitados,
-        updatedAt: serverTimestamp(),
-      };
-      if (saldoSnap.exists()) transaction.update(saldoRef, saldoActualizado);
-      else transaction.set(saldoRef, { ...saldoActualizado, createdAt: serverTimestamp() });
-
-      transaction.update(ref, {
-        estado,
-        observaciones,
-        diasDescontados: diasSolicitados,
-        saldoRestante: saldoActualizado.diasDisponibles,
-        fechaAprobacion: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      return { ...solicitud, estado, diasDescontados: diasSolicitados, saldoRestante: saldoActualizado.diasDisponibles };
+  if (!["aprobada", "rechazada"].includes(estado)) throw new Error("Estado de solicitud no válido.");
+  const ref = doc(db, "solicitudesVacaciones", id);
+  const inicial = await getDoc(ref);
+  if (!inicial.exists()) throw new Error("La solicitud de vacaciones ya no existe.");
+  const datos = inicial.data();
+  const historicas = estado === "aprobada" && datos.estado !== "aprobada"
+    ? (await solicitudesDelPeriodo(datos.legajo, datos.anioVacacional)).filter(s => s.id !== id) : [];
+  const usadasHistoricas = calcularSaldoVacacional({ habiles: 0, corridos: 0 }, historicas).porTipo;
+  const saldoRef = doc(db, "saldosVacaciones", `vacaciones_${String(datos.legajo)}_${Number(datos.anioVacacional)}`);
+  return runTransaction(db, async transaction => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists()) throw new Error("La solicitud de vacaciones ya no existe.");
+    const solicitud = snap.data();
+    if (solicitud.estado === estado) return solicitud;
+    if (solicitud.estado !== "pendiente") throw new Error("Sólo se puede resolver una solicitud pendiente.");
+    if (estado === "rechazada") {
+      transaction.update(ref, { estado, observaciones, fechaRechazo: serverTimestamp(), updatedAt: serverTimestamp() });
+      return { ...solicitud, estado };
     }
-
-    transaction.update(ref, {
-      estado,
-      observaciones,
-      fechaRechazo: estado === "rechazada" ? serverTimestamp() : null,
-      updatedAt: serverTimestamp(),
-    });
-    return { ...solicitud, estado };
+    const saldoSnap = await transaction.get(saldoRef);
+    const saldoAnterior = saldoSnap.exists() ? saldoSnap.data() : null;
+    // El documento por legajo/año serializa todas las aprobaciones, de ambos tipos.
+    // En la primera aprobación V2 se reconstruyen las bolsas desde el historial.
+    const usadas = saldoAnterior?.versionRegimen === 2 ? { ...saldoAnterior.diasUsadosPorTipo }
+      : { habiles: usadasHistoricas.habiles.diasUsados, corridos: usadasHistoricas.corridos.diasUsados };
+    if (![usadas.habiles, usadas.corridos].every(n => Number.isInteger(n) && n >= 0)) throw new Error("El saldo guardado está incompleto. RRHH debe revisarlo.");
+    const planPrevio = saldoAnterior?.planVacacional || planAprobado(historicas);
+    const planPropio = planDeSolicitud(solicitud);
+    if (planPrevio && planPropio && !solicitud.esCambioConvenio && !solicitud.esReingreso
+      && !mismoPerfilVacacional(planPrevio.perfilActual, planPropio.perfilActual)) {
+      throw new Error("La situación de esta solicitud no coincide con el régimen ya aprobado del año. Revisá los cambios antes de aprobar.");
+    }
+    const plan = planPropio && (solicitud.esCambioConvenio || solicitud.esReingreso)
+      ? planPropio : planPrevio || planPropio;
+    const otorgados = plan?.diasPorTipo || diasOtorgados(solicitud);
+    const consumo = consumoVacacional(solicitud);
+    const tipo = solicitud.tipoDias;
+    const cantidad = Number(solicitud.diasSolicitados);
+    const disponibles = Math.max(0, Number(otorgados[tipo]) - usadas[tipo]);
+    if (!Number.isFinite(disponibles) || cantidad < 1 || cantidad > disponibles) {
+      throw new Error(`No se puede aprobar: quedan ${disponibles || 0} días ${tipo === "habiles" ? "hábiles" : "corridos"} del período ${solicitud.anioVacacional}.`);
+    }
+    usadas.habiles += consumo.habiles;
+    usadas.corridos += consumo.corridos;
+    const restantes = { habiles: Math.max(0, Number(otorgados.habiles) - usadas.habiles), corridos: Math.max(0, Number(otorgados.corridos) - usadas.corridos) };
+    const nuevoSaldo = { versionRegimen: 2, legajo: String(solicitud.legajo), anioVacacional: Number(solicitud.anioVacacional),
+      diasUsadosPorTipo: usadas, diasCorrespondenPorTipo: otorgados, diasDisponiblesPorTipo: restantes,
+      planVacacional: plan || null,
+      tipoDias: tipo, diasUsados: usadas[tipo], diasCorresponden: Number(otorgados[tipo]), diasDisponibles: restantes[tipo], updatedAt: serverTimestamp() };
+    if (saldoSnap.exists()) transaction.update(saldoRef, nuevoSaldo);
+    else transaction.set(saldoRef, { ...nuevoSaldo, createdAt: serverTimestamp() });
+    const ajustePlan = plan && solicitud.versionRegimen === 2 ? { perfilAnterior: plan.perfilAnterior,
+      esCambioConvenio: plan.esCambioConvenio, esReingreso: plan.esReingreso, fechaReingreso: plan.fechaReingreso,
+      mesesConvenioAnterior: plan.mesesConvenioAnterior, mesesConvenioNuevo: plan.mesesConvenioNuevo,
+      calculoDetalle: plan.calculoDetalle } : {};
+    transaction.update(ref, { ...ajustePlan, estado, observaciones, diasPorTipo: otorgados, diasCorresponden: Number(otorgados[tipo]), diasDescontados: cantidad, consumoPorTipo: consumo,
+      saldoRestante: restantes[tipo], saldoRestantePorTipo: restantes, fechaAprobacion: serverTimestamp(), updatedAt: serverTimestamp() });
+    return { ...solicitud, ...ajustePlan, estado, diasPorTipo: otorgados, diasCorresponden: Number(otorgados[tipo]), saldoRestante: restantes[tipo], saldoRestantePorTipo: restantes };
   });
-}
-
-// ─────────────────────────────────────────────
-// CÁLCULO DE DÍAS EN UN RANGO DE FECHAS
-// ─────────────────────────────────────────────
-
-/**
- * Feriados nacionales fijos de Argentina (dd-MM).
- * Se evalúan cada año.
- */
-const FERIADOS_FIJOS = [
-  "01-01", // Año Nuevo
-  "24-03", // Día de la Memoria
-  "02-04", // Malvinas
-  "01-05", // Día del Trabajador
-  "25-05", // Revolución de Mayo
-  "20-06", // Paso a la Inmortalidad del Gral. Belgrano
-  "09-07", // Independencia
-  "17-08", // Paso a la Inmortalidad del Gral. San Martín (3er lunes de agosto — se trata como fijo al 17)
-  "12-10", // Día del Respeto a la Diversidad Cultural (2do lunes de octubre — se trata como fijo al 12)
-  "20-11", // Día de la Soberanía Nacional (4to lunes de noviembre — se trata como fijo al 20)
-  "08-12", // Inmaculada Concepción
-  "25-12", // Navidad
-];
-
-/**
- * Devuelve true si la fecha es feriado nacional fijo.
- * @param {Date} date
- */
-function esFeriadoFijo(date) {
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  return FERIADOS_FIJOS.includes(`${dd}-${mm}`);
-}
-
-/**
- * Cuenta los días hábiles entre dos fechas (inclusive ambos extremos).
- * Excluye sábados, domingos y feriados nacionales fijos.
- * @param {string} desde — "yyyy-mm-dd"
- * @param {string} hasta — "yyyy-mm-dd"
- * @param {string[]} [feriadosExtra] — feriados adicionales en formato "yyyy-mm-dd"
- * @returns {number}
- */
-export function contarDiasHabiles(desde, hasta, feriadosExtra = []) {
-  const inicio = parseFechaLocal(desde);
-  const fin    = parseFechaLocal(hasta);
-  if (!inicio || !fin || inicio > fin) return 0;
-
-  const extrasSet = new Set(feriadosExtra);
-  let count = 0;
-  const cur = new Date(inicio);
-
-  while (cur <= fin) {
-    const dow = cur.getDay(); // 0=Dom, 6=Sáb
-    const isoStr = cur.toISOString().slice(0, 10);
-    if (dow !== 0 && dow !== 6 && !esFeriadoFijo(cur) && !extrasSet.has(isoStr)) {
-      count++;
-    }
-    cur.setDate(cur.getDate() + 1);
-  }
-  return count;
-}
-
-/**
- * Cuenta los días corridos entre dos fechas (inclusive ambos extremos).
- * @param {string} desde — "yyyy-mm-dd"
- * @param {string} hasta — "yyyy-mm-dd"
- * @returns {number}
- */
-export function contarDiasCorridos(desde, hasta) {
-  const inicio = parseFechaLocal(desde);
-  const fin    = parseFechaLocal(hasta);
-  if (!inicio || !fin || inicio > fin) return 0;
-  const diff = fin.getTime() - inicio.getTime();
-  return Math.round(diff / (1000 * 60 * 60 * 24)) + 1;
-}
-
-/**
- * Dado un convenio y un rango de fechas, devuelve los días que consume ese rango
- * según el tipo del convenio (hábiles o corridos).
- * @param {string} convenio
- * @param {string} desde — "yyyy-mm-dd"
- * @param {string} hasta — "yyyy-mm-dd"
- * @param {string[]} [feriadosExtra]
- * @returns {{ diasRango: number, tipo: string }}
- */
-export function calcularDiasRango(convenio, desde, hasta, feriadosExtra = []) {
-  const tabla = TABLAS_CONVENIO[convenio];
-  if (!tabla) throw new Error(`Convenio desconocido: ${convenio}`);
-  const tipo = tabla.tipo;
-  const diasRango = tipo === "habiles"
-    ? contarDiasHabiles(desde, hasta, feriadosExtra)
-    : contarDiasCorridos(desde, hasta);
-  return { diasRango, tipo };
-}
-
-// ─────────────────────────────────────────────
-// SALDO DE DÍAS DISPONIBLES
-// ─────────────────────────────────────────────
-
-/**
- * Calcula los días disponibles para un empleado en un período dado.
- *
- * Lógica:
- *  - Trae todas las solicitudes APROBADAS del legajo para el año vacacional.
- *  - Suma los días ya descontados en esas solicitudes.
- *  - Devuelve: { diasCorresponden, diasUsados, diasDisponibles, solicitudesAnteriores }
- *
- * @param {string} legajo
- * @param {number} anioVacacional
- * @param {number} diasCorresponden — calculados para este período
- * @returns {Promise<{ diasCorresponden: number, diasUsados: number, diasDisponibles: number, solicitudesAnteriores: Array }>}
- */
-export async function fetchDiasDisponibles(legajo, anioVacacional, diasCorresponden) {
-  // Se consulta por legajo y se filtra el período en cliente. Así evitamos
-  // depender de un índice compuesto de Firestore para el cálculo del saldo.
-  const q = query(collection(db, "solicitudesVacaciones"), where("legajo", "==", String(legajo)));
-  const snap = await getDocs(q);
-  const todas = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-    .filter((solicitud) => Number(solicitud.anioVacacional) === Number(anioVacacional));
-
-  // Las pendientes no descuentan días: el impacto se produce al aprobar RRHH.
-  const validas = todas.filter((s) => s.estado === "aprobada");
-  const diasUsados = validas.reduce((acc, s) => acc + (Number(s.diasSolicitados) || 0), 0);
-  const diasDisponibles = Math.max(0, diasCorresponden - diasUsados);
-
-  return {
-    diasCorresponden,
-    diasUsados,
-    diasDisponibles,
-    solicitudesAnteriores: validas,
-  };
 }

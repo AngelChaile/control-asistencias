@@ -1,0 +1,926 @@
+{
+  "fuente": {
+    "archivo": "VACACIONES SEGUN CATEGORIAS.xlsx",
+    "hoja": "Hoja1",
+    "sha256": "37c106ddd830f86e389c279f8439ae94e5abf1bd296e2c2830ab79b8c28f97fb"
+  },
+  "reglas": [
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 1 35 HS",
+      "tipo": "habiles",
+      "fila": 2
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 10 30 HS",
+      "tipo": "habiles",
+      "fila": 3
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 10 35 HS",
+      "tipo": "habiles",
+      "fila": 4
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 11 30 HS",
+      "tipo": "habiles",
+      "fila": 5
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 11 35 HS",
+      "tipo": "habiles",
+      "fila": 6
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 12 30 HS",
+      "tipo": "habiles",
+      "fila": 7
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 12 35 HS",
+      "tipo": "habiles",
+      "fila": 8
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 2 35 HS",
+      "tipo": "habiles",
+      "fila": 9
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 3 35 HS",
+      "tipo": "habiles",
+      "fila": 10
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 4 30 HS",
+      "tipo": "habiles",
+      "fila": 11
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 4 35 HS",
+      "tipo": "habiles",
+      "fila": 12
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 5 35 HS",
+      "tipo": "habiles",
+      "fila": 13
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 6 30 HS",
+      "tipo": "habiles",
+      "fila": 14
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 6 35 HS",
+      "tipo": "habiles",
+      "fila": 15
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 7 35 HS",
+      "tipo": "habiles",
+      "fila": 16
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 8 30 HS",
+      "tipo": "habiles",
+      "fila": 17
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 8 35 HS",
+      "tipo": "habiles",
+      "fila": 18
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ADMINISTRATIVO CAT 9 35 HS",
+      "tipo": "habiles",
+      "fila": 19
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ASESOR I 48 HS",
+      "tipo": "corridos",
+      "fila": 20
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ASESOR II 48 HS",
+      "tipo": "corridos",
+      "fila": 21
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "ASESOR III 48 HS",
+      "tipo": "corridos",
+      "fila": 22
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "CONTADOR GENERAL 40 HS",
+      "tipo": "corridos",
+      "fila": 23
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "COORDINADOR DIRECCION 40 HS",
+      "tipo": "corridos",
+      "fila": 24
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "COORDINADOR DIRECCION 48 HS",
+      "tipo": "corridos",
+      "fila": 25
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "COORDINADOR UNIDAD 48 HS",
+      "tipo": "corridos",
+      "fila": 26
+    },
+    {
+      "tipoCargo": "DOCENTES PROVISIONALES",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "DIR. ESC. ESPECIAL",
+      "tipo": "corridos",
+      "fila": 27
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "DIRECTOR 48 HS",
+      "tipo": "corridos",
+      "fila": 28
+    },
+    {
+      "tipoCargo": "DOCENTES PROVISIONALES",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "DIRECTOR ESCUELA DANZAS",
+      "tipo": "corridos",
+      "fila": 29
+    },
+    {
+      "tipoCargo": "DOCENTES PROVISIONALES",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "DIRECTOR ESCUELA VOCACIONAL",
+      "tipo": "corridos",
+      "fila": 30
+    },
+    {
+      "tipoCargo": "DOCENTES PROVISIONALES",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "DIRECTOR JARDIN INFANTES",
+      "tipo": "corridos",
+      "fila": 31
+    },
+    {
+      "tipoCargo": "DOCENTES PROVISIONALES",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "DIRECTOR JARDIN MATERNAL",
+      "tipo": "corridos",
+      "fila": 32
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "HORA AYUD CAT NIVEL SUP",
+      "tipo": "corridos",
+      "fila": 33
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "INTENDENTE",
+      "tipo": "corridos",
+      "fila": 34
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "JUEZ DE FALTAS 40 HS",
+      "tipo": "corridos",
+      "fila": 35
+    },
+    {
+      "tipoCargo": "DOCENTES PROVISIONALES",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "MAESTRA ESPECIALIZADA",
+      "tipo": "corridos",
+      "fila": 36
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 10 40 HS",
+      "tipo": "habiles",
+      "fila": 37
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 11 40 HS",
+      "tipo": "habiles",
+      "fila": 38
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 12 40 HS",
+      "tipo": "habiles",
+      "fila": 39
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 2 40 HS",
+      "tipo": "habiles",
+      "fila": 40
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 3 40 HS",
+      "tipo": "habiles",
+      "fila": 41
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 4 40 HS",
+      "tipo": "habiles",
+      "fila": 42
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 5 40 HS",
+      "tipo": "habiles",
+      "fila": 43
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 6 40 HS",
+      "tipo": "habiles",
+      "fila": 44
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 7 40 HS",
+      "tipo": "habiles",
+      "fila": 45
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 8 40 HS",
+      "tipo": "habiles",
+      "fila": 46
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 9 30 HS",
+      "tipo": "habiles",
+      "fila": 47
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "OBRERO CAT 9 40 HS",
+      "tipo": "habiles",
+      "fila": 48
+    },
+    {
+      "tipoCargo": "PASANTIA",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PASANTIA NIVEL I",
+      "tipo": "habiles",
+      "fila": 49
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "PRECEPTOR",
+      "tipo": "corridos",
+      "fila": 50
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "PRECEPTOR ESCUELA DANZAS",
+      "tipo": "corridos",
+      "fila": 51
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "PRECEPTOR ESCUELA VOCACIONAL",
+      "tipo": "corridos",
+      "fila": 52
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 10 30 HS",
+      "tipo": "habiles",
+      "fila": 53
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 10 35 HS",
+      "tipo": "habiles",
+      "fila": 54
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 11 30 HS",
+      "tipo": "habiles",
+      "fila": 55
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 11 35 HS",
+      "tipo": "habiles",
+      "fila": 56
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 12 30 HS",
+      "tipo": "habiles",
+      "fila": 57
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 12 35 HS",
+      "tipo": "habiles",
+      "fila": 58
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 2 35 HS",
+      "tipo": "habiles",
+      "fila": 59
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 3 35 HS",
+      "tipo": "habiles",
+      "fila": 60
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 4 30 HS",
+      "tipo": "habiles",
+      "fila": 61
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 4 35 HS",
+      "tipo": "habiles",
+      "fila": 62
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 5 35 HS",
+      "tipo": "habiles",
+      "fila": 63
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 6 35 HS",
+      "tipo": "habiles",
+      "fila": 64
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 7 35 HS",
+      "tipo": "habiles",
+      "fila": 65
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 8 30 HS",
+      "tipo": "habiles",
+      "fila": 66
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 8 35 HS",
+      "tipo": "habiles",
+      "fila": 67
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "PROFESIONAL CAT 9 35 HS",
+      "tipo": "habiles",
+      "fila": 68
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "PROFESOR HORAS CATEDRA ESCUELA",
+      "tipo": "corridos",
+      "fila": 69
+    },
+    {
+      "tipoCargo": "DOCENTES PROVISIONALES",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "REGENTE DE ESTUDIOS",
+      "tipo": "corridos",
+      "fila": 70
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SECRETARIO 48 HS",
+      "tipo": "corridos",
+      "fila": 71
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "SECRETARIO ESCUELA DANZAS",
+      "tipo": "corridos",
+      "fila": 72
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "SECRETARIO ESCUELA VOCACIONAL",
+      "tipo": "corridos",
+      "fila": 73
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SECRETARIO JUZGADO 40 HS",
+      "tipo": "corridos",
+      "fila": 74
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "SECRETARIO NIVEL INICIAL",
+      "tipo": "corridos",
+      "fila": 75
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 10 40 HS",
+      "tipo": "habiles",
+      "fila": 76
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 11 30 HS",
+      "tipo": "habiles",
+      "fila": 77
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 11 40 HS",
+      "tipo": "habiles",
+      "fila": 78
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 12 40 HS",
+      "tipo": "habiles",
+      "fila": 79
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 4 40 HS",
+      "tipo": "habiles",
+      "fila": 80
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 5 40 HS",
+      "tipo": "habiles",
+      "fila": 81
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 6 30 HS",
+      "tipo": "habiles",
+      "fila": 82
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 6 40 HS",
+      "tipo": "habiles",
+      "fila": 83
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 7 40 HS",
+      "tipo": "habiles",
+      "fila": 84
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 8 30 HS",
+      "tipo": "habiles",
+      "fila": 85
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 8 40 HS",
+      "tipo": "habiles",
+      "fila": 86
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 9 30 HS",
+      "tipo": "habiles",
+      "fila": 87
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SERVICIO CAT 9 40 HS",
+      "tipo": "habiles",
+      "fila": 88
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SISTEMAS CAT 1 40 HS",
+      "tipo": "habiles",
+      "fila": 89
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SISTEMAS CAT 12 40 HS",
+      "tipo": "habiles",
+      "fila": 90
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SISTEMAS CAT 2 40 HS",
+      "tipo": "habiles",
+      "fila": 91
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SISTEMAS CAT 3 40 HS",
+      "tipo": "habiles",
+      "fila": 92
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SISTEMAS CAT 5 40 HS",
+      "tipo": "habiles",
+      "fila": 93
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SISTEMAS CAT 7 40 HS",
+      "tipo": "habiles",
+      "fila": 94
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SISTEMAS CAT 9 40 HS",
+      "tipo": "habiles",
+      "fila": 95
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "SUB-SECRETARIO 48 HS",
+      "tipo": "corridos",
+      "fila": 96
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS A 24 HS",
+      "tipo": "corridos",
+      "fila": 97
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS A 36 HS",
+      "tipo": "corridos",
+      "fila": 98
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS AGREGADO 24 HS",
+      "tipo": "corridos",
+      "fila": 99
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS AGREGADO 36 HS",
+      "tipo": "corridos",
+      "fila": 100
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS ASISTENTE 24 HS",
+      "tipo": "corridos",
+      "fila": 101
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS ASISTENTE 36 HS",
+      "tipo": "corridos",
+      "fila": 102
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS B 36 HS",
+      "tipo": "corridos",
+      "fila": 103
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS C 24 HS",
+      "tipo": "corridos",
+      "fila": 104
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS C 36 HS",
+      "tipo": "corridos",
+      "fila": 105
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS D 24 HS",
+      "tipo": "corridos",
+      "fila": 106
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS D 36 HS",
+      "tipo": "corridos",
+      "fila": 107
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS E 24 HS",
+      "tipo": "corridos",
+      "fila": 108
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS E 36 HS",
+      "tipo": "corridos",
+      "fila": 109
+    },
+    {
+      "tipoCargo": "INTERINO",
+      "particion": "CARRERA MEDICA",
+      "categoria": "SUMS PRE- ASISTENTE 36 HS",
+      "tipo": "corridos",
+      "fila": 110
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 1 35 HS",
+      "tipo": "habiles",
+      "fila": 111
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 10 30 HS",
+      "tipo": "habiles",
+      "fila": 112
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 10 35 HS",
+      "tipo": "habiles",
+      "fila": 113
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 11 30 HS",
+      "tipo": "habiles",
+      "fila": 114
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 11 35 HS",
+      "tipo": "habiles",
+      "fila": 115
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 12 30 HS",
+      "tipo": "habiles",
+      "fila": 116
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 12 35 HS",
+      "tipo": "habiles",
+      "fila": 117
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 2 35 HS",
+      "tipo": "habiles",
+      "fila": 118
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 3 35 HS",
+      "tipo": "habiles",
+      "fila": 119
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 4 35 HS",
+      "tipo": "habiles",
+      "fila": 120
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 5 35 HS",
+      "tipo": "habiles",
+      "fila": 121
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 6 35 HS",
+      "tipo": "habiles",
+      "fila": 122
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 7 35 HS",
+      "tipo": "habiles",
+      "fila": 123
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 8 35 HS",
+      "tipo": "habiles",
+      "fila": 124
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TECNICO CAT 9 35 HS",
+      "tipo": "habiles",
+      "fila": 125
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TEMP ASESOR I 48 HS",
+      "tipo": "corridos",
+      "fila": 126
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TEMP ASESOR II 48 HS",
+      "tipo": "corridos",
+      "fila": 127
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TEMP ASESOR III 48 HS",
+      "tipo": "corridos",
+      "fila": 128
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA MUNICIPAL",
+      "categoria": "TESORERO 40 HS",
+      "tipo": "corridos",
+      "fila": 129
+    },
+    {
+      "tipoCargo": "TEMPORARIO",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "VICE ESC. ESPECIAL",
+      "tipo": "corridos",
+      "fila": 130
+    },
+    {
+      "tipoCargo": "PLANTA PERMANENTE",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "VICE-DIRECTOR ESCUELA DANZAS",
+      "tipo": "corridos",
+      "fila": 131
+    },
+    {
+      "tipoCargo": "DOCENTES PROVISIONALES",
+      "particion": "CARRERA DOCENTE",
+      "categoria": "VICE-DIRECTOR ESCUELA VOCACION",
+      "tipo": "corridos",
+      "fila": 132
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+# Vacaciones por planta, partición y categoría
+
+## Reglas
+
+La fuente es `VACACIONES SEGUN CATEGORIAS.xlsx`, hoja `Hoja1`, rango `A1:D132`: 131 combinaciones (82 hábiles y 49 corridas). El catálogo de la aplicación está en `src/data/vacacionesCategorias.json`, con la fila y el SHA-256 del original para trazabilidad. No contiene legajos ni se requiere acceder a Canaima desde producción.
+
+Se compara la combinación completa de planta (`tipoCargo`), partición (`particion`) y categoría (`categoria`). La función del agente no sustituye su categoría. Se normalizan tildes, mayúsculas y espacios y se reconocen los códigos usados en los formularios. Una combinación no incluida impide calcular hasta corregir el legajo o ampliar el catálogo; no se infiere una regla por similitud.
+
+Confirmación de RRHH del 03/11/2026:
+
+- Municipal conserva 14/21/28/35 días por antigüedad, contados en el formato indicado por la planilla.
+- Se mantienen las escalas existentes de Médico, Docente y Radiólogo. El régimen de Radiólogo no figura en este Excel y conserva su configuración previa explícita.
+- Los cambios se calculan por tramo: días anuales × meses / 12, redondeando cada tramo al entero más cercano. Por eso dos tramos de 10,5 días se redondean individualmente a 11, como en la lógica anterior.
+- Los días hábiles y corridos se acumulan y descuentan por separado.
+
+## Uso
+
+1. Buscar el legajo: se muestran planta, partición, categoría y formato de días. Si los datos están incompletos, corregirlos desde Empleados y buscar de nuevo.
+2. Si hubo un cambio durante el año, marcar «Cambio de categoría, planta o convenio», indicar la combinación anterior y los meses de cada situación. El Excel no aporta el historial ni las fechas de cada agente, por lo que no se inventan ni se deducen del cargo actual. Para un agente que trabajó todo el año deben sumar 12 meses.
+3. Calcular y consultar saldo. Se muestran por separado el derecho, los días aprobados y los disponibles de cada formato.
+4. Cada solicitud usa un único saldo, seleccionado en «Saldo del que se descontará esta solicitud». Para utilizar ambos formatos se generan solicitudes con fechas propias; no se convierten unas unidades en otras.
+5. RRHH aprueba o rechaza desde el listado. La aprobación descuenta atómicamente del saldo correspondiente. La solicitud pendiente no reserva días; la aprobación vuelve a validar el saldo.
+
+Al volver a buscar un legajo se recupera la última configuración especial aprobada de ese año. Así una nueva solicitud conserva los meses y los proporcionales aprobados y no vuelve a asignar el año completo al régimen actual. El guardado y la aprobación también comprueban esa configuración para proteger solicitudes abiertas antes de la aprobación del cambio.
+
+El conteo hábil conserva el calendario fijo de feriados configurado en el sistema. Esta actualización no incorpora un calendario de feriados móviles.
+
+## Solicitudes anteriores
+
+Se conservan y descuentan según el `tipoDias` con el que fueron registradas, sin reclasificarlas con el cargo actual. En la primera aprobación del esquema nuevo se reconstruyen los usados por tipo desde las solicitudes aprobadas del mismo legajo y año. Si una solicitud histórica carece de formato, se informa para revisión de RRHH, en vez de asumir un saldo completo.
+
+Las solicitudes nuevas guardan `versionRegimen: 2`, los perfiles anterior/actual, meses, desglose y `diasPorTipo`. El campo numérico `diasCorresponden` representa el derecho del formato elegido en esa solicitud. En un cálculo mixto no se genera un total que sume unidades incompatibles.
+
+El documento `saldosVacaciones/vacaciones_<legajo>_<año>` conserva `diasUsadosPorTipo` para serializar las aprobaciones de ambos tipos. No se ejecuta una migración masiva ni se cambian empleados o aprobaciones existentes al desplegar.
+
+## Comprobación
+
+```powershell
+npm run test:vacaciones
+npm run build
+```
+
+Las pruebas cubren catálogo, límites de antigüedad, cambios dentro de Municipal y hacia Docente, redondeos, meses inválidos, rango hábil/corrido, pendientes/rechazadas, saldos agotados, solicitudes históricas y aprobaciones concurrentes con un SDK simulado. Las pruebas no se conectan a Firebase de producción.

@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:vacaciones": "node --experimental-vm-modules --test scripts/regimenVacaciones.test.mjs scripts/vacacionesCalculo.test.mjs scripts/vacacionesFirestore.test.mjs"
   },
   "dependencies": {
     "firebase": "^9.23.0",

@@ -1,7 +1,7 @@
 // src/pages/RRHH/Vacaciones/ListaVacaciones.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { fetchSolicitudesVacaciones, actualizarEstadoSolicitud } from "../../../utils/vacaciones";
+import { fetchSolicitudesVacaciones, actualizarEstadoSolicitud, describirDiasPorTipo } from "../../../utils/vacaciones";
 import FormularioImpresion from "./FormularioImpresion";
 
 const ANIO_ACTUAL = new Date().getFullYear();
@@ -48,9 +48,9 @@ export default function ListaVacaciones() {
 
   const handleCambiarEstado = async (id, nuevoEstado) => {
     try {
-      await actualizarEstadoSolicitud(id, nuevoEstado);
+      const actualizada = await actualizarEstadoSolicitud(id, nuevoEstado);
       setSolicitudes(prev =>
-        prev.map(s => s.id === id ? { ...s, estado: nuevoEstado } : s)
+        prev.map(s => s.id === id ? { ...s, ...actualizada, estado: nuevoEstado } : s)
       );
     } catch (e) {
       setError("Error al actualizar estado: " + e.message);
@@ -148,7 +148,7 @@ export default function ListaVacaciones() {
                       )}
                       {s.esCambioConvenio && (
                         <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-0.5 rounded-full font-semibold">
-                          Cambio convenio
+                          Cambio de régimen
                         </span>
                       )}
                     </div>
@@ -157,7 +157,10 @@ export default function ListaVacaciones() {
                       Legajo {s.legajo} · {s.area || "Sin área"} · {s.convenio}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Período {s.anioVacacional} · {s.diasSolicitados} días solicitados de {s.diasCorresponden} ({s.tipoDias})
+                      Período {s.anioVacacional} · {s.diasSolicitados} días {s.tipoDias === "habiles" ? "hábiles" : s.tipoDias} solicitados
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Derecho del período: {s.diasPorTipo ? describirDiasPorTipo(s.diasPorTipo) : `${s.diasCorresponden} días ${s.tipoDias || "(sin formato registrado)"}`}
                     </p>
                   </div>
 

@@ -1,5 +1,6 @@
 // src/pages/RRHH/Vacaciones/FormularioImpresion.jsx
 import React, { useRef } from "react";
+import { describirDiasPorTipo } from "../../../utils/vacacionesCalculo.mjs";
 
 function fechaEs(valor) {
   if (!valor) return "-";
@@ -91,13 +92,15 @@ export default function FormularioImpresion({ solicitud, onVolver }) {
             <div style={encabezadoSeccion}>Licencia anual ordinaria</div>
             <div style={{ padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}><span>Anual: ☒</span><span>Año: <strong>{anioVacacional}</strong></span></div>
-              <p style={{ margin: "0 0 14px" }}>Cantidad de días solicitados: <strong>{diasSolicitados}</strong> ({tipoDias || "días"})</p>
+              <p style={{ margin: "0 0 14px" }}>Cantidad de días solicitados: <strong>{diasSolicitados}</strong> ({tipoDias === "habiles" ? "hábiles" : tipoDias || "días"})</p>
               <table style={tablaPeriodo}><colgroup><col style={{ width: "22%" }} /><col style={{ width: "36%" }} /><col style={{ width: "21%" }} /><col style={{ width: "21%" }} /></colgroup><thead><tr><th style={encabezadoTabla}>Duración</th><th style={encabezadoTabla}>Día</th><th style={encabezadoTabla}>Mes</th><th style={encabezadoTabla}>Año</th></tr></thead><tbody>
                 <tr><td style={celdaTabla}>Desde</td><td style={celdaTabla}>{parteFecha(fechaDesde, "dia")} ({diaSemana(fechaDesde)})</td><td style={celdaTabla}>{parteFecha(fechaDesde, "mes")}</td><td style={celdaTabla}>{parteFecha(fechaDesde, "anio")}</td></tr>
                 <tr><td style={celdaTabla}>Hasta</td><td style={celdaTabla}>{parteFecha(fechaHasta, "dia")} ({diaSemana(fechaHasta)})</td><td style={celdaTabla}>{parteFecha(fechaHasta, "mes")}</td><td style={celdaTabla}>{parteFecha(fechaHasta, "anio")}</td></tr>
               </tbody></table>
-              <p style={{ margin: "12px 0 0", fontSize: 10 }}>Días que corresponden al período: {diasCorresponden} ({tipoDias || "-"}).</p>
-              {(esReingreso || esCambioConvenio) && <p style={{ margin: "7px 0 0", fontSize: 10 }}><strong>Situación especial:</strong> {esReingreso ? `Reingreso: ${fechaEs(fechaReingreso)}. ` : ""}{esCambioConvenio ? `Cambio de convenio. ${calculoDetalle?.desglose ? "Cálculo proporcional aplicado." : ""}` : ""}</p>}
+              <p style={{ margin: "12px 0 0", fontSize: 10 }}>Derecho del período: {solicitud.diasPorTipo ? describirDiasPorTipo(solicitud.diasPorTipo) : `${diasCorresponden} días ${tipoDias || "-"}`}.</p>
+              {(esReingreso || esCambioConvenio) && <p style={{ margin: "7px 0 0", fontSize: 10 }}><strong>Situación especial:</strong> {esReingreso ? `Reingreso: ${fechaEs(fechaReingreso)}. ` : ""}{esCambioConvenio ? "Cambio de categoría, planta o convenio. " : ""}
+                {esCambioConvenio && calculoDetalle?.desglose && <>Anterior: {calculoDetalle.desglose.mesesAnterior} meses, {calculoDetalle.desglose.diasAnterior} días {calculoDetalle.desglose.tipoAnterior === "habiles" ? "hábiles" : calculoDetalle.desglose.tipoAnterior}. Actual: {calculoDetalle.desglose.mesesNuevo} meses, {calculoDetalle.desglose.diasNuevo} días {calculoDetalle.desglose.tipoNuevo === "habiles" ? "hábiles" : calculoDetalle.desglose.tipoNuevo}.</>}
+              </p>}
               <div style={{ borderTop: "1px solid #111827", margin: "42px 20px 0", paddingTop: 6, textAlign: "center" }}>Firma del solicitante</div>
             </div>
           </section>
