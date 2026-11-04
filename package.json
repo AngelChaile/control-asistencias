@@ -2,14 +2,18 @@
   "name": "control-asistencias",
   "version": "1.0.0",
   "private": true,
+  "engines": { "node": "22.x" },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:vacaciones": "node --experimental-vm-modules --test scripts/regimenVacaciones.test.mjs scripts/vacacionesCalculo.test.mjs scripts/vacacionesFirestore.test.mjs"
+    "test:vacaciones": "node --experimental-vm-modules --test scripts/regimenVacaciones.test.mjs scripts/vacacionesCalculo.test.mjs scripts/vacacionesFirestore.test.mjs",
+    "test:seguridad": "node --test scripts/seguridad.test.mjs",
+    "test:reglas": "node --experimental-vm-modules --test scripts/firestoreRules.test.mjs"
   },
   "dependencies": {
     "firebase": "^9.23.0",
+    "firebase-admin": "13.6.0",
     "papaparse": "^5.4.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

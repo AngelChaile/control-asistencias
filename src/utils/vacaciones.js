@@ -6,13 +6,16 @@ import { db } from "../firebase";
 import { mismoPerfilVacacional } from "./regimenVacaciones.mjs";
 import { calcularVacaciones, calcularDiasRango, calcularSaldoVacacional, consumoVacacional, parseFechaLocal } from "./vacacionesCalculo.mjs";
 export * from "./vacacionesCalculo.mjs";
+import { llamarApi, SEGURIDAD_ACTIVA } from './api';
 
 async function generarNroSolicitud(anio) {
+  if (SEGURIDAD_ACTIVA) return (await llamarApi('vacaciones-contexto', { accion: 'numero', anio })).numero;
   const snap = await getDocs(query(collection(db, "solicitudesVacaciones"), where("anioVacacional", "==", anio), orderBy("createdAt", "desc")));
   return `VAC-${anio}-${String(snap.size + 1).padStart(5, "0")}`;
 }
 
 async function solicitudesDelPeriodo(legajo, anio) {
+  if (SEGURIDAD_ACTIVA) return (await llamarApi('vacaciones-contexto', { accion: 'historial', legajo: String(legajo).trim() })).solicitudes.filter(s => Number(s.anioVacacional) === Number(anio));
   const snap = await getDocs(query(collection(db, "solicitudesVacaciones"), where("legajo", "==", String(legajo).trim())));
   return snap.docs.map(d => ({ ...d.data(), id: d.id })).filter(s => Number(s.anioVacacional) === Number(anio));
 }

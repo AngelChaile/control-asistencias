@@ -27,7 +27,7 @@ const MENU_ADMIN = [
   { name: "Mis solicitudes", path: "/admin/mis-solicitudes", icon: "clipboard" },
   { name: "Vacaciones", path: "/admin/vacaciones/nueva", icon: "vacation" },
 ];
-const ROLES = { rrhh: "Recursos Humanos", subsecretario: "Subsecretario", admin: "Administrador de área", coordinador_traspasos: "Coordinador de traspasos" };
+const ROLES = { rrhh: "Recursos Humanos", subsecretario: "Subsecretario", admin: "Administrador de área" };
 
 export default function Navbar({ darkMode, onToggleDarkMode }) {
   const { user, logout } = useAuth();
@@ -105,7 +105,6 @@ export default function Navbar({ darkMode, onToggleDarkMode }) {
   const menus = {
     rrhh: MENU_RRHH,
     subsecretario: MENU_RRHH.filter(item => !["Usuarios", "QR"].includes(item.name)),
-    coordinador_traspasos: MENU_RRHH.filter(item => item.name === "Solicitudes"),
     admin: MENU_ADMIN,
   };
   const currentMenus = menus[user.rol] || [];

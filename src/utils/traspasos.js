@@ -24,7 +24,7 @@ const EMAILJS_TEMPLATE_ID = 'template_wph4gpm'; // 👈 Reemplaza con tu Templat
 
 // src/utils/traspasos.js - Función enviarCorreoTraspaso CORREGIDA
 
-async function enviarCorreoTraspaso({ empleado, areaOrigen, areaDestino, motivo, tipo }) {
+async function enviarCorreoTraspaso({ empleado, areaOrigen, areaDestino, motivo, tipo, destinatarios = [] }) {
   try {
     if (typeof window.emailjs === 'undefined') {
       console.warn('⚠️ EmailJS no está inicializado.');
@@ -32,10 +32,6 @@ async function enviarCorreoTraspaso({ empleado, areaOrigen, areaDestino, motivo,
     }
 
     // Lista de destinatarios
-    const destinatarios = [
-      { email: 'registrosdeasistenciasmoron@gmail.com', mensaje: 'Debe actualizar el traspaso del personal en Major y Portal Empleados.' },
-      { email: 'safeguarding740@gmail.com', mensaje: 'Debe notificar al empleado su nuevo destino.' }
-    ];
 
     // ✅ Enviar un correo por cada destinatario
     for (const destinatario of destinatarios) {
@@ -245,7 +241,7 @@ export async function ejecutarTraspaso(solicitudId) {
       });
       
       // Notificar internamente (sistema)
-      await notificarTraspasoFinalizado({
+      const avisos = await notificarTraspasoFinalizado({
         empleado: solicitud.empleado,
         areaOrigen: historialEntry.areaOrigen,
         areaDestino: solicitud.areaDestino.nombre,
@@ -254,6 +250,7 @@ export async function ejecutarTraspaso(solicitudId) {
       
       // ✅ NUEVO: Enviar correo electrónico con EmailJS
       await enviarCorreoTraspaso({
+        destinatarios: avisos.destinatarios,
         empleado: {
           ...solicitud.empleado,
           funcion: empleadoData.funcion,
@@ -331,7 +328,7 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
     });
     
     // Notificar internamente
-    await notificarTraspasoFinalizado({
+    const avisos = await notificarTraspasoFinalizado({
       empleado,
       areaOrigen: origen,
       areaDestino: destino.nombre,
@@ -340,6 +337,7 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
     
     // ✅ NUEVO: Enviar correo electrónico con EmailJS
     await enviarCorreoTraspaso({
+      destinatarios: avisos.destinatarios,
       empleado,
       areaOrigen: origen,
       areaDestino: destino.nombre,
@@ -375,10 +373,11 @@ export async function destinarEmpleadoDisponible(empleado, areaDestino, ejecutad
   });
   
   // Notificar internamente
-  await notificarTraspasoFinalizado({ empleado, areaOrigen: origen, areaDestino: areaDestino.nombre, tipo: 'destino_disponibles' });
+  const avisos = await notificarTraspasoFinalizado({ empleado, areaOrigen: origen, areaDestino: areaDestino.nombre, tipo: 'destino_disponibles' });
   
   // ✅ NUEVO: Enviar correo electrónico con EmailJS
   await enviarCorreoTraspaso({
+    destinatarios: avisos.destinatarios,
     empleado,
     areaOrigen: origen,
     areaDestino: areaDestino.nombre,

@@ -15,12 +15,24 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { formatearHora24 } from "./fechas";
+import { llamarApi, SEGURIDAD_ACTIVA } from './api';
+import { auth } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
+export async function areaAdministrada() {
+  if (!auth?.currentUser) return null;
+  const perfil = await getDoc(doc(db, 'users', auth.currentUser.uid));
+  if (perfil.data()?.rol !== 'admin') return null;
+  if (!perfil.data().lugarTrabajo) throw new Error('Su usuario no tiene un área asignada. Consulte a RRHH.');
+  return perfil.data().lugarTrabajo;
+}
 
 /**
  * validarToken(token)
  * Busca el token en collection "tokens" y verifica expiresAt (ISO string)
  */
 export async function validarToken(token) {
+  if (SEGURIDAD_ACTIVA) return llamarApi('fichaje', { accion: 'validar', token }, false);
   if (!token) throw new Error("Token requerido.");
 
   const q = query(collection(db, "tokens"), where("token", "==", token));
@@ -52,7 +64,10 @@ export async function validarToken(token) {
  */
 export async function buscarEmpleadoPorLegajo(legajo) {
   if (!legajo) return null;
-  const q = query(collection(db, "empleados"), where("legajo", "==", String(legajo)));
+  const area = await areaAdministrada();
+  const filtros = [where("legajo", "==", String(legajo))];
+  if (area) filtros.push(where('lugarTrabajo', '==', area));
+  const q = query(collection(db, "empleados"), ...filtros);
   const snap = await getDocs(q);
   if (snap.empty) return null;
   const d = snap.docs[0];
@@ -85,7 +100,8 @@ export async function registrarNuevoEmpleado(emp) {
  * registrarAsistenciaPorLegajo(legajo, token)
  * alterna tipo: ENTRADA ↔ SALIDA
  */
-export async function registrarAsistenciaPorLegajo(legajo, token = null) {
+export async function registrarAsistenciaPorLegajo(legajo, token = null, operacionId = null) {
+  if (SEGURIDAD_ACTIVA) return llamarApi('fichaje', { accion: 'fichar', legajo: String(legajo), token, operacionId }, false);
   if (!legajo) throw new Error("Legajo requerido.");
 
   // Validar token antes de continuar
@@ -208,6 +224,8 @@ export async function fetchAsistenciasToday(area = null) {
 export async function fetchAsistenciasByRange({ desde = null, hasta = null, legajo = "", nombre = "", area = null } = {}) {
   // QUITAMOS el filtro de área del servidor para hacerlo case-insensitive en el cliente
   const constraints = [];
+  const areaObligatoria = await areaAdministrada();
+  if (areaObligatoria) constraints.push(where('lugarTrabajo', '==', areaObligatoria));
   // if (area) constraints.push(where("lugarTrabajo", "==", area)); // ← ELIMINADO
   const q = query(collection(db, "asistencias"), ...constraints);
   const snap = await getDocs(q);

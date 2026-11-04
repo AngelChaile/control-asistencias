@@ -1,5 +1,5 @@
 // src/utils/usuarios.js
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { llamarApi } from './api';
 import {
   setDoc,
   doc,
@@ -14,31 +14,14 @@ import {
   limit,
   startAfter
 } from "firebase/firestore";
-import { db, auth } from "../firebase";
+import { db } from "../firebase";
 
 /**
  * registrarUsuario
  * Registra un nuevo usuario en Firebase Auth y crea su documento en la colección "users"
  */
 export async function registrarUsuario(email, password, nombre, apellido, rol, area) {
-  try {
-    const userCred = await createUserWithEmailAndPassword(auth, email, password);
-    const uid = userCred.user.uid;
-
-    await setDoc(doc(db, "users", uid), {
-      nombre,
-      apellido,
-      email,
-      rol,  // "rrhh", "admin", "empleado"
-      area,
-      createdAt: serverTimestamp(),
-    });
-
-    return uid;
-  } catch (error) {
-    console.error("registrarUsuario error:", error);
-    throw error;
-  }
+  return (await llamarApi('usuarios', {accion:'crear',perfil:{email,nombre,apellido,rol,lugarTrabajo:area},password})).uid;
 }
 
 /* ---------------------

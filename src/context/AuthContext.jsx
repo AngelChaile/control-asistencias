@@ -7,10 +7,7 @@ import { getUserDoc } from "../utils/auth";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem("user");
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
   const login = (data) => {
@@ -40,7 +37,8 @@ export const AuthProvider = ({ children }) => {
 
       try {
         const userDoc = await getUserDoc(u.uid, u.email);
-        const full = userDoc ? { uid: u.uid, ...userDoc } : { uid: u.uid };
+        if (!userDoc) throw new Error('Su cuenta no tiene un perfil vinculado al UID. Consulte a RRHH.');
+        const full = { ...userDoc, uid: u.uid };
         
         // ✅ 🔥 AGREGAR: Asegurar que el rol se mantenga
         // Si el usuario tiene rol "subsecretario", lo mantenemos
@@ -52,8 +50,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem("user", JSON.stringify(full));
       } catch (err) {
         console.error("Error obteniendo user doc:", err);
-        setUser({ uid: u.uid });
-        localStorage.setItem("user", JSON.stringify({ uid: u.uid }));
+        setUser(null);
+        localStorage.removeItem('user');
       } finally {
         setAuthReady(true);
       }

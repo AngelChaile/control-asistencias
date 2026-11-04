@@ -12,16 +12,13 @@ import {
 } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
 import EmployeeDetailModal from "../../components/EmployeeDetailModal";
-import { fetchAllAreas, searchAreas } from "../../utils/areas";
+import { fetchAllAreas } from "../../utils/areas";
 
 export default function EmpleadosAdmin() {
   const { user } = useAuth();
   const area = user?.lugarTrabajo || "";
   const [empleados, setEmpleados] = useState([]);
   const [areas, setAreas] = useState([]);
-  const [areasFiltradas, setAreasFiltradas] = useState([]);
-  const [busquedaArea, setBusquedaArea] = useState("");
-  const [mostrarDropdown, setMostrarDropdown] = useState(false);
   const [filter, setFilter] = useState({ legajo: "", nombre: "" });
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -57,7 +54,6 @@ export default function EmpleadosAdmin() {
     const loadAreas = async () => {
       const data = await fetchAllAreas();
       setAreas(data);
-      setAreasFiltradas(data);
     };
     loadAreas();
   }, []);
@@ -87,11 +83,12 @@ export default function EmpleadosAdmin() {
       const payload = { 
         ...nuevo, 
         lugarTrabajo: area,
-        area: nuevo.area || null
+        area: areas.find(item=>item.nombre===area) || null
       };
       
       if (editingId) {
-        await updateDoc(doc(db, "empleados", editingId), payload);
+        const editables = ['nombre','apellido','documento','domicilio','email','telefono','secretaria','horario','funcion','particion','tipoCargo','fechaIngreso','estado','activo'];
+        await updateDoc(doc(db, "empleados", editingId), Object.fromEntries(editables.map(key => [key,payload[key]])));
         setEditingId(null);
       } else {
         await addDoc(collection(db, "empleados"), payload);
@@ -127,9 +124,7 @@ export default function EmpleadosAdmin() {
       activo: true,
       rol: "empleado"
     });
-    setBusquedaArea("");
     setEditingId(null);
-    setMostrarDropdown(false);
   }
 
   function handleCrear() {
@@ -171,9 +166,6 @@ export default function EmpleadosAdmin() {
       rol: emp.rol || "empleado"
     });
     
-    if (emp.area) {
-      setBusquedaArea(emp.area.nombre);
-    }
 
     requestAnimationFrame(() => {
       formularioRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -190,32 +182,6 @@ export default function EmpleadosAdmin() {
       console.error("eliminar empleado admin:", err);
     }
   }
-
-  // Funciones de área
-  const handleBusquedaArea = async (text) => {
-    setBusquedaArea(text);
-    if (text.length > 1) {
-      const resultados = await searchAreas(text);
-      setAreasFiltradas(resultados);
-      setMostrarDropdown(true);
-    } else {
-      setAreasFiltradas(areas);
-      setMostrarDropdown(false);
-    }
-  };
-
-  const seleccionarArea = (area) => {
-    setNuevo({
-      ...nuevo,
-      area: {
-        id: area.id,
-        nombre: area.nombre,
-        ruta: area.ruta || area.nombre
-      }
-    });
-    setBusquedaArea(area.nombre);
-    setMostrarDropdown(false);
-  };
 
   // Filtros
   const filtered = empleados.filter(
@@ -282,6 +248,7 @@ export default function EmpleadosAdmin() {
                 className="input-modern" 
                 placeholder="Número de legajo" 
                 value={nuevo.legajo} 
+                readOnly={!!editingId}
                 onChange={(e) => setNuevo({ ...nuevo, legajo: e.target.value })} 
                 ref={legajoRef}
                 required 
@@ -370,32 +337,9 @@ export default function EmpleadosAdmin() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Área *</label>
               <input
                 className="input-modern"
-                placeholder="Buscar área..."
-                value={busquedaArea}
-                onChange={(e) => handleBusquedaArea(e.target.value)}
-                onFocus={() => setMostrarDropdown(true)}
-                onBlur={() => setTimeout(() => setMostrarDropdown(false), 200)}
-                required={!nuevo.area}
+                value={area}
+                readOnly
               />
-              {mostrarDropdown && areasFiltradas.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {areasFiltradas.map((area) => (
-                    <button
-                      key={area.id}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors text-sm"
-                      onMouseDown={() => seleccionarArea(area)}
-                    >
-                      <div className="font-medium">{area.nombre}</div>
-                      <div className="text-xs text-gray-500">{area.id}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {nuevo.area && (
-                <div className="mt-2 text-xs text-green-600">
-                  ✅ {nuevo.area.nombre}
-                </div>
-              )}
             </div>
 
             {/* Categoría, restringida para el rol Admin, y Función */}

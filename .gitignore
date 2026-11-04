@@ -1,4 +1,9 @@
 node_modules
+.pnpm-store
+*-debug.log
+service-account*.json
+firebase-service-account*.json
+*-firebase-adminsdk-*.json
 dist
 .env
 .env.local

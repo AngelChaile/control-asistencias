@@ -3,7 +3,8 @@ import React, { useState } from "react";
 import { makeToken } from "../utils/tokens";
 import { db, collection, addDoc, serverTimestamp } from "../firebase";
 
-export default function QrGenerator({ area = "", user }) {
+export default function QrGenerator({ area: areaRecibida = "", user }) {
+  const area = user?.rol === 'admin' ? user.lugarTrabajo : areaRecibida;
   const [loading, setLoading] = useState(false);
   const [qrLink, setQrLink] = useState(null);
   const [token, setToken] = useState(null);
@@ -11,6 +12,7 @@ export default function QrGenerator({ area = "", user }) {
   async function generarQR() {
     setLoading(true);
     try {
+      if (user?.rol === 'admin' && !area) throw new Error('Su usuario no tiene área asignada.');
       const t = makeToken();
       const validMs = 1000 * 60 * 60 * 24 * 120; // 4 meses (120 días)
       const expiresAt = new Date(Date.now() + validMs).toISOString();

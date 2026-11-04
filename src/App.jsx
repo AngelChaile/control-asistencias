@@ -1,8 +1,6 @@
 // src/App.jsx
 import React, { useEffect, useState, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { auth, onAuthStateChanged, firebaseSignOut } from "./firebase";
-import { getUserDoc } from "./utils/auth";
 
 // 🔹 Componentes
 import Navbar from "./components/Navbar";
@@ -42,38 +40,12 @@ const Scan = lazy(() => import("./pages/Public/Scan"));
 const Login = lazy(() => import("./pages/Auth/Login"));
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [authReady, setAuthReady] = useState(false);
+  const { user, authReady } = useAuth();
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem("control-asistencias-theme");
     return saved ? saved === "dark" : window.matchMedia?.("(prefers-color-scheme: dark)").matches;
   });
 
-  const { setUser: setContextUser } = useAuth();
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) {
-        setUser(null);
-        setContextUser(null);
-        setAuthReady(true);
-        return;
-      }
-      try {
-        const userDoc = await getUserDoc(u.uid, u.email);
-        if (userDoc) {
-          const full = { uid: u.uid, ...userDoc };
-          setUser(full);
-          setContextUser(full);
-        }
-      } catch (err) {
-        console.error("Error cargando user doc:", err);
-      } finally {
-        setAuthReady(true);
-      }
-    });
-    return () => unsub();
-  }, [setContextUser]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -82,12 +54,6 @@ export default function App() {
       meta.setAttribute("content", darkMode ? "#12171f" : "#ffffff");
     });
   }, [darkMode]);
-
-  async function logout() {
-    await firebaseSignOut(auth);
-    setUser(null);
-    setContextUser(null);
-  }
 
   if (!authReady) return <div style={{ padding: 20 }}>Cargando...</div>;
 
@@ -99,7 +65,6 @@ const getRedirectPath = () => {
   const roleRoutes = {
     'rrhh': '/rrhh',
     'subsecretario': '/rrhh/gestion-solicitudes',
-    'coordinador_traspasos': '/rrhh/gestion-solicitudes',
     'admin': '/admin',
     'empleado': '/scan'
   };
@@ -220,7 +185,7 @@ const getRedirectPath = () => {
           <Route
             path="/rrhh/gestion-solicitudes"
             element={
-              <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario", "coordinador_traspasos"]}>
+            <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario"]}>
                 <GestionSolicitudes />
               </ProtectedRoute>
             }

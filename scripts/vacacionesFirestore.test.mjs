@@ -59,7 +59,7 @@ async function servicio(seed = {}) {
     },
   };
   const synthetic = exports => new vm.SyntheticModule(Object.keys(exports),function(){for(const [key,value] of Object.entries(exports)) this.setExport(key,value);});
-  const modules = {"firebase/firestore":synthetic(sdk),"../firebase":synthetic({db}),"./vacacionesCalculo.mjs":synthetic(calculo),"./regimenVacaciones.mjs":synthetic(regimen)};
+  const modules = {"./api":synthetic({SEGURIDAD_ACTIVA:false,llamarApi:()=>{throw new Error('API no esperada');}}),"firebase/firestore":synthetic(sdk),"../firebase":synthetic({db}),"./vacacionesCalculo.mjs":synthetic(calculo),"./regimenVacaciones.mjs":synthetic(regimen)};
   const source = readFileSync(new URL("../src/utils/vacaciones.js",import.meta.url),"utf8");
   const module = new vm.SourceTextModule(source);
   await module.link(specifier=>modules[specifier]);

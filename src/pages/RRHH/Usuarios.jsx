@@ -1,316 +1,47 @@
-import React, { useEffect, useState } from "react";
-import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "../../firebase";
+import React, { useEffect, useState } from 'react';
+import { llamarApi } from '../../utils/api';
 
+const vacio = () => ({ email:'', nombre:'', apellido:'', legajo:'', lugarTrabajo:'', secretaria:'', rol:'empleado', activo:true, avisosTraspasos:[] });
+const avisos = [ ['actualizar_sistemas','Actualizar Major y Portal Empleados'], ['notificar_empleado','Notificar al empleado su nuevo destino'] ];
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
-  const [nuevo, setNuevo] = useState({ 
-    email: "", 
-    nombre: "", 
-    apellido: "", 
-    legajo: "", 
-    lugarTrabajo: "", 
-    contraseña: "", 
-    rol: "empleado" 
-  });
-  const [editingId, setEditingId] = useState(null);
+  const [perfil, setPerfil] = useState(vacio);
+  const [uid, setUid] = useState(null);
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetchUsuarios();
-  }, []);
-
-  async function fetchUsuarios() {
-    setLoading(true);
+  const [error, setError] = useState('');
+  const [mensaje, setMensaje] = useState('');
+  const cargar = async () => setUsuarios((await llamarApi('usuarios', {accion:'listar'})).usuarios);
+  useEffect(() => { cargar().catch(e => setError(e.message)); }, []);
+  const reset = () => { setPerfil(vacio()); setUid(null); setPassword(''); };
+  const guardar = async event => {
+    event.preventDefault(); setLoading(true); setError(''); setMensaje('');
     try {
-      const snap = await getDocs(collection(db, "users"));
-      setUsuarios(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleGuardar(e) {
-    e.preventDefault();
-    try {
-      if (editingId) {
-        await updateDoc(doc(db, "users", editingId), nuevo);
-        setEditingId(null);
-      } else {
-        await addDoc(collection(db, "users"), nuevo);
-      }
-      setNuevo({ 
-        email: "", 
-        nombre: "", 
-        apellido: "", 
-        legajo: "", 
-        lugarTrabajo: "", 
-        contraseña: "", 
-        rol: "empleado" 
-      });
-      fetchUsuarios();
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  async function handleEditar(u) {
-    setEditingId(u.id);
-    setNuevo(u);
-  }
-
-  async function handleEliminar(id) {
-    if (window.confirm("¿Estás seguro de eliminar este usuario?")) {
-      await deleteDoc(doc(db, "users", id));
-      fetchUsuarios();
-    }
-  }
-
-  const stats = {
-    total: usuarios.length,
-    empleados: usuarios.filter(u => u.rol === 'empleado').length,
-    admins: usuarios.filter(u => u.rol === 'admin').length,
-    rrhh: usuarios.filter(u => u.rol === 'rrhh').length
+      await llamarApi('usuarios', {accion:uid ? 'actualizar' : 'crear', uid, perfil, password:password || undefined});
+      reset(); await cargar(); setMensaje('Cuenta y perfil guardados correctamente.');
+    } catch(e) { setError(e.message); }
+    finally { setLoading(false); }
   };
-
-  return (
-    <div className="app-container">
-      {/* Header */}
-      <div className="page-heading">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Usuarios</h1>
-        <p className="text-gray-600">Administración de accesos y permisos del sistema</p>
+  const desactivar = async usuario => {
+    if (!window.confirm(`¿Desactivar el acceso de ${usuario.nombre} ${usuario.apellido}?`)) return;
+    setLoading(true); setError('');
+    try { await llamarApi('usuarios', {accion:'desactivar', uid:usuario.id}); await cargar(); }
+    catch(e) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+  return <div className="app-container space-y-6">
+    <header className="page-heading"><h1 className="text-3xl font-bold">Usuarios del sistema</h1><p className="mt-2 text-muted">Cuentas, permisos por área y responsabilidades de notificación.</p></header>
+    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</p>}
+    {mensaje && <p role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">{mensaje}</p>}
+    <section className="card p-6"><h2 className="mb-5 text-lg font-semibold">{uid ? 'Editar cuenta' : 'Crear cuenta'}</h2><form onSubmit={guardar} className="space-y-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[['email','Correo','email'],['nombre','Nombre','text'],['apellido','Apellido','text'],['legajo','Legajo','text'],['lugarTrabajo','Área / Lugar de trabajo','text'],['secretaria','Secretaría','text']].map(([key,label,type]) => <label key={key} className="space-y-2 text-sm font-medium">{label}<input className="input-modern block w-full" type={type} required={['email','nombre','apellido'].includes(key) || (key==='lugarTrabajo' && perfil.rol==='admin')} value={perfil[key]} maxLength={250} onChange={e => setPerfil({...perfil,[key]:e.target.value})} /></label>)}
+        <label className="space-y-2 text-sm font-medium">Rol<select className="input-modern block w-full" value={perfil.rol} onChange={e=>setPerfil({...perfil,rol:e.target.value})}><option value="empleado">Empleado</option><option value="admin">Administrador de área</option><option value="rrhh">Recursos Humanos</option><option value="subsecretario">Subsecretario</option></select></label>
+        <label className="space-y-2 text-sm font-medium">{uid ? 'Nueva contraseña (opcional)' : 'Contraseña inicial'}<input type="password" className="input-modern block w-full" value={password} autoComplete="new-password" minLength={8} maxLength={128} required={!uid} onChange={e=>setPassword(e.target.value)} /></label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={perfil.activo} onChange={e=>setPerfil({...perfil,activo:e.target.checked})} />Cuenta habilitada</label>
       </div>
-
-      {/* Estadísticas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="card p-4 text-center">
-          <div className="text-xl font-bold text-gray-900">{stats.total}</div>
-          <div className="text-sm text-gray-600">Total Usuarios</div>
-        </div>
-        <div className="card p-4 text-center">
-          <div className="text-xl font-bold text-blue-600">{stats.empleados}</div>
-          <div className="text-sm text-gray-600">Empleados</div>
-        </div>
-        <div className="card p-4 text-center">
-          <div className="text-xl font-bold text-green-600">{stats.admins}</div>
-          <div className="text-sm text-gray-600">Administradores</div>
-        </div>
-        <div className="card p-4 text-center">
-          <div className="text-xl font-bold text-purple-600">{stats.rrhh}</div>
-          <div className="text-sm text-gray-600">RRHH</div>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        {/* Formulario de Usuario */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            {editingId ? "✏️ Editar Usuario" : "👤 Crear Nuevo Usuario"}
-          </h3>
-          <form onSubmit={handleGuardar} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-              <input 
-                className="input-modern" 
-                type="email" 
-                placeholder="correo@municipio.com" 
-                value={nuevo.email} 
-                onChange={e => setNuevo({...nuevo, email: e.target.value})} 
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nombre *</label>
-              <input 
-                className="input-modern" 
-                placeholder="Nombre del usuario" 
-                value={nuevo.nombre} 
-                onChange={e => setNuevo({...nuevo, nombre: e.target.value})} 
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Apellido *</label>
-              <input 
-                className="input-modern" 
-                placeholder="Apellido del usuario" 
-                value={nuevo.apellido} 
-                onChange={e => setNuevo({...nuevo, apellido: e.target.value})} 
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Legajo *</label>
-              <input 
-                className="input-modern" 
-                placeholder="Número de legajo" 
-                value={nuevo.legajo} 
-                onChange={e => setNuevo({...nuevo, legajo: e.target.value})} 
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Lugar de Trabajo *</label>
-              <input 
-                className="input-modern" 
-                placeholder="Área o departamento" 
-                value={nuevo.lugarTrabajo} 
-                onChange={e => setNuevo({...nuevo, lugarTrabajo: e.target.value})} 
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña *</label>
-              <input 
-                className="input-modern" 
-                type="password" 
-                placeholder="Contraseña temporal" 
-                value={nuevo.contraseña} 
-                onChange={e => setNuevo({...nuevo, contraseña: e.target.value})} 
-                required
-              />
-            </div>
-            <div className="md:col-span-2 lg:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rol del Usuario</label>
-              <select 
-                className="input-modern" 
-                value={nuevo.rol} 
-                onChange={e => setNuevo({...nuevo, rol: e.target.value})}
-              >
-                <option value="empleado">👨‍💼 Empleado</option>
-                <option value="admin">🛡️ Administrador</option>
-                <option value="rrhh">📊 Recursos Humanos</option>
-                <option value="coordinador_traspasos">🔔 Coordinador de traspasos</option>
-              </select>
-            </div>
-            <div className="flex items-end gap-2 md:col-span-2 lg:col-span-3">
-              <button type="submit" className="btn-primary flex-1">
-                {editingId ? "💾 Guardar Cambios" : "➕ Crear Usuario"}
-              </button>
-              {editingId && (
-                <button 
-                  type="button" 
-                  onClick={() => { 
-                    setEditingId(null); 
-                    setNuevo({ 
-                      email: "", 
-                      nombre: "", 
-                      apellido: "", 
-                      legajo: "", 
-                      lugarTrabajo: "", 
-                      contraseña: "", 
-                      rol: "empleado" 
-                    }); 
-                  }} 
-                  className="btn-secondary px-4 py-2"
-                >
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-
-        {/* Lista de Usuarios */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Usuarios del Sistema</h3>
-              <p className="text-gray-600">Gestión de accesos y permisos</p>
-            </div>
-            <div className="text-sm text-gray-600">
-              {usuarios.length} usuarios registrados
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-municipio-500"></div>
-            </div>
-          ) : usuarios.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 text-6xl mb-4">👥</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No hay usuarios</h3>
-              <p className="text-gray-600">Comienza creando el primer usuario del sistema</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: 900 }}>
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {usuarios.map(u => (
-                    <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className={`shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
-                            u.rol === 'admin' ? 'bg-red-100' :
-                            u.rol === 'rrhh' ? 'bg-purple-100' :
-                            'bg-blue-100'
-                          }`}>
-                            <span className={`text-sm font-medium ${
-                              u.rol === 'admin' ? 'text-red-600' :
-                              u.rol === 'rrhh' ? 'text-purple-600' :
-                              'text-blue-600'
-                            }`}>
-                              {u.nombre?.[0]}{u.apellido?.[0]}
-                            </span>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {u.nombre} {u.apellido}
-                            </div>
-                            <div className="text-sm text-gray-500">Legajo: {u.legajo}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {u.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          u.rol === 'admin' ? 'bg-red-100 text-red-800' :
-                          u.rol === 'rrhh' ? 'bg-purple-100 text-purple-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {u.rol}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {u.lugarTrabajo}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => handleEditar(u)} 
-                            className="text-municipio-600 hover:text-municipio-700 bg-municipio-50 hover:bg-municipio-100 px-3 py-1 rounded-lg transition-colors"
-                          >
-                            ✏️ Editar
-                          </button>
-                          <button 
-                            onClick={() => handleEliminar(u.id)} 
-                            className="text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg transition-colors"
-                          >
-                            🗑️ Eliminar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+      <fieldset className="rounded-xl border border-slate-200 p-4"><legend className="px-2 text-sm font-semibold">Avisos de traspasos</legend><p className="mb-3 text-sm text-muted">Recibe estos avisos además de los correspondientes a su área. No otorga permisos de aprobación.</p><div className="flex flex-wrap gap-4">{avisos.map(([key,label])=><label key={key} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={perfil.avisosTraspasos.includes(key)} onChange={e=>setPerfil({...perfil,avisosTraspasos:e.target.checked ? [...perfil.avisosTraspasos,key] : perfil.avisosTraspasos.filter(r=>r!==key)})} />{label}</label>)}</div></fieldset>
+      <div className="flex gap-3"><button className="btn-primary" disabled={loading}>{loading ? 'Guardando…' : 'Guardar cuenta'}</button>{uid && <button type="button" className="btn-secondary" onClick={reset}>Cancelar edición</button>}</div>
+    </form></section>
+    <section className="card overflow-hidden"><div className="border-b border-slate-200 p-5"><h2 className="font-semibold">{usuarios.length} perfiles registrados</h2></div><div className="overflow-x-auto"><table className="min-w-full text-sm"><thead><tr>{['Usuario','Rol / Área','Avisos','Acciones'].map(c=><th key={c} className="p-4 text-left">{c}</th>)}</tr></thead><tbody>{usuarios.map(u=><tr key={u.id} className="border-t border-slate-200"><td className="p-4"><p className="font-medium">{u.nombre} {u.apellido}</p><p className="text-muted">{u.email}</p>{!u.activo && <span className="text-red-700">Deshabilitado</span>}</td><td className="p-4"><p>{u.rol}</p><p className="text-muted">{u.lugarTrabajo}</p></td><td className="p-4">{avisos.filter(([key])=>u.avisosTraspasos.includes(key)).map(([,label])=>label).join(' · ') || 'Avisos del área'}</td><td className="p-4"><div className="flex gap-2"><button type="button" className="btn-secondary" disabled={loading} onClick={()=>{setUid(u.id);setPerfil({...vacio(),...u});setPassword('');setMensaje('');window.scrollTo({top:0,behavior:'smooth'});}}>Editar</button>{u.activo && <button type="button" className="btn-secondary" disabled={loading} onClick={()=>desactivar(u)}>Desactivar</button>}</div></td></tr>)}</tbody></table></div></section>
+  </div>;
 }

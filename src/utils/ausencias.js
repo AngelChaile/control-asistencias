@@ -1,5 +1,6 @@
 import { collection, getDocs, query, where, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
+import { areaAdministrada } from './asistencia';
 
 /**
  * Normalize input date to a local Date object (no timezone shift)
@@ -56,7 +57,8 @@ export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), ju
     // buscar empleado por legajo (completar nombre/apellido/lugarTrabajo si existe)
     let empleado = null;
     try {
-      const qEmp = query(collection(db, "empleados"), where("legajo", "==", String(legajo)));
+      const area = await areaAdministrada();
+      const qEmp = query(collection(db, "empleados"), where("legajo", "==", String(legajo)), ...(area ? [where('lugarTrabajo','==',area)] : []));
       const snapEmp = await getDocs(qEmp);
       if (!snapEmp.empty) {
         const d = snapEmp.docs[0];
@@ -66,6 +68,7 @@ export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), ju
       console.warn("ausencias.save: no se pudo buscar empleado:", err);
     }
 
+    if (!empleado) throw new Error('No se encontró el agente en su área.');
     const payload = {
       legajo: String(legajo),
       fecha: fechaStr,
@@ -80,10 +83,12 @@ export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), ju
     };
 
     // upsert ausencia legajo+fecha
+    const areaPropia = await areaAdministrada();
     const q = query(
       collection(db, "ausencias"),
       where("legajo", "==", String(legajo)),
-      where("fecha", "==", fechaStr)
+      where("fecha", "==", fechaStr),
+      ...(areaPropia ? [where('lugarTrabajo','==',areaPropia)] : [])
     );
     const snap = await getDocs(q);
 

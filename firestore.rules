@@ -1,0 +1,140 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function perfil() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function rol(roles) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && perfil().get('activo', true) == true && perfil().rol in roles;
+    }
+    function central() { return rol(['rrhh', 'subsecretario']); }
+    function areaPropia(area) { return rol(['admin']) && perfil().get('lugarTrabajo', '') != '' && area == perfil().lugarTrabajo; }
+    function cambioSolo(campos) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos); }
+    function creadoAhora() { return request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time; }
+
+    match /users/{uid} {
+      allow get: if request.auth != null && (request.auth.uid == uid || central());
+      allow list: if central();
+      // Las cuentas se gestionan con la API, que también actualiza Authentication.
+      allow write: if false;
+    }
+    match /tokens/{id} {
+      allow read: if central() || areaPropia(resource.data.area);
+      allow create: if (rol(['rrhh']) || areaPropia(request.resource.data.area))
+        && request.resource.data.keys().hasOnly(['token','area','createdAt','expiresAt','used'])
+        && request.resource.data.token is string && request.resource.data.token.size() >= 16
+        && request.resource.data.area is string && request.resource.data.expiresAt is string
+        && request.resource.data.createdAt == request.time && request.resource.data.used == false;
+      allow update, delete: if rol(['rrhh']);
+    }
+    match /areas/{id} {
+      allow read: if rol(['rrhh','subsecretario','admin']);
+      allow write: if rol(['rrhh']);
+    }
+    match /empleados/{id} {
+      allow read: if central() || areaPropia(resource.data.lugarTrabajo);
+      allow create: if rol(['rrhh']) || (areaPropia(request.resource.data.lugarTrabajo)
+        && request.resource.data.rol == 'empleado'
+        && request.resource.data.keys().hasOnly(['legajo','nombre','apellido','documento','domicilio','email','telefono','lugarTrabajo','secretaria','horario','categoria','funcion','particion','tipoCargo','area','fechaIngreso','estado','activo','rol']));
+      allow update: if rol(['rrhh'])
+        || (rol(['subsecretario']) && cambioSolo(['area','lugarTrabajo','historialTraspasos','historialAreas','updatedAt']))
+        || (areaPropia(resource.data.lugarTrabajo) && areaPropia(request.resource.data.lugarTrabajo)
+          && cambioSolo(['nombre','apellido','documento','domicilio','email','telefono','secretaria','horario','funcion','particion','tipoCargo','fechaIngreso','estado','activo']));
+      allow delete: if rol(['rrhh']) || areaPropia(resource.data.lugarTrabajo);
+    }
+    match /asistencias/{id} {
+      allow read: if central() || areaPropia(resource.data.lugarTrabajo);
+      // Sólo escribe Firebase Admin desde la API de fichaje.
+      allow write: if false;
+    }
+    match /ausencias/{id} {
+      allow read: if central() || areaPropia(resource.data.lugarTrabajo);
+      allow create: if central() || areaPropia(request.resource.data.lugarTrabajo);
+      allow update: if central() || (areaPropia(resource.data.lugarTrabajo)
+        && areaPropia(request.resource.data.lugarTrabajo) && request.resource.data.legajo == resource.data.legajo
+        && request.resource.data.fecha == resource.data.fecha);
+      allow delete: if central() || areaPropia(resource.data.lugarTrabajo);
+    }
+    match /solicitudes_traspaso/{id} {
+      function pendiente(data) {
+        return data.estado == 'pendiente' && data.aprobaciones.rrhh.estado == 'pendiente'
+          && data.aprobaciones.subsecretaria.estado == 'pendiente'
+          && data.aprobaciones.rrhh.fecha == null && data.aprobaciones.subsecretaria.fecha == null;
+      }
+      function deSuArea(data) {
+        return data.tipoSolicitud == 'solicitud_personal' ? areaPropia(data.areaDestino.nombre)
+          : data.empleadoId is string
+            && areaPropia(get(/databases/$(database)/documents/empleados/$(data.empleadoId)).data.lugarTrabajo)
+            && data.empleado.legajo == get(/databases/$(database)/documents/empleados/$(data.empleadoId)).data.legajo;
+      }
+      function aprobarRRHH() {
+        return rol(['rrhh']) && resource.data.estado == 'pendiente' && request.resource.data.estado == 'rrhh_aprobado'
+          && request.resource.data.aprobaciones.rrhh.estado == 'aprobado'
+          && request.resource.data.aprobaciones.subsecretaria == resource.data.aprobaciones.subsecretaria
+          && cambioSolo(['estado','aprobaciones','updatedAt']);
+      }
+      function aprobarSubsecretaria() {
+        return rol(['subsecretario']) && resource.data.estado == 'rrhh_aprobado' && request.resource.data.estado == 'subsecretaria_aprobado'
+          && request.resource.data.aprobaciones.subsecretaria.estado == 'aprobado'
+          && request.resource.data.aprobaciones.rrhh == resource.data.aprobaciones.rrhh
+          && cambioSolo(['estado','aprobaciones','updatedAt']);
+      }
+      function resolverSubsecretaria() {
+        return rol(['subsecretario']) && resource.data.estado == 'subsecretaria_aprobado'
+          && ((resource.data.tipoSolicitud == 'solicitud_personal' && request.resource.data.estado == 'asignacion_pendiente')
+            || (resource.data.tipoSolicitud != 'solicitud_personal' && request.resource.data.estado == 'finalizado'))
+          && cambioSolo(['estado','fechaEjecucion','updatedAt']);
+      }
+      function asignarPedido() {
+        return central() && resource.data.tipoSolicitud == 'solicitud_personal' && resource.data.estado == 'asignacion_pendiente'
+          && request.resource.data.estado in ['asignacion_pendiente','finalizado']
+          && cambioSolo(['estado','necesidades','asignaciones','fechaFinalizacion','cerrado','updatedAt']);
+      }
+      function rechazar() {
+        return ((rol(['rrhh']) && resource.data.estado == 'pendiente')
+          || (rol(['subsecretario']) && resource.data.estado == 'rrhh_aprobado'))
+          && request.resource.data.estado == 'rechazado' && cambioSolo(['estado','motivoRechazo','updatedAt']);
+      }
+      allow read: if central() || (rol(['admin']) && resource.data.creadoPor == request.auth.token.email);
+      allow create: if creadoAhora() && (
+        (rol(['admin']) && request.resource.data.creadoPor == request.auth.token.email
+          && pendiente(request.resource.data) && deSuArea(request.resource.data)
+          && request.resource.data.keys().hasOnly(['tipoSolicitud','empleadoId','empleado','areaDestino','necesidades','motivo','observaciones','creadoPor','creadorNombre','aprobaciones','estado','createdAt','updatedAt']))
+        || (rol(['rrhh']) && request.resource.data.origenSolicitud == 'disponibles'
+          && request.resource.data.estado == 'rrhh_aprobado'
+          && request.resource.data.aprobaciones.subsecretaria.estado == 'pendiente'));
+      allow update: if aprobarRRHH() || aprobarSubsecretaria() || resolverSubsecretaria() || asignarPedido() || rechazar();
+      allow delete: if false;
+    }
+    match /solicitudesVacaciones/{id} {
+      allow read: if central() || areaPropia(resource.data.area);
+      allow create: if rol(['rrhh','subsecretario','admin']) && request.resource.data.solicitadoPor == request.auth.uid
+        && (central() || areaPropia(request.resource.data.area)) && request.resource.data.estado == 'pendiente'
+        && request.resource.data.versionRegimen == 2 && request.resource.data.tipoDias in ['habiles','corridos']
+        && request.resource.data.diasSolicitados is int && request.resource.data.diasSolicitados > 0
+        && request.resource.data.diasSolicitados <= 366 && creadoAhora()
+        && request.resource.data.keys().hasOnly(['nroSolicitud','legajo','nombreCompleto','cargo','categoria','tipoCargo','particion','area','convenio','esJerarquico','fechaIngreso','anioVacacional','versionRegimen','diasCorresponden','diasPorTipo','tipoDias','diasSolicitados','consumoPorTipo','fechaDesde','fechaHasta','estado','observaciones','solicitadoPor','esReingreso','fechaReingreso','esCambioConvenio','perfilActual','perfilAnterior','convenioAnterior','mesesConvenioAnterior','mesesConvenioNuevo','calculoDetalle','createdAt','updatedAt']);
+      allow update: if central() && resource.data.estado == 'pendiente' && request.resource.data.estado in ['aprobada','rechazada']
+        && cambioSolo(['estado','observaciones','updatedAt','fechaRechazo','fechaAprobacion','diasPorTipo','diasCorresponden','diasDescontados','consumoPorTipo','saldoRestante','saldoRestantePorTipo','perfilAnterior','esCambioConvenio','esReingreso','fechaReingreso','mesesConvenioAnterior','mesesConvenioNuevo','calculoDetalle']);
+      allow delete: if false;
+    }
+    match /saldosVacaciones/{id} {
+      allow read: if central();
+      allow create, update: if central();
+      allow delete: if false;
+    }
+    match /notificaciones/{id} {
+      allow read: if rol(['empleado','admin','rrhh','subsecretario']) && resource.data.usuarioId == request.auth.uid;
+      allow create: if central() && request.resource.data.leido == false && request.resource.data.createdAt == request.time;
+      allow update: if rol(['empleado','admin','rrhh','subsecretario']) && resource.data.usuarioId == request.auth.uid
+        && cambioSolo(['leido']) && request.resource.data.leido == true;
+      allow delete: if false;
+    }
+    match /notificaciones_email/{id} {
+      allow read, create: if central();
+      allow update, delete: if false;
+    }
+    // Incluye contadores, límites, idempotencia y archivos de migración del servidor.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
