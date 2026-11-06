@@ -64,6 +64,43 @@ test("un rango consume hábiles o corridos aunque ambos pertenezcan a Municipal"
   assert.equal(calcularDiasRango("corridos","2027-01-04","2027-01-10").diasRango,7);
 });
 
+test("días hábiles de 2026 excluyen Carnaval, Semana Santa, puentes y traslados oficiales", () => {
+  const carnaval = calcularDiasRango("habiles", "2026-02-13", "2026-02-18");
+  assert.equal(carnaval.diasRango, 2);
+  assert.equal(carnaval.finesDeSemana, 2);
+  assert.deepEqual(carnaval.feriadosExcluidos.map(dia => dia.fecha), ["2026-02-16", "2026-02-17"]);
+
+  const santa = calcularDiasRango("habiles", "2026-04-01", "2026-04-06");
+  assert.equal(santa.diasRango, 2);
+  assert.deepEqual(santa.feriadosExcluidos.map(dia => dia.fecha), ["2026-04-02", "2026-04-03"]);
+  assert.match(santa.feriadosExcluidos[0].motivo, /Jueves Santo.*Malvinas/);
+  assert.equal(calcularDiasRango("habiles", "2026-12-07", "2026-12-09").diasRango, 1);
+  assert.equal(calcularDiasRango("habiles", "2026-11-20", "2026-11-20").diasRango, 1);
+  assert.equal(calcularDiasRango("habiles", "2026-11-23", "2026-11-23").diasRango, 0);
+});
+
+test("feriados extraordinarios aplicables a Morón y cruce de año sin alterar días corridos", () => {
+  assert.equal(calcularDiasRango("habiles", "2026-10-05", "2026-10-05").diasRango, 0);
+  const desde = "2026-11-09";
+  const hasta = "2026-11-13";
+  const semana = calcularDiasRango("habiles", desde, hasta);
+  assert.equal(semana.diasRango, 3);
+  assert.deepEqual(semana.feriadosExcluidos.map(dia => dia.fecha), ["2026-11-09", "2026-11-11"]);
+  assert.equal(calcularDiasRango("corridos", desde, hasta).diasRango, 5);
+
+  const cambioDeAnio = calcularDiasRango("habiles", "31/12/2026", "04/01/2027");
+  assert.equal(cambioDeAnio.diasRango, 2);
+  assert.deepEqual(cambioDeAnio.aniosSinPuentes, [2027]);
+  assert.equal(cambioDeAnio.feriadosExcluidos[0].fecha, "2027-01-01");
+  assert.equal(calcularDiasRango("habiles", "2027-03-25", "2027-03-26").diasRango, 0);
+});
+
+test("respeta excepciones de años anteriores y permite fechas inhábiles adicionales", () => {
+  assert.equal(calcularDiasRango("habiles", "2022-06-17", "2022-06-20").diasRango, 0);
+  assert.equal(calcularDiasRango("habiles", "2025-10-10", "2025-10-10").diasRango, 0);
+  assert.equal(calcularDiasRango("habiles", "2027-01-04", "2027-01-05", ["2027-01-05"]).diasRango, 1);
+});
+
 test("el saldo descuenta sólo aprobadas y respeta la unidad de solicitudes históricas", () => {
   const saldo = calcularSaldoVacacional({habiles:14,corridos:14},[
     {estado:"aprobada",tipoDias:"habiles",diasSolicitados:4},

@@ -141,12 +141,13 @@ export default function SolicitudVacaciones() {
   const regimen = resolverRegimenVacacional(perfilActual);
   const tipoElegido = tipoDias || regimen.tipo;
   const saldoElegido = saldo?.porTipo[tipoElegido];
-  let diasRango = null;
+  let resumenRango = null;
   let errorRango = "";
   if (fechaDesde && fechaHasta && tipoElegido) {
     if (fechaDesde > fechaHasta || !parseFechaLocal(fechaDesde) || !parseFechaLocal(fechaHasta)) errorRango = "El rango de fechas no es válido.";
-    else diasRango = calcularDiasRango(tipoElegido, fechaDesde, fechaHasta).diasRango;
+    else resumenRango = calcularDiasRango(tipoElegido, fechaDesde, fechaHasta);
   }
+  const diasRango = resumenRango?.diasRango ?? null;
   const agotado = !!saldo && Object.values(saldo.porTipo).every(s => s.diasDisponibles === 0);
 
   function cambiarLegajo(valor) {
@@ -297,7 +298,17 @@ export default function SolicitudVacaciones() {
           <div className="grid gap-4 sm:grid-cols-2"><Campo label="Fecha desde" id="fechaDesde"><input id="fechaDesde" type="date" className="input-base" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} /></Campo><Campo label="Fecha hasta" id="fechaHasta"><input id="fechaHasta" type="date" className="input-base" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} /></Campo></div>
           {errorRango && <p className="text-sm text-red-700">{errorRango}</p>}
           {diasRango !== null && !errorRango && <div className={`rounded-xl border p-4 text-sm ${diasRango > (saldoElegido?.diasDisponibles || 0) ? "border-red-200 bg-red-50 text-red-700" : "border-blue-200 bg-blue-50 text-blue-800"}`}>
-            <p>Del <strong>{fechaHumana(fechaDesde)}</strong> al <strong>{fechaHumana(fechaHasta)}</strong>: <strong>{diasRango} días {nombreTipo(tipoElegido)}</strong>{tipoElegido === "habiles" ? " (sin sábados, domingos ni feriados configurados)." : "."}</p>
+            <p>Del <strong>{fechaHumana(fechaDesde)}</strong> al <strong>{fechaHumana(fechaHasta)}</strong>: <strong>{diasRango} días {nombreTipo(tipoElegido)}</strong>.</p>
+            {tipoElegido === "habiles" && <div className="mt-2 space-y-2 text-xs">
+              <p>Se excluyeron {resumenRango.finesDeSemana} días de fin de semana y {resumenRango.feriadosExcluidos.length} fechas inhábiles entre semana.</p>
+              {resumenRango.feriadosExcluidos.length > 0 && <ul className="list-disc space-y-1 pl-5">
+                {resumenRango.feriadosExcluidos.map(({ fecha, motivo }) => (
+                  <li key={fecha}>{fechaHumana(fecha)} · {motivo}</li>
+                ))}
+              </ul>}
+              {resumenRango.aniosSinPuentes.length > 0 && <p>Los puentes de {resumenRango.aniosSinPuentes.join(", ")} aún no están incorporados al calendario.</p>}
+              {diasRango === 0 && <p className="font-semibold">El rango no contiene días hábiles. Elegí otras fechas.</p>}
+            </div>}
             <p className="mt-2">Disponibles: <strong>{saldoElegido?.diasDisponibles || 0}</strong> · Quedarían: <strong>{Math.max(0, (saldoElegido?.diasDisponibles || 0) - diasRango)}</strong></p>
             {diasRango > (saldoElegido?.diasDisponibles || 0) && <p className="mt-2 font-semibold">El rango supera el saldo disponible. Ajustá las fechas.</p>}
           </div>}

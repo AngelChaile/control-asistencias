@@ -106,6 +106,22 @@ test("una categoría con formato municipal único permite guardar conservando la
   assert.equal(resuelta.saldoRestante, 20);
 });
 
+test("una solicitud hábil previa descuenta el rango corregido al aprobar y conserva lo solicitado", async () => {
+  const { api, datos } = await servicio({
+    "solicitudesVacaciones/preexistente": solicitud("habiles", 5, {
+      fechaDesde: "2026-11-09",
+      fechaHasta: "2026-11-13",
+    }),
+  });
+  const aprobada = await api.actualizarEstadoSolicitud("preexistente", "aprobada");
+  assert.equal(aprobada.diasSolicitados, 5);
+  assert.equal(aprobada.diasDescontados, 3);
+  assert.equal(aprobada.saldoRestante, 11);
+  assert.equal(datos.get("saldosVacaciones/vacaciones_123_2026").diasUsadosPorTipo.habiles, 3);
+  const disponible = await api.fetchDiasDisponibles("123", 2026, { habiles: 14, corridos: 14 });
+  assert.equal(disponible.porTipo.habiles.diasDisponibles, 11);
+});
+
 test("primera aprobación reconstruye un saldo antiguo sin mezclar las unidades",async()=>{
   const {api,datos} = await servicio({
     "solicitudesVacaciones/hist-h":solicitud("habiles",5,{estado:"aprobada",versionRegimen:1}),

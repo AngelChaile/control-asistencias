@@ -1,7 +1,7 @@
 // src/pages/RRHH/Vacaciones/ListaVacaciones.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { fetchSolicitudesVacaciones, actualizarEstadoSolicitud, describirDiasPorTipo } from "../../../utils/vacaciones";
+import { fetchSolicitudesVacaciones, actualizarEstadoSolicitud, describirDiasPorTipo, diasParaAprobar } from "../../../utils/vacaciones";
 import FormularioImpresion from "./FormularioImpresion";
 
 const ANIO_ACTUAL = new Date().getFullYear();
@@ -129,6 +129,9 @@ export default function ListaVacaciones() {
           <div className="space-y-3">
             {solicitudes.map(s => {
               const badge = ESTADO_BADGE[s.estado] || ESTADO_BADGE.pendiente;
+              const diasAprobables = s.estado === "pendiente" ? diasParaAprobar(s) : null;
+              const cambioCalendario = s.estado === "pendiente" && diasAprobables !== Number(s.diasSolicitados);
+              const diasMostrados = s.estado === "aprobada" ? s.diasDescontados ?? s.diasSolicitados : s.diasSolicitados;
               return (
                 <div
                   key={s.id}
@@ -157,8 +160,13 @@ export default function ListaVacaciones() {
                       Legajo {s.legajo} · {s.area || "Sin área"} · {s.convenio}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Período {s.anioVacacional} · {s.diasSolicitados} días {s.tipoDias === "habiles" ? "hábiles" : s.tipoDias} solicitados
+                      Período {s.anioVacacional} · {diasMostrados} días {s.tipoDias === "habiles" ? "hábiles" : s.tipoDias} {s.estado === "aprobada" ? "aprobados" : "solicitados"}
                     </p>
+                    {cambioCalendario && <p className="mt-1 text-xs font-medium text-amber-800 dark:text-amber-300">
+                      {diasAprobables > 0
+                        ? `El calendario vigente computa ${diasAprobables} días. Se descontará esa cantidad al aprobar.`
+                        : "Revisá el rango antes de aprobar. No contiene días de licencia válidos."}
+                    </p>}
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       Derecho del período: {s.diasPorTipo ? describirDiasPorTipo(s.diasPorTipo) : `${s.diasCorresponden} días ${s.tipoDias || "(sin formato registrado)"}`}
                     </p>
@@ -176,9 +184,10 @@ export default function ListaVacaciones() {
                       <>
                         <button
                           onClick={() => handleCambiarEstado(s.id, "aprobada")}
-                          className="text-xs bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 font-semibold px-3 py-1.5 rounded-lg transition"
+                          disabled={!(diasAprobables > 0)}
+                          className="text-xs bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 font-semibold px-3 py-1.5 rounded-lg transition disabled:opacity-50"
                         >
-                          ✅ Aprobar
+                          {cambioCalendario && diasAprobables > 0 ? `✅ Aprobar ${diasAprobables} días` : "✅ Aprobar"}
                         </button>
                         <button
                           onClick={() => handleCambiarEstado(s.id, "rechazada")}

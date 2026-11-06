@@ -92,7 +92,11 @@ export default function FormularioImpresion({ solicitud, onVolver }) {
             <div style={encabezadoSeccion}>Licencia anual ordinaria</div>
             <div style={{ padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}><span>Anual: ☒</span><span>Año: <strong>{anioVacacional}</strong></span></div>
-              <p style={{ margin: "0 0 14px" }}>Cantidad de días solicitados: <strong>{diasSolicitados}</strong> ({tipoDias === "habiles" ? "hábiles" : tipoDias || "días"})</p>
+              <p style={{ margin: "0 0 14px" }}>
+                Cantidad de días {solicitud.estado === "aprobada" ? "aprobados" : "solicitados"}:{" "}
+                <strong>{solicitud.estado === "aprobada" ? solicitud.diasDescontados ?? diasSolicitados : diasSolicitados}</strong>{" "}
+                ({tipoDias === "habiles" ? "hábiles" : tipoDias || "días"})
+              </p>
               <table style={tablaPeriodo}><colgroup><col style={{ width: "22%" }} /><col style={{ width: "36%" }} /><col style={{ width: "21%" }} /><col style={{ width: "21%" }} /></colgroup><thead><tr><th style={encabezadoTabla}>Duración</th><th style={encabezadoTabla}>Día</th><th style={encabezadoTabla}>Mes</th><th style={encabezadoTabla}>Año</th></tr></thead><tbody>
                 <tr><td style={celdaTabla}>Desde</td><td style={celdaTabla}>{parteFecha(fechaDesde, "dia")} ({diaSemana(fechaDesde)})</td><td style={celdaTabla}>{parteFecha(fechaDesde, "mes")}</td><td style={celdaTabla}>{parteFecha(fechaDesde, "anio")}</td></tr>
                 <tr><td style={celdaTabla}>Hasta</td><td style={celdaTabla}>{parteFecha(fechaHasta, "dia")} ({diaSemana(fechaHasta)})</td><td style={celdaTabla}>{parteFecha(fechaHasta, "mes")}</td><td style={celdaTabla}>{parteFecha(fechaHasta, "anio")}</td></tr>

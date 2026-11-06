@@ -1,5 +1,6 @@
 import catalogo from "../data/vacacionesCategorias.json" with { type: "json" };
 import { buscarRegimenVacacional, normalizarParticion, normalizarPlanta } from "./regimenVacaciones.mjs";
+import { calendarioVacacional } from "./calendarioVacacional.mjs";
 
 export const TIPOS_CARGO_VACACIONES = [
   { value: "permanente", label: "Planta permanente" },
@@ -406,61 +407,42 @@ export function calcularVacaciones(params) {
 // CÁLCULO DE DÍAS EN UN RANGO DE FECHAS
 // ─────────────────────────────────────────────
 
-/**
- * Feriados nacionales fijos de Argentina (dd-MM).
- * Se evalúan cada año.
- */
-const FERIADOS_FIJOS = [
-  "01-01", // Año Nuevo
-  "24-03", // Día de la Memoria
-  "02-04", // Malvinas
-  "01-05", // Día del Trabajador
-  "25-05", // Revolución de Mayo
-  "20-06", // Paso a la Inmortalidad del Gral. Belgrano
-  "09-07", // Independencia
-  "17-08", // Paso a la Inmortalidad del Gral. San Martín (3er lunes de agosto — se trata como fijo al 17)
-  "12-10", // Día del Respeto a la Diversidad Cultural (2do lunes de octubre — se trata como fijo al 12)
-  "20-11", // Día de la Soberanía Nacional (4to lunes de noviembre — se trata como fijo al 20)
-  "08-12", // Inmaculada Concepción
-  "25-12", // Navidad
-];
-
-/**
- * Devuelve true si la fecha es feriado nacional fijo.
- * @param {Date} date
- */
-function esFeriadoFijo(date) {
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  return FERIADOS_FIJOS.includes(`${dd}-${mm}`);
+function fechaCivilUTC(valor) {
+  const fecha = parseFechaLocal(valor);
+  if (!fecha || !Number.isFinite(fecha.getTime())) return null;
+  return new Date(Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()));
 }
 
-/**
- * Cuenta los días hábiles entre dos fechas (inclusive ambos extremos).
- * Excluye sábados, domingos y feriados nacionales fijos.
- * @param {string} desde — "yyyy-mm-dd"
- * @param {string} hasta — "yyyy-mm-dd"
- * @param {string[]} [feriadosExtra] — feriados adicionales en formato "yyyy-mm-dd"
- * @returns {number}
- */
-export function contarDiasHabiles(desde, hasta, feriadosExtra = []) {
-  const inicio = parseFechaLocal(desde);
-  const fin    = parseFechaLocal(hasta);
-  if (!inicio || !fin || inicio > fin) return 0;
+function resumirDiasHabiles(desde, hasta, feriadosExtra) {
+  const inicio = fechaCivilUTC(desde);
+  const fin = fechaCivilUTC(hasta);
+  const resumen = { diasRango: 0, finesDeSemana: 0, feriadosExcluidos: [], aniosSinPuentes: [] };
+  if (!inicio || !fin || inicio > fin) return resumen;
 
-  const extrasSet = new Set(feriadosExtra);
-  let count = 0;
-  const cur = new Date(inicio);
-
-  while (cur <= fin) {
-    const dow = cur.getDay(); // 0=Dom, 6=Sáb
-    const isoStr = cur.toISOString().slice(0, 10);
-    if (dow !== 0 && dow !== 6 && !esFeriadoFijo(cur) && !extrasSet.has(isoStr)) {
-      count++;
+  const extras = new Set(feriadosExtra);
+  let anio;
+  let calendario;
+  for (const dia = new Date(inicio); dia <= fin; dia.setUTCDate(dia.getUTCDate() + 1)) {
+    if (dia.getUTCFullYear() !== anio) {
+      anio = dia.getUTCFullYear();
+      calendario = calendarioVacacional(anio);
+      if (!calendario.puentesPublicados) resumen.aniosSinPuentes.push(anio);
     }
-    cur.setDate(cur.getDate() + 1);
+    const semana = dia.getUTCDay();
+    if (semana === 0 || semana === 6) {
+      resumen.finesDeSemana++;
+      continue;
+    }
+    const fecha = dia.toISOString().slice(0, 10);
+    const motivo = calendario.fechas.get(fecha);
+    if (motivo || extras.has(fecha)) resumen.feriadosExcluidos.push({ fecha, motivo: motivo || "Día inhábil adicional" });
+    else resumen.diasRango++;
   }
-  return count;
+  return resumen;
+}
+
+export function contarDiasHabiles(desde, hasta, feriadosExtra = []) {
+  return resumirDiasHabiles(desde, hasta, feriadosExtra).diasRango;
 }
 
 /**
@@ -470,8 +452,8 @@ export function contarDiasHabiles(desde, hasta, feriadosExtra = []) {
  * @returns {number}
  */
 export function contarDiasCorridos(desde, hasta) {
-  const inicio = parseFechaLocal(desde);
-  const fin    = parseFechaLocal(hasta);
+  const inicio = fechaCivilUTC(desde);
+  const fin = fechaCivilUTC(hasta);
   if (!inicio || !fin || inicio > fin) return 0;
   const diff = fin.getTime() - inicio.getTime();
   return Math.round(diff / (1000 * 60 * 60 * 24)) + 1;
@@ -489,15 +471,22 @@ export function contarDiasCorridos(desde, hasta) {
 export function calcularDiasRango(convenio, desde, hasta, feriadosExtra = []) {
   const tipo = ["habiles", "corridos"].includes(convenio) ? convenio : TABLAS_CONVENIO[convenio]?.tipo;
   if (!tipo) throw new Error(`Régimen de días desconocido: ${convenio}`);
-  const diasRango = tipo === "habiles"
-    ? contarDiasHabiles(desde, hasta, feriadosExtra)
-    : contarDiasCorridos(desde, hasta);
-  return { diasRango, tipo };
+  if (tipo === "habiles") return { tipo, ...resumirDiasHabiles(desde, hasta, feriadosExtra) };
+  return { tipo, diasRango: contarDiasCorridos(desde, hasta) };
+}
+
+export function diasParaAprobar(solicitud) {
+  if (solicitud.tipoDias === "habiles" && (solicitud.fechaDesde || solicitud.fechaHasta)) {
+    return calcularDiasRango("habiles", solicitud.fechaDesde, solicitud.fechaHasta).diasRango;
+  }
+  return Number(solicitud.diasSolicitados);
 }
 
 export function consumoVacacional(solicitud) {
   const tipo = solicitud.tipoDias;
-  const cantidad = Number(solicitud.diasSolicitados);
+  const cantidad = Number(solicitud.estado === "aprobada"
+    ? solicitud.diasDescontados ?? solicitud.diasSolicitados
+    : solicitud.diasSolicitados);
   if (!["habiles", "corridos"].includes(tipo) || !Number.isInteger(cantidad) || cantidad < 0) {
     throw new Error(`La solicitud ${solicitud.nroSolicitud || solicitud.id || "histórica"} no tiene un formato de días válido. RRHH debe revisarla antes de calcular el saldo.`);
   }

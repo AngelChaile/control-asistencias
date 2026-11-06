@@ -25,7 +25,11 @@ Confirmación de RRHH del 03/11/2026:
 
 Al volver a buscar un legajo se recupera la última configuración especial aprobada de ese año. Así una nueva solicitud conserva los meses y los proporcionales aprobados y no vuelve a asignar el año completo al régimen actual. El guardado y la aprobación también comprueban esa configuración para proteger solicitudes abiertas antes de la aprobación del cambio.
 
-El conteo hábil conserva el calendario fijo de feriados configurado en el sistema. Esta actualización no incorpora un calendario de feriados móviles.
+El conteo hábil usa un calendario común. Excluye fines de semana, feriados fijos, Carnaval, Jueves y Viernes Santo, feriados trasladados y días turísticos publicados. Se consultan los años de las fechas de la licencia, incluso si el período vacacional es anterior.
+
+Las excepciones están en `src/utils/calendarioVacacional.mjs`. El calendario incluye los puentes nacionales publicados de 2020 a 2026 y las fechas extraordinarias verificadas, entre ellas las del [Decreto 1103/2026](https://www.argentina.gob.ar/normativa/nacional/norma-430580/texto) y el [aniversario de Morón de 2026](https://normas.gba.gob.ar/anexos/descargar/2B3YrlJ0.pdf). Los nuevos puentes, traslados discrecionales y asuetos municipales requieren incorporar la fecha oficial. El formulario identifica los años cuyos puentes aún no están cargados. [Calendario nacional](https://www.argentina.gob.ar/feriados) · [Resolución de días turísticos de 2026](https://www.argentina.gob.ar/normativa/nacional/norma-421799/texto).
+
+Si cambia el conteo de una solicitud hábil pendiente, RRHH ve la cantidad vigente antes de aprobar. La solicitud conserva la cantidad original y registra la cantidad efectivamente descontada. Los saldos históricos usan los días que se descontaron al aprobar.
 
 ## Solicitudes anteriores
 

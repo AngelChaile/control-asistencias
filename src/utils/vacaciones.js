@@ -4,7 +4,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { mismoPerfilVacacional } from "./regimenVacaciones.mjs";
-import { calcularVacaciones, calcularDiasRango, calcularSaldoVacacional, consumoVacacional, parseFechaLocal } from "./vacacionesCalculo.mjs";
+import { calcularVacaciones, calcularDiasRango, calcularSaldoVacacional, consumoVacacional, diasParaAprobar, parseFechaLocal } from "./vacacionesCalculo.mjs";
 export * from "./vacacionesCalculo.mjs";
 import { llamarApi, SEGURIDAD_ACTIVA } from './api';
 
@@ -162,11 +162,14 @@ export async function actualizarEstadoSolicitud(id, estado, observaciones = "") 
     const plan = planPropio && (solicitud.esCambioConvenio || solicitud.esReingreso)
       ? planPropio : planPrevio || planPropio;
     const otorgados = plan?.diasPorTipo || diasOtorgados(solicitud);
-    const consumo = consumoVacacional(solicitud);
     const tipo = solicitud.tipoDias;
-    const cantidad = Number(solicitud.diasSolicitados);
+    const cantidad = diasParaAprobar(solicitud);
+    if (!Number.isInteger(cantidad) || cantidad < 1) {
+      throw new Error("La solicitud debe incluir al menos un día de licencia. Revisá el rango antes de aprobar.");
+    }
+    const consumo = consumoVacacional({ ...solicitud, diasSolicitados: cantidad });
     const disponibles = Math.max(0, Number(otorgados[tipo]) - usadas[tipo]);
-    if (!Number.isFinite(disponibles) || cantidad < 1 || cantidad > disponibles) {
+    if (!Number.isFinite(disponibles) || cantidad > disponibles) {
       throw new Error(`No se puede aprobar: quedan ${disponibles || 0} días ${tipo === "habiles" ? "hábiles" : "corridos"} del período ${solicitud.anioVacacional}.`);
     }
     usadas.habiles += consumo.habiles;
@@ -184,6 +187,7 @@ export async function actualizarEstadoSolicitud(id, estado, observaciones = "") 
       calculoDetalle: plan.calculoDetalle } : {};
     transaction.update(ref, { ...ajustePlan, estado, observaciones, diasPorTipo: otorgados, diasCorresponden: Number(otorgados[tipo]), diasDescontados: cantidad, consumoPorTipo: consumo,
       saldoRestante: restantes[tipo], saldoRestantePorTipo: restantes, fechaAprobacion: serverTimestamp(), updatedAt: serverTimestamp() });
-    return { ...solicitud, ...ajustePlan, estado, diasPorTipo: otorgados, diasCorresponden: Number(otorgados[tipo]), saldoRestante: restantes[tipo], saldoRestantePorTipo: restantes };
+    return { ...solicitud, ...ajustePlan, estado, diasPorTipo: otorgados, diasCorresponden: Number(otorgados[tipo]),
+      diasDescontados: cantidad, consumoPorTipo: consumo, saldoRestante: restantes[tipo], saldoRestantePorTipo: restantes };
   });
 }
