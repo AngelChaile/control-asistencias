@@ -1,5 +1,5 @@
-// Identificación exacta del régimen por las tres columnas de la planilla de RRHH.
-// No deduce cantidades anuales ni convierte días hábiles en corridos.
+// Prioriza la combinación exacta. RRHH admite otra planta de la misma categoría
+// y partición cuando todas las filas de referencia tienen el mismo formato.
 export function normalizarDescripcion(valor) {
   return String(valor ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toUpperCase().replace(/\s+/g, " ").replace(/\s*-\s*/g, "-").trim();
@@ -44,12 +44,20 @@ export function buscarRegimenVacacional(agente, reglas) {
   ].filter(Boolean);
   if (faltantes.length) return { encontrado: false, motivo: "datos_incompletos", faltantes };
 
-  const coincidencias = reglas.filter(regla => (
-    normalizarPlanta(regla.tipoCargo) === tipoCargo
-    && normalizarParticion(regla.particion) === particion
-    && normalizarDescripcion(regla.categoria) === categoria
-  ));
-  if (!coincidencias.length) return { encontrado: false, motivo: "sin_regla", faltantes: [] };
+  const referencias = reglas.filter(regla => normalizarDescripcion(regla.categoria) === categoria);
+  const enParticion = referencias.filter(regla => normalizarParticion(regla.particion) === particion);
+  const exactas = enParticion.filter(regla => normalizarPlanta(regla.tipoCargo) === tipoCargo);
+  const exacta = exactas.length > 0;
+
+  if (!exacta) {
+    const plantaConocida = reglas.some(regla => normalizarPlanta(regla.tipoCargo) === tipoCargo);
+    const formatos = new Set(enParticion.map(regla => regla.tipo));
+    if (!plantaConocida || formatos.size !== 1) {
+      return { encontrado: false, motivo: "sin_regla", faltantes: [], referencias };
+    }
+  }
+
+  const coincidencias = exacta ? exactas : enParticion;
   const tipos = new Set(coincidencias.map(regla => regla.tipo));
   if (tipos.size !== 1 || !["habiles", "corridos"].includes(coincidencias[0].tipo)) {
     throw new Error("La planilla contiene reglas incompatibles para esta planta, partición y categoría.");
@@ -59,9 +67,11 @@ export function buscarRegimenVacacional(agente, reglas) {
     encontrado: true,
     tipo: regla.tipo,
     descripcion: regla.tipo === "habiles" ? "Días hábiles" : "Días corridos",
-    tipoCargo: regla.tipoCargo,
+    tipoCargo: exacta ? regla.tipoCargo : tipoCargo,
     particion: regla.particion,
     categoria: regla.categoria,
     filaFuente: regla.fila,
+    coincidencia: exacta ? "exacta" : "categoria_particion",
+    plantaFuente: regla.tipoCargo,
   };
 }

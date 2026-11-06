@@ -1,18 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from "../../firebase";
 import ExportExcel from "../../components/ExportExcel";
 import EmployeeDetailModal from "../../components/EmployeeDetailModal";
 import { fetchEmpleadosPage, fetchAllEmpleados, fetchEmpleadosByLugarTrabajo } from "../../utils/usuarios";
 import { fetchAllAreas, searchAreas } from "../../utils/areas";
-import { CATEGORIAS_VACACIONES } from "../../utils/vacacionesCalculo.mjs";
+import SelectorCategoria from "../../components/SelectorCategoria";
 
 export default function Empleados() {
+  const [params] = useSearchParams();
   const [empleados, setEmpleados] = useState([]);
   const [areas, setAreas] = useState([]);
   const [areasFiltradas, setAreasFiltradas] = useState([]);
   const [busquedaArea, setBusquedaArea] = useState("");
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
-  const [filter, setFilter] = useState({ legajo: "", nombre: "", area: "" });
+  const [filter, setFilter] = useState(() => ({ legajo: params.get("legajo") || "", nombre: "", area: "" }));
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -60,7 +62,7 @@ export default function Empleados() {
   }, []);
 
   useEffect(() => {
-    loadFirstPage();
+    handleSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -143,7 +145,7 @@ export default function Empleados() {
       
       resetForm();
       setMostrarFormulario(false);
-      await loadFirstPage({ area: filter.area || null });
+      await handleSearch();
     } catch (err) {
       console.error(err);
     }
@@ -272,9 +274,6 @@ export default function Empleados() {
   );
 
   // Opciones para selectores
-  const categorias = nuevo.categoria && !CATEGORIAS_VACACIONES.includes(nuevo.categoria)
-    ? [nuevo.categoria, ...CATEGORIAS_VACACIONES] : CATEGORIAS_VACACIONES;
-
   const funciones = [
     "Administrativo",
     "Técnico",
@@ -460,15 +459,8 @@ export default function Empleados() {
             {/* Categoría y Función */}
             <div>
               <label htmlFor="empleado-categoria" className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
-              <input
-                id="empleado-categoria"
-                list="categorias-empleado"
-                className="input-modern"
-                value={nuevo.categoria}
-                placeholder="Escribí para buscar una categoría…"
-                onChange={(e) => setNuevo({ ...nuevo, categoria: e.target.value })}
-              />
-              <datalist id="categorias-empleado">{categorias.map(cat => <option key={cat} value={cat} />)}</datalist>
+              <SelectorCategoria id="empleado-categoria" valor={nuevo.categoria} requerido
+                cambiar={categoria => setNuevo(actual => ({ ...actual, categoria }))} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Función</label>

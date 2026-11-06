@@ -4,7 +4,9 @@
 
 La fuente es `VACACIONES SEGUN CATEGORIAS.xlsx`, hoja `Hoja1`, rango `A1:D132`: 131 combinaciones (82 hábiles y 49 corridas). El catálogo de la aplicación está en `src/data/vacacionesCategorias.json`, con la fila y el SHA-256 del original para trazabilidad. No contiene legajos ni se requiere acceder a Canaima desde producción.
 
-Se compara la combinación completa de planta (`tipoCargo`), partición (`particion`) y categoría (`categoria`). La función del agente no sustituye su categoría. Se normalizan tildes, mayúsculas y espacios y se reconocen los códigos usados en los formularios. Una combinación no incluida impide calcular hasta corregir el legajo o ampliar el catálogo; no se infiere una regla por similitud.
+Primero se compara la combinación de planta (`tipoCargo`), partición (`particion`) y categoría (`categoria`). Si la planta es reconocida y no hay una fila exacta, se aplica el formato de esa categoría en la misma partición cuando todas sus filas coinciden, según confirmó RRHH. Se conserva la planta real del agente y la fila consultada. Se normalizan tildes, mayúsculas y espacios y se reconocen los códigos de los formularios.
+
+El selector de Empleados incluye también las categorías informadas para el padrón. Si la categoría carece de una regla aplicable o las referencias de la misma partición tienen formatos distintos, RRHH debe confirmar el régimen antes de calcular.
 
 Confirmación de RRHH del 03/11/2026:
 

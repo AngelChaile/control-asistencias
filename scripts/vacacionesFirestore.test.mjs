@@ -88,6 +88,24 @@ test("guardar vuelve a consultar el saldo y rechaza sobreconsumo o conteos alter
   await assert.rejects(api.crearSolicitudVacaciones({...parametros,diasSolicitados:5}),/conteo de la licencia/);
 });
 
+test("una categoría con formato municipal único permite guardar conservando la planta del agente", async () => {
+  const { api } = await servicio({
+    "solicitudesVacaciones/usada": solicitud("habiles", 3, { estado: "aprobada" }),
+  });
+  const creada = await api.crearSolicitudVacaciones({
+    ...parametros,
+    perfilActual: { tipoCargo: "permanente", particion: "municipal", categoria: "TECNICO CAT 6 35 HS" },
+    fechaIngreso: "2010-08-01",
+    tipoDias: "habiles",
+    diasSolicitados: 5,
+  });
+  assert.equal(creada.tipoCargo, "permanente");
+  assert.equal(creada.tipoDias, "habiles");
+  assert.equal(creada.diasCorresponden, 28);
+  const resuelta = await api.actualizarEstadoSolicitud(creada.id, "aprobada");
+  assert.equal(resuelta.saldoRestante, 20);
+});
+
 test("primera aprobación reconstruye un saldo antiguo sin mezclar las unidades",async()=>{
   const {api,datos} = await servicio({
     "solicitudesVacaciones/hist-h":solicitud("habiles",5,{estado:"aprobada",versionRegimen:1}),

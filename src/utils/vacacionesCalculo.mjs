@@ -14,8 +14,6 @@ export const PARTICIONES_VACACIONES = [
   { value: "medico", label: "Carrera Médica" },
   { value: "radiologo", label: "Radiólogo (régimen existente)" },
 ];
-export const CATEGORIAS_VACACIONES = [...new Set(catalogo.reglas.map(r => r.categoria))].sort();
-
 export function convenioDeParticion(particion) {
   return ({ "CARRERA MUNICIPAL": "Municipal", "CARRERA DOCENTE": "Docente", "CARRERA MEDICA": "Medico", RADIOLOGO: "Radiologo" })[normalizarParticion(particion)] || "";
 }

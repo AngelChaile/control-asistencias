@@ -12,6 +12,7 @@ import {
 } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
 import EmployeeDetailModal from "../../components/EmployeeDetailModal";
+import SelectorCategoria from "../../components/SelectorCategoria";
 import { fetchAllAreas } from "../../utils/areas";
 
 export default function EmpleadosAdmin() {
@@ -342,7 +343,16 @@ export default function EmpleadosAdmin() {
               />
             </div>
 
-            {/* Categoría, restringida para el rol Admin, y Función */}
+            <div>
+              <label htmlFor="admin-empleado-categoria" className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
+              {editingId ? <>
+                <input id="admin-empleado-categoria" className="input-modern" value={nuevo.categoria} placeholder="Sin categoría" readOnly />
+                <p className="mt-2 text-xs text-muted">RRHH puede corregir la categoría de este agente.</p>
+              </> : <SelectorCategoria id="admin-empleado-categoria" valor={nuevo.categoria} requerido
+                cambiar={categoria => setNuevo(actual => ({ ...actual, categoria }))} />}
+            </div>
+
+            {/* Función */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Función</label>
               <select

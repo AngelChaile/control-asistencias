@@ -5,9 +5,11 @@ import { buscarEmpleadoPorLegajo } from "../../../utils/asistencia";
 import {
   calcularVacaciones, calcularMesesTrabajados, parseFechaLocal, crearSolicitudVacaciones,
   fetchDiasDisponibles, fetchPlanVacacional, calcularDiasRango, resolverRegimenVacacional, perfilVacacionalEmpleado,
-  TIPOS_CARGO_VACACIONES, PARTICIONES_VACACIONES, CATEGORIAS_VACACIONES, describirDiasPorTipo,
+  TIPOS_CARGO_VACACIONES, PARTICIONES_VACACIONES, describirDiasPorTipo,
 } from "../../../utils/vacaciones";
+import SelectorCategoria from "../../../components/SelectorCategoria";
 import FormularioImpresion from "./FormularioImpresion";
+import { categoriaDelCatalogo } from "../../../utils/catalogoCategorias.mjs";
 import { mismoPerfilVacacional } from "../../../utils/regimenVacaciones.mjs";
 
 const ANIO_ACTUAL = new Date().getFullYear();
@@ -23,8 +25,25 @@ function Campo({ label, id, children, hint }) {
   return <div className="flex min-w-0 flex-col gap-1.5"><label htmlFor={id} className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>{children}{hint && <p className="text-xs leading-5 text-gray-500">{hint}</p>}</div>;
 }
 
+function detalleRegimen(perfil, regimen) {
+  if (regimen.motivo === "datos_incompletos") {
+    return `Falta completar ${regimen.faltantes.join(", ")} para determinar el régimen.`;
+  }
+  if (regimen.referencias?.length) {
+    const combinaciones = [...new Set(regimen.referencias.map(r => `${r.tipoCargo} · ${r.particion}`))];
+    return `La planilla registra esta categoría para ${combinaciones.join(" o ")}. Revisá si la planta y la partición de la ficha corresponden al agente.`;
+  }
+  if (categoriaDelCatalogo(perfil.categoria)) {
+    return "La categoría está en el catálogo de empleados. RRHH debe confirmar si corresponden días hábiles o corridos para esta combinación.";
+  }
+  return "La categoría de la ficha no figura en el catálogo. Revisá el nombre exacto de la categoría con RRHH.";
+}
+
 function PerfilRegimen({ perfil, cambiar, prefijo, bloqueado = false }) {
   const regimen = resolverRegimenVacacional(perfil);
+  let origenRegimen = regimen.origen;
+  if (regimen.coincidencia === "exacta") origenRegimen = "Según la planta, partición y categoría de la planilla.";
+  if (regimen.coincidencia === "categoria_particion") origenRegimen = "La categoría tiene un único formato en esta partición.";
   return <div className="space-y-4">
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <Campo label="Tipo de cargo / Planta" id={`${prefijo}-planta`}>
@@ -41,15 +60,15 @@ function PerfilRegimen({ perfil, cambiar, prefijo, bloqueado = false }) {
           {PARTICIONES_VACACIONES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
         </select>
       </Campo>
-      <div className="sm:col-span-2"><Campo label="Cargo / Categoría" id={`${prefijo}-categoria`} hint={!bloqueado ? "Escribí para buscar la categoría exacta de la planilla." : null}>
-        <input id={`${prefijo}-categoria`} className="input-base" value={perfil.categoria} readOnly={bloqueado} list={bloqueado ? undefined : `${prefijo}-categorias`} placeholder="Ej.: ADMINISTRATIVO CAT 5 35 HS" title={perfil.categoria} onChange={e => cambiar({ ...perfil, categoria: e.target.value })} />
-        {!bloqueado && <datalist id={`${prefijo}-categorias`}>{CATEGORIAS_VACACIONES.map(c => <option key={c} value={c} />)}</datalist>}
+      <div className="sm:col-span-2"><Campo label="Cargo / Categoría" id={`${prefijo}-categoria`}>
+        {bloqueado ? <input id={`${prefijo}-categoria`} className="input-base" value={perfil.categoria} readOnly />
+          : <SelectorCategoria id={`${prefijo}-categoria`} valor={perfil.categoria}
+            cambiar={categoria => cambiar({ ...perfil, categoria })} />}
       </Campo></div>
     </div>
     <div className={`rounded-xl border p-3 text-sm ${regimen.encontrado ? "border-green-200 bg-green-50 text-green-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
-      {regimen.encontrado ? <><strong>{regimen.descripcion}</strong><span className="ml-2 text-xs">{regimen.filaFuente ? "Determinado por la planta, partición y categoría de RRHH." : regimen.origen}</span></>
-        : regimen.motivo === "datos_incompletos" ? `Completá ${regimen.faltantes.join(", ")} para determinar el régimen.`
-        : "Esta combinación de planta, partición y categoría no figura en la planilla. Revisá los datos del agente antes de calcular."}
+      {regimen.encontrado ? <><strong>{regimen.descripcion}</strong><span className="ml-2 text-xs">{origenRegimen}</span></>
+        : detalleRegimen(perfil, regimen)}
     </div>
   </div>;
 }
@@ -227,7 +246,11 @@ export default function SolicitudVacaciones() {
 
     <section className="card space-y-4"><h2 className="text-base font-semibold text-gray-900">Situación actual</h2>
       <PerfilRegimen perfil={perfilActual} cambiar={setPerfilActual} prefijo="actual" bloqueado={empleadoCargado} />
-      {empleadoCargado && !regimen.encontrado && <p className="text-xs text-gray-600">Completá o corregí los datos desde <Link className="text-municipio-600 underline" to={user?.rol === "admin" ? "/admin/empleados" : "/rrhh/empleados"}>Empleados</Link> y volvé a buscar el legajo.</p>}
+      {empleadoCargado && !regimen.encontrado && <p className="text-xs text-gray-600">
+        {user?.rol === "rrhh"
+          ? <>Revisá la ficha del <Link className="text-municipio-600 underline" to={`/rrhh/empleados?legajo=${encodeURIComponent(legajo.trim())}`}>legajo {legajo.trim()}</Link>. Si los datos son correctos, hace falta incorporar la regla de vacaciones correspondiente.</>
+          : `Pedile a RRHH que revise la ficha o confirme la regla de vacaciones para el legajo ${legajo.trim()}.`}
+      </p>}
     </section>
 
     <section className="card space-y-4"><h2 className="text-base font-semibold text-gray-900">Situaciones del período</h2>
