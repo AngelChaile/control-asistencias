@@ -15,7 +15,7 @@ export default function AsistenciasAdmin() {
     async function load() {
       setLoading(true);
       try {
-        const data = await fetchAsistenciasToday(user?.lugarTrabajo);
+        const data = await fetchAsistenciasToday(user?.lugarTrabajo, user);
         setAsistencias(data || []);
       } catch (err) {
         console.error(err);

@@ -1,3 +1,4 @@
+import { ID_SALUD } from '../src/utils/alcanceAdmin.mjs';
 import { autorizar, errorHttp } from './http.mjs';
 
 export const RESPONSABILIDADES = ['actualizar_sistemas', 'notificar_empleado'];
@@ -8,7 +9,8 @@ export function perfilSeguro(datos) {
   if (!perfil.nombre || !perfil.apellido || !perfil.email || (rol === 'admin' && !perfil.lugarTrabajo)) throw errorHttp(400, 'Complete nombre, apellido, correo y el área del administrador.');
   if (Object.values(perfil).some(value => value.length > 250)) throw errorHttp(400, 'Hay campos demasiado extensos.');
   perfil.email = perfil.email.toLowerCase();
-  return { ...perfil, rol, activo: datos.activo !== false,
+  if (datos.secretariaAdministradaId && (rol !== 'admin' || datos.secretariaAdministradaId !== ID_SALUD)) throw errorHttp(400, 'El alcance de secretaría es inválido.');
+  return { ...perfil, ...(datos.secretariaAdministradaId ? { secretariaAdministradaId: ID_SALUD } : {}), rol, activo: datos.activo !== false,
     avisosTraspasos: [...new Set((Array.isArray(datos.avisosTraspasos) ? datos.avisosTraspasos : []).filter(r => RESPONSABILIDADES.includes(r)))] };
 }
 
@@ -20,7 +22,7 @@ export async function usuarios(req, body, servicios) {
     return { usuarios: docs.docs.map(doc => {
       const d = doc.data();
       // Lista explícita: nunca se envían antiguas contraseñas ni campos arbitrarios.
-      return { id: doc.id, ...Object.fromEntries(['email','nombre','apellido','legajo','lugarTrabajo','secretaria','areaId','rol','activo','avisosTraspasos'].map(key => [key, key === 'avisosTraspasos' ? (Array.isArray(d[key]) ? d[key] : []) : d[key] ?? (key === 'activo' ? true : '')])) };
+      return { id: doc.id, ...Object.fromEntries(['email','nombre','apellido','legajo','lugarTrabajo','secretaria','areaId','secretariaAdministradaId','rol','activo','avisosTraspasos'].map(key => [key, key === 'avisosTraspasos' ? (Array.isArray(d[key]) ? d[key] : []) : d[key] ?? (key === 'activo' ? true : '')])) };
     }) };
   }
   if (!['crear','actualizar','desactivar'].includes(body.accion)) throw errorHttp(400, 'Operación inválida.');

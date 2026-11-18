@@ -1,4 +1,5 @@
 // src/utils/usuarios.js
+import { filtroAdmin } from './alcanceAdmin.mjs';
 import { llamarApi } from './api';
 import {
   setDoc,
@@ -29,11 +30,11 @@ export async function registrarUsuario(email, password, nombre, apellido, rol, a
    --------------------- */
 
 /**
- * fetchEmpleadosByLugarTrabajo(lugar)
+ * fetchEmpleadosByLugarTrabajo(lugar, perfil = null)
  */
-export async function fetchEmpleadosByLugarTrabajo(lugar) {
+export async function fetchEmpleadosByLugarTrabajo(lugar, perfil = null) {
   if (!lugar) return [];
-  const q = query(collection(db, "empleados"), where("lugarTrabajo", "==", lugar));
+  const q = query(collection(db, "empleados"), perfil ? where(...filtroAdmin(perfil)) : where("lugarTrabajo", "==", lugar));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }

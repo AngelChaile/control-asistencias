@@ -52,6 +52,13 @@ export default function EmployeeDetailModal({ empleado, onClose }) {
             </div>
           </section>
 
+          {empleado.cargosPadron?.length > 1 && <section className="border-t border-slate-200 pt-5">
+            <h3 className="mb-3 text-sm font-bold">Cargos del padrón de Salud</h3>
+            <ul className="space-y-2">{empleado.cargosPadron.map(cargo => <li key={cargo.nroCargo} className="rounded-xl border p-3 text-sm">
+              <strong>Cargo {cargo.nroCargo} · {cargo.categoria}</strong>
+              <p>{cargo.lugarTrabajo}</p>
+            </li>)}</ul>
+          </section>}
           <section className="border-t border-slate-200 pt-5">
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-700">Historial de fechas</h3>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

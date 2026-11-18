@@ -1,3 +1,4 @@
+import { empleadoAdministrado } from '../src/utils/alcanceAdmin.mjs';
 import { autorizar, errorHttp } from './http.mjs';
 
 export async function vacacionesContexto(req, body, s) {
@@ -17,7 +18,8 @@ export async function vacacionesContexto(req, body, s) {
   if (body.accion !== 'historial' || !/^[0-9]{1,20}$/.test(body.legajo || '')) throw errorHttp(400, 'Legajo inválido.');
   if (usuario.rol === 'admin') {
     const empleados = await s.db.collection('empleados').where('legajo','==',body.legajo).limit(2).get();
-    if (empleados.size !== 1 || !usuario.lugarTrabajo || empleados.docs[0].data().lugarTrabajo !== usuario.lugarTrabajo) throw errorHttp(403, 'El agente no pertenece a su área.');
+    if (empleados.size !== 1 || !empleadoAdministrado(usuario, empleados.docs[0].data()) || empleados.docs[0].data().activo === false) throw errorHttp(403, 'El agente no pertenece a su área.');
+    if (empleados.docs[0].data().requiereRevisionCargo) throw errorHttp(409, 'RRHH debe seleccionar el cargo para vacaciones en la ficha del agente.');
   }
   const docs = await s.db.collection('solicitudesVacaciones').where('legajo','==',body.legajo).get();
   return { solicitudes: docs.docs.map(d => ({ ...d.data(), id:d.id,

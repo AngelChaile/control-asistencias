@@ -8,7 +8,19 @@ service cloud.firestore {
         && perfil().get('activo', true) == true && perfil().rol in roles;
     }
     function central() { return rol(['rrhh', 'subsecretario']); }
-    function areaPropia(area) { return rol(['admin']) && perfil().get('lugarTrabajo', '') != '' && area == perfil().lugarTrabajo; }
+    function adminSalud() { return rol(['admin']) && perfil().get('secretariaAdministradaId', '') == '1.9.'; }
+    function enSalud(data) { return adminSalud() && data.get('secretariaId', '') == '1.9.'; }
+    function idSalud(id) { return id is string && id.matches('1[.]9[.]([0-9]+[.])*'); }
+    function areaSaludVerificada(area) {
+      let registro = get(/databases/$(database)/documents/areas/$(area.get('documentoAreaId', area.id))).data;
+      return idSalud(area.id) && registro.get('id', area.get('documentoAreaId', area.id)) == area.id && registro.nombre == area.nombre;
+    }
+    function puedeVerPersonal(data) { return enSalud(data) || areaPropia(data.lugarTrabajo); }
+    function agenteDeSalud(data, lugar) {
+      let agente = get(/databases/$(database)/documents/empleados/$(data.empleadoId)).data;
+      return enSalud(agente) && agente.legajo == data.legajo && agente.lugarTrabajo == lugar && agente.get('activo', true);
+    }
+    function areaPropia(area) { return rol(['admin']) && !adminSalud() && perfil().get('lugarTrabajo', '') != '' && area == perfil().lugarTrabajo; }
     function cambioSolo(campos) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos); }
     function creadoAhora() { return request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time; }
 
@@ -19,8 +31,8 @@ service cloud.firestore {
       allow write: if false;
     }
     match /tokens/{id} {
-      allow read: if central() || areaPropia(resource.data.area);
-      allow create: if (rol(['rrhh']) || areaPropia(request.resource.data.area))
+      allow read: if central() || areaPropia(resource.data.area) || (adminSalud() && resource.data.area == perfil().lugarTrabajo);
+      allow create: if (rol(['rrhh']) || areaPropia(request.resource.data.area) || (adminSalud() && request.resource.data.area == perfil().lugarTrabajo))
         && request.resource.data.keys().hasOnly(['token','area','createdAt','expiresAt','used'])
         && request.resource.data.token is string && request.resource.data.token.size() >= 16
         && request.resource.data.area is string && request.resource.data.expiresAt is string
@@ -32,28 +44,30 @@ service cloud.firestore {
       allow write: if rol(['rrhh']);
     }
     match /empleados/{id} {
-      allow read: if central() || areaPropia(resource.data.lugarTrabajo);
-      allow create: if rol(['rrhh']) || (areaPropia(request.resource.data.lugarTrabajo)
+      allow read: if central() || puedeVerPersonal(resource.data);
+      allow create: if rol(['rrhh']) || (((areaPropia(request.resource.data.lugarTrabajo) && request.resource.data.get('secretariaId', '') != '1.9.') ||
+          ((areaPropia(request.resource.data.lugarTrabajo) || adminSalud()) && request.resource.data.get('secretariaId', '') == '1.9.'
+            && areaSaludVerificada(request.resource.data.area) && request.resource.data.lugarTrabajo == request.resource.data.area.nombre))
         && request.resource.data.rol == 'empleado'
-        && request.resource.data.keys().hasOnly(['legajo','nombre','apellido','documento','domicilio','email','telefono','lugarTrabajo','secretaria','horario','categoria','funcion','particion','tipoCargo','area','fechaIngreso','estado','activo','rol']));
+        && request.resource.data.keys().hasOnly(['legajo','nombre','apellido','documento','domicilio','email','telefono','lugarTrabajo','secretaria','secretariaId','horario','categoria','funcion','particion','tipoCargo','area','fechaIngreso','estado','activo','rol']));
       allow update: if rol(['rrhh'])
-        || (rol(['subsecretario']) && cambioSolo(['area','lugarTrabajo','historialTraspasos','historialAreas','updatedAt']))
-        || (areaPropia(resource.data.lugarTrabajo) && areaPropia(request.resource.data.lugarTrabajo)
+        || (rol(['subsecretario']) && cambioSolo(['area','areaId','secretariaId','secretaria','lugarTrabajo','historialTraspasos','historialAreas','updatedAt']))
+        || (puedeVerPersonal(resource.data) && puedeVerPersonal(request.resource.data)
           && cambioSolo(['nombre','apellido','documento','domicilio','email','telefono','secretaria','horario','funcion','particion','tipoCargo','fechaIngreso','estado','activo']));
-      allow delete: if rol(['rrhh']) || areaPropia(resource.data.lugarTrabajo);
+      allow delete: if rol(['rrhh']) || puedeVerPersonal(resource.data);
     }
     match /asistencias/{id} {
-      allow read: if central() || areaPropia(resource.data.lugarTrabajo);
+      allow read: if central() || puedeVerPersonal(resource.data);
       // Sólo escribe Firebase Admin desde la API de fichaje.
       allow write: if false;
     }
     match /ausencias/{id} {
-      allow read: if central() || areaPropia(resource.data.lugarTrabajo);
-      allow create: if central() || areaPropia(request.resource.data.lugarTrabajo);
-      allow update: if central() || (areaPropia(resource.data.lugarTrabajo)
-        && areaPropia(request.resource.data.lugarTrabajo) && request.resource.data.legajo == resource.data.legajo
+      allow read: if central() || puedeVerPersonal(resource.data);
+      allow create: if central() || areaPropia(request.resource.data.lugarTrabajo) || (enSalud(request.resource.data) && agenteDeSalud(request.resource.data, request.resource.data.lugarTrabajo));
+      allow update: if central() || (puedeVerPersonal(resource.data)
+        && (areaPropia(request.resource.data.lugarTrabajo) || (enSalud(request.resource.data) && agenteDeSalud(request.resource.data, request.resource.data.lugarTrabajo))) && request.resource.data.legajo == resource.data.legajo
         && request.resource.data.fecha == resource.data.fecha);
-      allow delete: if central() || areaPropia(resource.data.lugarTrabajo);
+      allow delete: if central() || puedeVerPersonal(resource.data);
     }
     match /solicitudes_traspaso/{id} {
       function pendiente(data) {
@@ -62,9 +76,9 @@ service cloud.firestore {
           && data.aprobaciones.rrhh.fecha == null && data.aprobaciones.subsecretaria.fecha == null;
       }
       function deSuArea(data) {
-        return data.tipoSolicitud == 'solicitud_personal' ? areaPropia(data.areaDestino.nombre)
+        return data.tipoSolicitud == 'solicitud_personal' ? (areaPropia(data.areaDestino.nombre) || (adminSalud() && areaSaludVerificada(data.areaDestino)))
           : data.empleadoId is string
-            && areaPropia(get(/databases/$(database)/documents/empleados/$(data.empleadoId)).data.lugarTrabajo)
+            && puedeVerPersonal(get(/databases/$(database)/documents/empleados/$(data.empleadoId)).data)
             && data.empleado.legajo == get(/databases/$(database)/documents/empleados/$(data.empleadoId)).data.legajo;
       }
       function aprobarRRHH() {
@@ -107,13 +121,14 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /solicitudesVacaciones/{id} {
-      allow read: if central() || areaPropia(resource.data.area);
+      allow read: if central() || areaPropia(resource.data.area) || enSalud(resource.data);
       allow create: if rol(['rrhh','subsecretario','admin']) && request.resource.data.solicitadoPor == request.auth.uid
-        && (central() || areaPropia(request.resource.data.area)) && request.resource.data.estado == 'pendiente'
+        && (central() || areaPropia(request.resource.data.area) || (enSalud(request.resource.data) && agenteDeSalud(request.resource.data, request.resource.data.area)
+          && !get(/databases/$(database)/documents/empleados/$(request.resource.data.empleadoId)).data.get('requiereRevisionCargo', false))) && request.resource.data.estado == 'pendiente'
         && request.resource.data.versionRegimen == 2 && request.resource.data.tipoDias in ['habiles','corridos']
         && request.resource.data.diasSolicitados is int && request.resource.data.diasSolicitados > 0
         && request.resource.data.diasSolicitados <= 366 && creadoAhora()
-        && request.resource.data.keys().hasOnly(['nroSolicitud','legajo','nombreCompleto','cargo','categoria','tipoCargo','particion','area','convenio','esJerarquico','fechaIngreso','anioVacacional','versionRegimen','diasCorresponden','diasPorTipo','tipoDias','diasSolicitados','consumoPorTipo','fechaDesde','fechaHasta','estado','observaciones','solicitadoPor','esReingreso','fechaReingreso','esCambioConvenio','perfilActual','perfilAnterior','convenioAnterior','mesesConvenioAnterior','mesesConvenioNuevo','calculoDetalle','createdAt','updatedAt']);
+        && request.resource.data.keys().hasOnly(['nroSolicitud','empleadoId','secretariaId','legajo','nombreCompleto','cargo','categoria','tipoCargo','particion','area','convenio','esJerarquico','fechaIngreso','anioVacacional','versionRegimen','diasCorresponden','diasPorTipo','tipoDias','diasSolicitados','consumoPorTipo','fechaDesde','fechaHasta','estado','observaciones','solicitadoPor','esReingreso','fechaReingreso','esCambioConvenio','perfilActual','perfilAnterior','convenioAnterior','mesesConvenioAnterior','mesesConvenioNuevo','calculoDetalle','createdAt','updatedAt']);
       allow update: if central() && resource.data.estado == 'pendiente' && request.resource.data.estado in ['aprobada','rechazada']
         && cambioSolo(['estado','observaciones','updatedAt','fechaRechazo','fechaAprobacion','diasPorTipo','diasCorresponden','diasDescontados','consumoPorTipo','saldoRestante','saldoRestantePorTipo','perfilAnterior','esCambioConvenio','esReingreso','fechaReingreso','mesesConvenioAnterior','mesesConvenioNuevo','calculoDetalle']);
       allow delete: if false;

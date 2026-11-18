@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ID_SALUD } from '../../utils/alcanceAdmin.mjs';
 import { llamarApi } from '../../utils/api';
 
 const vacio = () => ({ email:'', nombre:'', apellido:'', legajo:'', lugarTrabajo:'', secretaria:'', rol:'empleado', activo:true, avisosTraspasos:[] });
@@ -35,7 +36,8 @@ export default function Usuarios() {
     {mensaje && <p role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">{mensaje}</p>}
     <section className="card p-6"><h2 className="mb-5 text-lg font-semibold">{uid ? 'Editar cuenta' : 'Crear cuenta'}</h2><form onSubmit={guardar} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[['email','Correo','email'],['nombre','Nombre','text'],['apellido','Apellido','text'],['legajo','Legajo','text'],['lugarTrabajo','Área / Lugar de trabajo','text'],['secretaria','Secretaría','text']].map(([key,label,type]) => <label key={key} className="space-y-2 text-sm font-medium">{label}<input className="input-modern block w-full" type={type} required={['email','nombre','apellido'].includes(key) || (key==='lugarTrabajo' && perfil.rol==='admin')} value={perfil[key]} maxLength={250} onChange={e => setPerfil({...perfil,[key]:e.target.value})} /></label>)}
-        <label className="space-y-2 text-sm font-medium">Rol<select className="input-modern block w-full" value={perfil.rol} onChange={e=>setPerfil({...perfil,rol:e.target.value})}><option value="empleado">Empleado</option><option value="admin">Administrador de área</option><option value="rrhh">Recursos Humanos</option><option value="subsecretario">Subsecretario</option></select></label>
+        <label className="space-y-2 text-sm font-medium">Rol<select className="input-modern block w-full" value={perfil.rol} onChange={e=>setPerfil({...perfil,rol:e.target.value,secretariaAdministradaId:''})}><option value="empleado">Empleado</option><option value="admin">Administrador de área</option><option value="rrhh">Recursos Humanos</option><option value="subsecretario">Subsecretario</option></select></label>
+        {perfil.rol === 'admin' && <label className="space-y-2 text-sm font-medium">Alcance del administrador<select className="input-modern block w-full" value={perfil.secretariaAdministradaId || ''} onChange={e=>setPerfil({...perfil,secretariaAdministradaId:e.target.value})}><option value="">Su área de trabajo</option><option value={ID_SALUD}>Todas las áreas de Salud</option></select></label>}
         <label className="space-y-2 text-sm font-medium">{uid ? 'Nueva contraseña (opcional)' : 'Contraseña inicial'}<input type="password" className="input-modern block w-full" value={password} autoComplete="new-password" minLength={8} maxLength={128} required={!uid} onChange={e=>setPassword(e.target.value)} /></label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={perfil.activo} onChange={e=>setPerfil({...perfil,activo:e.target.checked})} />Cuenta habilitada</label>
       </div>

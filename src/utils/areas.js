@@ -32,7 +32,8 @@ export async function fetchAllAreas() {
     const snapshot = await getDocs(collection(db, 'areas'));
     cachedAreas = snapshot.docs.map(doc => ({ 
       id: doc.id, 
-      ...doc.data() 
+      ...doc.data(),
+      documentoAreaId: doc.id
     }));
     cacheTime = now;
     return cachedAreas;

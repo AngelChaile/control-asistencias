@@ -1,6 +1,6 @@
 import { collection, getDocs, query, where, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
-import { areaAdministrada } from './asistencia';
+import { filtroAdministradoActual } from './asistencia';
 
 /**
  * Normalize input date to a local Date object (no timezone shift)
@@ -57,8 +57,8 @@ export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), ju
     // buscar empleado por legajo (completar nombre/apellido/lugarTrabajo si existe)
     let empleado = null;
     try {
-      const area = await areaAdministrada();
-      const qEmp = query(collection(db, "empleados"), where("legajo", "==", String(legajo)), ...(area ? [where('lugarTrabajo','==',area)] : []));
+      const alcance = await filtroAdministradoActual();
+      const qEmp = query(collection(db, "empleados"), where("legajo", "==", String(legajo)), ...(alcance ? [alcance] : []));
       const snapEmp = await getDocs(qEmp);
       if (!snapEmp.empty) {
         const d = snapEmp.docs[0];
@@ -78,17 +78,19 @@ export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), ju
       apellido: empleado?.apellido || null,
       // guardar secretaria también para que RRHH/Admin la vean en los reportes
       secretaria: empleado?.secretaria || null,
+      secretariaId: empleado.secretariaId || "",
+      empleadoId: empleado.id,
       lugarTrabajo: empleado?.lugarTrabajo || null,
       updatedAt: serverTimestamp(),
     };
 
     // upsert ausencia legajo+fecha
-    const areaPropia = await areaAdministrada();
+    const alcance = await filtroAdministradoActual();
     const q = query(
       collection(db, "ausencias"),
       where("legajo", "==", String(legajo)),
       where("fecha", "==", fechaStr),
-      ...(areaPropia ? [where('lugarTrabajo','==',areaPropia)] : [])
+      ...(alcance ? [alcance] : [])
     );
     const snap = await getDocs(q);
 

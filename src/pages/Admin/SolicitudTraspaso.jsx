@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db, collection, getDocs, query, where } from '../../firebase';
+import { filtroAdmin, areaAdministrable } from '../../utils/alcanceAdmin.mjs';
 import { fetchAllAreas } from '../../utils/areas';
 import { crearSolicitudTraspaso } from '../../utils/traspasos';
 import { descargarFormularioTraspaso } from '../../utils/formularioTraspaso';
@@ -29,7 +30,7 @@ export default function SolicitudTraspaso() {
       setLoading(true);
       try {
         if (!user?.lugarTrabajo) throw new Error('Su usuario no tiene área asignada. Consulte a RRHH.');
-        const [areasData, empSnapshot] = await Promise.all([fetchAllAreas(), getDocs(query(collection(db, 'empleados'), where('lugarTrabajo', '==', user.lugarTrabajo)))]);
+        const [areasData, empSnapshot] = await Promise.all([fetchAllAreas(), getDocs(query(collection(db, 'empleados'), where(...filtroAdmin(user))))]);
         setAreas(areasData);
         const areaUsuario = areasData.find(area => area.nombre === user?.lugarTrabajo);
         if (areaUsuario) {
@@ -43,7 +44,7 @@ export default function SolicitudTraspaso() {
       } catch (error) { console.error('Error cargando datos:', error); } finally { setLoading(false); }
     };
     cargarDatos();
-  }, [user?.lugarTrabajo]);
+  }, [user]);
   useEffect(() => {
     if (tipo === 'solicitud_personal') {
       const propia = areas.find(area=>area.nombre===user?.lugarTrabajo);
@@ -99,11 +100,10 @@ export default function SolicitudTraspaso() {
   };
 
   const resultadosEmpleados = busquedaEmpleado.length > 1 ? empleados.filter(emp => {
-    const perteneceAlArea = !user?.lugarTrabajo || [emp.area?.nombre, emp.lugarTrabajo].filter(Boolean).some(area => area.toLowerCase() === user.lugarTrabajo.toLowerCase());
     const busqueda = busquedaEmpleado.toLowerCase();
-    return perteneceAlArea && (`${emp.nombre} ${emp.apellido}`.toLowerCase().includes(busqueda) || String(emp.legajo || '').includes(busqueda));
+    return emp.activo !== false && (`${emp.nombre} ${emp.apellido}`.toLowerCase().includes(busqueda) || String(emp.legajo || '').includes(busqueda));
   }) : [];
-  const resultadosAreas = areas.filter(area => (tipo !== 'solicitud_personal' || area.nombre === user?.lugarTrabajo) && `${area.nombre} ${area.ruta || ''}`.toLowerCase().includes(busquedaArea.toLowerCase())).slice(0, 30);
+  const resultadosAreas = areas.filter(area => (tipo !== 'solicitud_personal' || areaAdministrable(user, area)) && `${area.nombre} ${area.ruta || ''}`.toLowerCase().includes(busquedaArea.toLowerCase())).slice(0, 30);
   const titulo = tipo === 'solicitud_personal' ? 'Pedido de Personal' : tipo === 'enviar_disposicion' ? 'Enviar personal a disposición' : 'Solicitud de Traspaso';
   return <div className="app-container"><div className="page-heading"><h1 className="text-3xl font-bold text-gray-900 mb-2">{titulo}</h1><p className="text-gray-600">Los pedidos requieren aprobación de RRHH y Subsecretaría.</p></div>
     {solicitudEnviada && <div className="card p-4 mb-6 bg-green-50 border border-green-200 text-green-800">✅ Solicitud enviada correctamente.</div>}

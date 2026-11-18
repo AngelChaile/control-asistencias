@@ -1,3 +1,4 @@
+import { secretariaDeArea } from '../src/utils/alcanceAdmin.mjs';
 import { createHash } from 'node:crypto';
 import { errorHttp } from './http.mjs';
 
@@ -83,7 +84,7 @@ export async function fichaje(req, body, { db, FieldValue, Timestamp }, clock = 
     const { fecha, hora } = fechaLocal(momento);
     const tipo = siguienteTipo(ultimo, momento);
     const resultado = { id: asistenciaRef.id, empleado: empleadoPublico(empleado), fecha, hora, tipo };
-    tx.create(asistenciaRef, { ...empleadoPublico(empleado), secretaria: empleado.secretaria || '', tipo, fecha, hora,
+    tx.create(asistenciaRef, { ...empleadoPublico(empleado), secretaria: empleado.secretaria || '', secretariaId: empleado.secretariaId || secretariaDeArea(empleado.area), tipo, fecha, hora,
       tokenId: tokenDoc.id, createdAt: FieldValue.serverTimestamp(), origen: 'api' });
     tx.set(estadoRef, { tipo, createdAt: Timestamp.fromDate(momento), asistenciaId: asistenciaRef.id });
     tx.create(operacionRef, { resultado, createdAt: FieldValue.serverTimestamp() });

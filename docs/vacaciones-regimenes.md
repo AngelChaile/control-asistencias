@@ -47,3 +47,5 @@ npm run build
 ```
 
 Las pruebas cubren catálogo, límites de antigüedad, cambios dentro de Municipal y hacia Docente, redondeos, meses inválidos, rango hábil/corrido, pendientes/rechazadas, saldos agotados, solicitudes históricas y aprobaciones concurrentes con un SDK simulado. Las pruebas no se conectan a Firebase de producción.
+
+En Carrera Médica RRHH confirmó días corridos para todas las plantas. Esto incluye Guardia Médica y conserva la escala de antigüedad de la carrera. Los legajos de Salud con cargos simultáneos de distinto régimen requieren que RRHH elija el cargo para vacaciones en la ficha del empleado.

@@ -1,3 +1,4 @@
+import { secretariaDeArea } from "../../utils/alcanceAdmin.mjs";
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from "../../firebase";
@@ -14,10 +15,13 @@ export default function Empleados() {
   const [areasFiltradas, setAreasFiltradas] = useState([]);
   const [busquedaArea, setBusquedaArea] = useState("");
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
+  const [soloRevision, setSoloRevision] = useState(false);
   const [filter, setFilter] = useState(() => ({ legajo: params.get("legajo") || "", nombre: "", area: "" }));
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [revisionCargos, setRevisionCargos] = useState([]);
+  const [numeroCargo, setNumeroCargo] = useState("");
   const [empleadoDetalle, setEmpleadoDetalle] = useState(null);
   const formularioRef = useRef(null);
   const legajoRef = useRef(null);
@@ -100,6 +104,12 @@ export default function Empleados() {
   async function handleSearch() {
     setLoading(true);
     try {
+      if (soloRevision) {
+        const snap = await getDocs(query(collection(db, "empleados"), where("requiereRevisionCargo", "==", true)));
+        setEmpleados(snap.docs.map(d=>({id:d.id,...d.data()})));
+        setHasMore(false); setLastDoc(null);
+        return;
+      }
       if (filter.legajo && filter.legajo.trim()) {
         const q = query(collection(db, "empleados"), where("legajo", "==", String(filter.legajo).trim()));
         const snap = await getDocs(q);
@@ -124,6 +134,7 @@ export default function Empleados() {
   }
 
   function handleReset() {
+    setSoloRevision(false);
     setFilter({ legajo: "", nombre: "", area: "" });
     loadFirstPage({ area: null });
   }
@@ -133,9 +144,12 @@ export default function Empleados() {
     try {
       const payload = { 
         ...nuevo,
+        lugarTrabajo: nuevo.area?.nombre || nuevo.lugarTrabajo,
+        ...(nuevo.area?.id ? {secretariaId: secretariaDeArea(nuevo.area), areaId: nuevo.area.id} : {}),
         area: nuevo.area || null
       };
       
+      if (revisionCargos.length && numeroCargo) payload.requiereRevisionCargo = false;
       if (editingId) {
         await updateDoc(doc(db, "empleados", editingId), payload);
         setEditingId(null);
@@ -152,6 +166,7 @@ export default function Empleados() {
   }
 
   function resetForm() {
+    setRevisionCargos([]); setNumeroCargo("");
     setNuevo({
       legajo: "",
       nombre: "",
@@ -194,6 +209,7 @@ export default function Empleados() {
   }
 
   function handleEditar(emp) {
+    setRevisionCargos(emp.requiereRevisionCargo ? emp.cargosPadron || [] : []); setNumeroCargo("");
     setEditingId(emp.id);
     setMostrarFormulario(true);
     setNuevo({
@@ -209,8 +225,8 @@ export default function Empleados() {
       horario: emp.horario || "",
       categoria: emp.categoria || "",
       funcion: emp.funcion || "",
-      particion: emp.particion || "municipal",
-      tipoCargo: emp.tipoCargo || "permanente",
+      particion: emp.particion || (emp.requiereRevisionCargo ? "" : "municipal"),
+      tipoCargo: emp.tipoCargo || (emp.requiereRevisionCargo ? "" : "permanente"),
       area: emp.area || null,
       fechaIngreso: emp.fechaIngreso || "",
       fechaReingreso: emp.fechaReingreso || "",
@@ -333,6 +349,21 @@ export default function Empleados() {
           </h3>
           
           <form onSubmit={handleGuardar} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {revisionCargos.length > 0 && <label className="col-span-full rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium">
+              Cargo que corresponde usar para vacaciones
+              <select className="input-modern mt-2" value={numeroCargo} required onChange={e=>{
+                const cargo = revisionCargos.find(c=>c.nroCargo === e.target.value);
+                setNumeroCargo(e.target.value);
+                if (cargo) {
+                  const area = areas.find(a=>a.id === cargo.areaId) || {id:cargo.areaId,nombre:cargo.lugarTrabajo};
+                  setNuevo(prev=>({...prev,...cargo,area,lugarTrabajo:area.nombre}));
+                  setBusquedaArea(area.nombre);
+                }
+              }}>
+                <option value="">Elegí el cargo para habilitar la solicitud…</option>
+                {revisionCargos.map(c=><option key={c.nroCargo} value={c.nroCargo}>{c.nroCargo} · {c.categoria} · {c.lugarTrabajo}</option>)}
+              </select>
+            </label>}
             {/* Datos Personales */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Legajo *</label>
@@ -609,6 +640,7 @@ export default function Empleados() {
                 />
               </div>
               <div className="flex items-end gap-2">
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={soloRevision} onChange={e=>setSoloRevision(e.target.checked)} />Cargos por revisar</label>
                 <button onClick={handleSearch} className="btn-primary px-4 py-2">Buscar</button>
                 <button onClick={handleReset} className="btn-secondary px-4 py-2" title="Limpiar filtros">🗑️</button>
               </div>

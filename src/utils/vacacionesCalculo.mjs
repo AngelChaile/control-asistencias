@@ -21,6 +21,11 @@ export function convenioDeParticion(particion) {
 
 export function resolverRegimenVacacional(perfil) {
   const convenio = convenioDeParticion(perfil.particion);
+  if (convenio === "Medico") {
+    const referencia = buscarRegimenVacacional(perfil, catalogo.reglas);
+    if (referencia.encontrado && referencia.tipo === "corridos") return {...referencia, convenio, origen: catalogo.fuente.archivo};
+    return { encontrado: true, tipo: "corridos", descripcion: "Días corridos", convenio, filaFuente: null, origen: "Carrera médica · criterio confirmado por RRHH" };
+  }
   if (convenio === "Radiologo") {
     return { encontrado: true, tipo: "corridos", descripcion: "Días corridos", convenio, filaFuente: null, origen: "Régimen de radiólogos ya configurado" };
   }

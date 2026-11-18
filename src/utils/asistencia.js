@@ -16,15 +16,16 @@ import {
 import { db } from "../firebase";
 import { formatearHora24 } from "./fechas";
 import { llamarApi, SEGURIDAD_ACTIVA } from './api';
+import { filtroAdmin, secretariaDeArea } from './alcanceAdmin.mjs';
+import { getUserDoc } from './auth';
 import { auth } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
 
-export async function areaAdministrada() {
+
+export async function filtroAdministradoActual() {
   if (!auth?.currentUser) return null;
-  const perfil = await getDoc(doc(db, 'users', auth.currentUser.uid));
-  if (perfil.data()?.rol !== 'admin') return null;
-  if (!perfil.data().lugarTrabajo) throw new Error('Su usuario no tiene un área asignada. Consulte a RRHH.');
-  return perfil.data().lugarTrabajo;
+  const perfil = await getUserDoc(auth.currentUser.uid, auth.currentUser.email);
+  if (!perfil) throw new Error('No se encontró el perfil del usuario.');
+  return perfil.rol === 'admin' ? where(...filtroAdmin(perfil)) : null;
 }
 
 /**
@@ -64,9 +65,9 @@ export async function validarToken(token) {
  */
 export async function buscarEmpleadoPorLegajo(legajo) {
   if (!legajo) return null;
-  const area = await areaAdministrada();
+  const alcance = await filtroAdministradoActual();
   const filtros = [where("legajo", "==", String(legajo))];
-  if (area) filtros.push(where('lugarTrabajo', '==', area));
+  if (alcance) filtros.push(alcance);
   const q = query(collection(db, "empleados"), ...filtros);
   const snap = await getDocs(q);
   if (snap.empty) return null;
@@ -111,6 +112,7 @@ export async function registrarAsistenciaPorLegajo(legajo, token = null, operaci
 
   const empleado = await buscarEmpleadoPorLegajo(legajo);
   if (!empleado) throw new Error("Empleado no encontrado.");
+  if (empleado.activo === false || empleado.estado === "inactivo") throw new Error("El agente figura de baja.");
 
   // Obtener todas las asistencias del legajo
   const q = query(collection(db, "asistencias"), where("legajo", "==", String(legajo)));
@@ -175,6 +177,7 @@ export async function registrarAsistenciaPorLegajo(legajo, token = null, operaci
     apellido: empleado.apellido,
     secretaria: empleado.secretaria || "",
     lugarTrabajo: empleado.lugarTrabajo || "",
+    secretariaId: empleado.secretariaId || secretariaDeArea(empleado.area),
     tipo,
     fecha: fechaStr,
     hora: horaStr,
@@ -200,10 +203,11 @@ export async function registrarAsistenciaPorLegajo(legajo, token = null, operaci
  * date: Date object (default = today)
  * area: string o null -> filtra por lugarTrabajo
  */
-export async function fetchAsistenciasByDate(date = new Date(), area = null) {
+export async function fetchAsistenciasByDate(date = new Date(), area = null, perfil = null) {
   const fechaStr = date.toLocaleDateString("es-AR");
   const constraints = [where("fecha", "==", fechaStr)];
-  if (area) constraints.push(where("lugarTrabajo", "==", area));
+  if (perfil?.rol === "admin") constraints.push(where(...filtroAdmin(perfil)));
+  else if (area) constraints.push(where("lugarTrabajo", "==", area));
   const q = query(collection(db, "asistencias"), ...constraints);
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -212,8 +216,8 @@ export async function fetchAsistenciasByDate(date = new Date(), area = null) {
 /**
  * fetchAsistenciasToday(area)
  */
-export async function fetchAsistenciasToday(area = null) {
-  return fetchAsistenciasByDate(new Date(), area);
+export async function fetchAsistenciasToday(area = null, perfil = null) {
+  return fetchAsistenciasByDate(new Date(), area, perfil);
 }
 
 /**
@@ -224,8 +228,8 @@ export async function fetchAsistenciasToday(area = null) {
 export async function fetchAsistenciasByRange({ desde = null, hasta = null, legajo = "", nombre = "", area = null } = {}) {
   // QUITAMOS el filtro de área del servidor para hacerlo case-insensitive en el cliente
   const constraints = [];
-  const areaObligatoria = await areaAdministrada();
-  if (areaObligatoria) constraints.push(where('lugarTrabajo', '==', areaObligatoria));
+  const alcance = await filtroAdministradoActual();
+  if (alcance) constraints.push(alcance);
   // if (area) constraints.push(where("lugarTrabajo", "==", area)); // ← ELIMINADO
   const q = query(collection(db, "asistencias"), ...constraints);
   const snap = await getDocs(q);
@@ -289,9 +293,10 @@ export async function fetchAsistenciasByRange({ desde = null, hasta = null, lega
  * fetchAusenciasByRange({ desde, hasta, area })
  * - Busca en colección "ausencias" si existe, si no devuelve vacío.
  */
-export async function fetchAusenciasByRange({ desde = null, hasta = null, area = null } = {}) {
+export async function fetchAusenciasByRange({ desde = null, hasta = null, area = null, perfil = null } = {}) {
   const constraints = [];
-  if (area) constraints.push(where("lugarTrabajo", "==", area));
+  if (perfil?.rol === "admin") constraints.push(where(...filtroAdmin(perfil)));
+  else if (area) constraints.push(where("lugarTrabajo", "==", area));
   const q = query(collection(db, "ausencias"), ...constraints);
 
   try {

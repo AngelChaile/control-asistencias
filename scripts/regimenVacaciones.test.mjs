@@ -1,3 +1,4 @@
+import { resolverRegimenVacacional } from '../src/utils/vacacionesCalculo.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -82,4 +83,14 @@ test("una ambigüedad nunca se resuelve eligiendo arbitrariamente el primer form
   assert.throws(() => buscarRegimenVacacional(administrativo, [
     { ...administrativo, tipo: "habiles" }, { ...administrativo, tipo: "corridos" },
   ]), /incompatibles/);
+});
+
+test("Carrera Médica siempre cuenta corridos, incluso para Guardia Médica sin fila en la planilla", () => {
+  for (const tipoCargo of ["permanente", "temporario"]) {
+    for (const categoria of ["GUARDIA MEDICA", "Guardia Médica"]) {
+      const perfil = {tipoCargo, particion:"Carrera Médica", categoria};
+      assert.equal(resolverRegimenVacacional(perfil).tipo, "corridos");
+      assert.equal(resolverRegimenVacacional({...perfil,particion:"municipal"}).encontrado, false);
+    }
+  }
 });

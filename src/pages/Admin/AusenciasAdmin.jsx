@@ -50,12 +50,12 @@ export default function AusenciasAdmin() {
         const fechaDate = parseInputDateToLocal(selectedDate);
 
         const [emp, asist, aus] = await Promise.all([
-          fetchEmpleadosByLugarTrabajo(lugar),
-          fetchAsistenciasByDate(fechaDate, lugar), // probando correccion
-          fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar }),
+          fetchEmpleadosByLugarTrabajo(lugar, user),
+          fetchAsistenciasByDate(fechaDate, lugar, user), // probando correccion
+          fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar, perfil: user }),
         ]);
 
-        setEmpleados(emp || []);
+        setEmpleados(emp.filter(e => e.activo !== false));
         setAsistencias(asist || []);
         setAusencias(aus || []);
       } catch (err) {
@@ -65,7 +65,7 @@ export default function AusenciasAdmin() {
       }
     }
     load();
-  }, [lugar, selectedDate]);
+  }, [user, lugar, selectedDate]);
 
   // empleados que NO ficharon en la fecha seleccionada (se muestran aunque tengan ausencia)
   const faltantes = empleados.filter(
@@ -96,7 +96,7 @@ export default function AusenciasAdmin() {
 
       // Forzar recarga de ausencias para la fecha exacta desde BD (asegura consistencia)
       try {
-        const ausReload = await fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar });
+        const ausReload = await fetchAusenciasByRange({ desde: fechaDate, hasta: fechaDate, area: lugar, perfil: user });
         setAusencias(ausReload || []);
       } catch (err) {
         console.warn("No se pudo recargar ausencias desde BD:", err);
@@ -111,7 +111,7 @@ export default function AusenciasAdmin() {
       }
 
       // recargar asistencias para la fecha
-      const asist = await fetchAsistenciasByDate(fechaDate, lugar);
+      const asist = await fetchAsistenciasByDate(fechaDate, lugar, user);
       setAsistencias(asist || []);
     } catch (err) {
       console.error("handleSaveJust error:", err);

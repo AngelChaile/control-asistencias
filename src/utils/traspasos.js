@@ -1,5 +1,6 @@
 // src/utils/traspasos.js
 import { db } from '../firebase';
+import { destinoLaboral } from './alcanceAdmin.mjs';
 import { notificarTraspasoFinalizado } from './notificaciones';
 import { 
   collection, 
@@ -233,8 +234,7 @@ export async function ejecutarTraspaso(solicitudId) {
       // Actualizar el historial del empleado
       const historialActual = empleadoData.historialTraspasos || [];
       await updateDoc(empleadoRef, {
-        area: solicitud.areaDestino,
-        lugarTrabajo: solicitud.areaDestino.nombre,
+        ...destinoLaboral(solicitud.areaDestino, empleadoData),
         historialTraspasos: [...historialActual, historialEntry],
         historialAreas: actualizarHistorialAreas(empleadoData, solicitud.areaDestino),
         updatedAt: serverTimestamp()
@@ -244,6 +244,8 @@ export async function ejecutarTraspaso(solicitudId) {
       const avisos = await notificarTraspasoFinalizado({
         empleado: solicitud.empleado,
         areaOrigen: historialEntry.areaOrigen,
+        areaOrigenId: empleadoData.area?.id || empleadoData.areaId,
+        areaDestinoId: solicitud.areaDestino.id,
         areaDestino: solicitud.areaDestino.nombre,
         tipo: solicitud.tipoSolicitud || 'traspaso'
       });
@@ -310,8 +312,7 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
     const completa = necesidadesActualizadas.every(item => Number(item.cantidadAsignada || 0) >= Number(item.cantidad || 0));
 
     await updateDoc(doc(db, 'empleados', empleadoDoc.id), {
-      area: destino,
-      lugarTrabajo: destino.nombre,
+      ...destinoLaboral(destino, empleadoData),
       historialTraspasos: [...historial, {
         fecha: fechaActual(), areaOrigen: origen, areaDestino: destino.nombre,
         motivo: `Asignación a pedido de personal`, solicitudId, aprobadoPor: 'RRHH / Subsecretaría'
@@ -330,6 +331,8 @@ export async function asignarEmpleadoAPedido(solicitudId, empleado) {
     // Notificar internamente
     const avisos = await notificarTraspasoFinalizado({
       empleado,
+      areaOrigenId: empleadoData.area?.id || empleadoData.areaId,
+      areaDestinoId: destino.id,
       areaOrigen: origen,
       areaDestino: destino.nombre,
       tipo: 'asignacion_pedido'
@@ -362,8 +365,7 @@ export async function destinarEmpleadoDisponible(empleado, areaDestino, ejecutad
   const origen = datos.area?.nombre || datos.lugarTrabajo || 'A Disposición de Personal';
   
   await updateDoc(doc(db, 'empleados', empleadoDoc.id), {
-    area: areaDestino,
-    lugarTrabajo: areaDestino.nombre,
+    ...destinoLaboral(areaDestino, datos),
     historialTraspasos: [...(datos.historialTraspasos || []), {
       fecha: fechaActual(), areaOrigen: origen, areaDestino: areaDestino.nombre,
       motivo: 'Destino asignado desde Disponibles', aprobadoPor: ejecutadoPor
@@ -373,7 +375,7 @@ export async function destinarEmpleadoDisponible(empleado, areaDestino, ejecutad
   });
   
   // Notificar internamente
-  const avisos = await notificarTraspasoFinalizado({ empleado, areaOrigen: origen, areaDestino: areaDestino.nombre, tipo: 'destino_disponibles' });
+  const avisos = await notificarTraspasoFinalizado({ empleado, areaOrigen: origen, areaDestino: areaDestino.nombre, areaOrigenId:datos.area?.id || datos.areaId, areaDestinoId:areaDestino.id, tipo: 'destino_disponibles' });
   
   // ✅ NUEVO: Enviar correo electrónico con EmailJS
   await enviarCorreoTraspaso({

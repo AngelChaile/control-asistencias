@@ -12,15 +12,19 @@ import {
 } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
 import EmployeeDetailModal from "../../components/EmployeeDetailModal";
+import { administraSalud, areaAdministrable, filtroAdmin, secretariaDeArea } from "../../utils/alcanceAdmin.mjs";
 import SelectorCategoria from "../../components/SelectorCategoria";
 import { fetchAllAreas } from "../../utils/areas";
 
 export default function EmpleadosAdmin() {
   const { user } = useAuth();
   const area = user?.lugarTrabajo || "";
+  const [errorCarga, setErrorCarga] = useState("");
   const [empleados, setEmpleados] = useState([]);
   const [areas, setAreas] = useState([]);
   const [filter, setFilter] = useState({ legajo: "", nombre: "" });
+  const [filtroArea, setFiltroArea] = useState("");
+  const [limiteVisible, setLimiteVisible] = useState(60);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -37,7 +41,7 @@ export default function EmpleadosAdmin() {
     email: "",
     telefono: "",
     lugarTrabajo: area,
-    secretaria: "",
+    secretaria: administraSalud(user) ? "SALUD" : "",
     horario: "",
     categoria: "",
     funcion: "",
@@ -63,16 +67,17 @@ export default function EmpleadosAdmin() {
   useEffect(() => {
     if (!area) return;
     fetchEmpleados();
-  }, [area]);
+  }, [user, area]);
 
   async function fetchEmpleados() {
-    setLoading(true);
+    setErrorCarga(""); setLoading(true);
     try {
-      const q = query(collection(db, "empleados"), where("lugarTrabajo", "==", area));
+      const q = query(collection(db, "empleados"), where(...filtroAdmin(user)));
       const snap = await getDocs(q);
       setEmpleados(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (err) {
       console.error("fetchEmpleados admin:", err);
+      setEmpleados([]); setErrorCarga("No se pudo consultar el personal. Revisá los permisos de tu cuenta con RRHH.");
     } finally {
       setLoading(false);
     }
@@ -81,10 +86,13 @@ export default function EmpleadosAdmin() {
   async function handleGuardar(e) {
     e.preventDefault();
     try {
-      const payload = { 
-        ...nuevo, 
-        lugarTrabajo: area,
-        area: areas.find(item=>item.nombre===area) || null
+      const destino = administraSalud(user) ? nuevo.area : areas.find(item => item.nombre === area);
+      if (administraSalud(user) && !editingId && !areaAdministrable(user, destino)) throw new Error("Elegí un área de Salud.");
+      const payload = {
+        ...nuevo,
+        lugarTrabajo: destino?.nombre || area,
+        secretariaId: secretariaDeArea(destino),
+        area: destino || null
       };
       
       if (editingId) {
@@ -100,6 +108,7 @@ export default function EmpleadosAdmin() {
       fetchEmpleados();
     } catch (err) {
       console.error("guardar empleado admin:", err);
+      alert(err.message || "No se pudo guardar el empleado.");
     }
   }
 
@@ -113,7 +122,7 @@ export default function EmpleadosAdmin() {
       email: "",
       telefono: "",
       lugarTrabajo: area,
-      secretaria: "",
+      secretaria: administraSalud(user) ? "SALUD" : "",
       horario: "",
       categoria: "",
       funcion: "",
@@ -187,6 +196,7 @@ export default function EmpleadosAdmin() {
   // Filtros
   const filtered = empleados.filter(
     (e) =>
+      (!filtroArea || e.area?.id === filtroArea || (e.requiereRevisionCargo && e.cargosPadron?.some(c=>c.areaId === filtroArea))) &&
       (filter.legajo === "" || String(e.legajo).includes(filter.legajo)) &&
       (filter.nombre === "" ||
         `${e.nombre} ${e.apellido}`.toLowerCase().includes(filter.nombre.toLowerCase()))
@@ -336,11 +346,13 @@ export default function EmpleadosAdmin() {
             {/* Área */}
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">Área *</label>
-              <input
-                className="input-modern"
-                value={area}
-                readOnly
-              />
+              {administraSalud(user) && !editingId ? (
+                <select required className="input-modern" value={nuevo.area?.id || ""}
+                  onChange={e => setNuevo({...nuevo, area: areas.find(a => a.id === e.target.value) || null})}>
+                  <option value="">Elegir área de Salud…</option>
+                  {areas.filter(a => areaAdministrable(user, a)).map(a => <option key={a.id} value={a.id}>{a.nombre} ({a.id})</option>)}
+                </select>
+              ) : <input className="input-modern" value={editingId ? nuevo.lugarTrabajo : area} readOnly />}
             </div>
 
             <div>
@@ -432,6 +444,12 @@ export default function EmpleadosAdmin() {
                 />
               </div>
             </div>
+            {administraSalud(user) && <label className="text-sm font-medium">Área de Salud
+              <select className="input-modern block" value={filtroArea} onChange={e=>{setFiltroArea(e.target.value);setLimiteVisible(60);}}>
+                <option value="">Todas las áreas</option>
+                {areas.filter(a=>areaAdministrable(user,a)).map(a=><option key={a.id} value={a.id}>{a.nombre} ({a.id})</option>)}
+              </select>
+            </label>}
             <div className="text-sm text-gray-600">
               {filtered.length} de {empleados.length} empleados
             </div>
@@ -442,7 +460,7 @@ export default function EmpleadosAdmin() {
             )}
           </div>
 
-          {loading ? (
+          {errorCarga ? <p role="alert" className="p-4 text-red-700">{errorCarga}</p> : loading ? (
             <div className="flex justify-center items-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-municipio-500"></div>
             </div>
@@ -468,7 +486,7 @@ export default function EmpleadosAdmin() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filtered.map((emp) => (
+                  {(administraSalud(user) ? filtered.slice(0, limiteVisible) : filtered).map((emp) => (
                     <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-4">
                         <div className="flex items-center">
@@ -481,7 +499,7 @@ export default function EmpleadosAdmin() {
                             <div className="truncate text-sm font-semibold text-slate-900">
                               {emp.nombre} {emp.apellido}
                             </div>
-                            <div className="text-xs text-slate-500">Legajo {emp.legajo}</div>
+                            <div className="text-xs text-slate-500">Legajo {emp.legajo}{administraSalud(user) && ` · ${emp.lugarTrabajo}`}{emp.activo === false && " · Baja"}{emp.requiereRevisionCargo && " · Cargo a revisar por RRHH"}</div>
                           </div>
                         </div>
                       </td>
@@ -516,6 +534,7 @@ export default function EmpleadosAdmin() {
                   ))}
                 </tbody>
               </table>
+              {administraSalud(user) && filtered.length > limiteVisible && <button type="button" className="btn-secondary m-3" onClick={()=>setLimiteVisible(n=>n+60)}>Mostrar más empleados</button>}
             </div>
           )}
         </div>

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { administraSalud } from "../../utils/alcanceAdmin.mjs";
 import ExportExcel from "../../components/ExportExcel";
 import { fetchAsistenciasByRange } from "../../utils/asistencia";
 import { formatAsistenciasMensuales } from "../../utils/excelFormats";
@@ -73,7 +74,7 @@ async function handleSearch() {
     
     // Para admin: usar su área automáticamente (sin filtro en el input)
     // Para RRHH: enviar el área del filtro (puede estar vacío para todas)
-    const areaFilter = user?.rol === "admin" ? user?.lugarTrabajo : normalizedFilters.area;
+    const areaFilter = user?.rol === "admin" && !administraSalud(user) ? user?.lugarTrabajo : normalizedFilters.area;
     
     const data = await fetchAsistenciasByRange({
       desde,

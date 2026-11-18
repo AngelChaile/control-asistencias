@@ -178,3 +178,83 @@ test('API de cuentas crea Auth y perfil con el mismo UID, rechaza Admin y no alm
   await usuarios(req('rrhh'),{accion:'desactivar',uid:res.uid},s);
   assert.equal(cuentas.get(res.uid).disabled,true);assert.equal((await db.doc('users/nuevo-uid').get()).data().activo,false);
 });
+
+test('Admin de Salud solicita licencias de dos áreas y no accede a otra secretaría ni aprueba', async () => {
+  const salud = cliente('adminSalud');
+  await db.doc('users/adminSalud').set({rol:'admin', lugarTrabajo:'Salud', secretariaAdministradaId:'1.9.'});
+  const empleados = [
+    {id:'s1', legajo:'801', lugarTrabajo:'Hospital', secretariaId:'1.9.'},
+    {id:'s2', legajo:'802', lugarTrabajo:'Salud Mental', secretariaId:'1.9.'},
+    {id:'ext', legajo:'803', lugarTrabajo:'Hospital', secretariaId:'1.90.'},
+  ];
+  for (const emp of empleados) await db.doc('empleados/'+emp.id).set({...emp,activo:true});
+  const lista = await web.getDocs(web.query(web.collection(salud,'empleados'),web.where('secretariaId','==','1.9.')));
+  assert.equal(lista.size,2);
+  await denegado(web.getDocs(web.collection(salud,'empleados')));
+  await denegado(web.getDoc(web.doc(salud,'empleados','ext')));
+  await denegado(web.updateDoc(web.doc(salud,'empleados','ext'),{telefono:'falso'}));
+  const s={db,auth:identidad};
+  const req={headers:{authorization:'Bearer adminSalud'}};
+  for (const emp of empleados.slice(0,2)) {
+    const {solicitudes}=await vacacionesContexto(req,{accion:'historial',legajo:emp.legajo},s);
+    assert.deepEqual(solicitudes,[]);
+    const solicitud={empleadoId:emp.id, legajo:emp.legajo, area:emp.lugarTrabajo, secretariaId:'1.9.', solicitadoPor:'adminSalud',
+      estado:'pendiente', versionRegimen:2, tipoDias:'habiles', diasSolicitados:2, createdAt:web.serverTimestamp(), updatedAt:web.serverTimestamp()};
+    const ref=await web.addDoc(web.collection(salud,'solicitudesVacaciones'),solicitud);
+    await denegado(web.updateDoc(ref,{estado:'aprobada'}));
+    await denegado(web.addDoc(web.collection(salud,'solicitudesVacaciones'),{...solicitud,empleadoId:'ext',legajo:'803'}));
+    await denegado(web.addDoc(web.collection(salud,'solicitudesVacaciones'),{...solicitud,legajo:'803'}));
+    await web.updateDoc(web.doc(rrhh,'solicitudesVacaciones',ref.id),{estado:'aprobada',updatedAt:web.serverTimestamp()});
+  }
+  await assert.rejects(vacacionesContexto(req,{accion:'historial',legajo:'803'},s),{status:403});
+  const areaPrueba = {id:'1.9.88.',nombre:'Prueba orgánica',documentoAreaId:'id-interno'};
+  await db.doc('areas/id-interno').set(areaPrueba);
+  const nuevoEmpleado = {rol:'empleado',legajo:'808',lugarTrabajo:areaPrueba.nombre,area:areaPrueba,secretariaId:'1.9.'};
+  await web.addDoc(web.collection(salud,'empleados'),nuevoEmpleado);
+  await denegado(web.addDoc(web.collection(salud,'empleados'),{...nuevoEmpleado,area:{...areaPrueba,id:'1.90.1.'}}));
+  await db.doc('empleados/s1').update({requiereRevisionCargo:true});
+  await assert.rejects(vacacionesContexto(req,{accion:'historial',legajo:'801'},s),{status:409});
+  await denegado(web.addDoc(web.collection(salud,'solicitudesVacaciones'),{
+    empleadoId:'s1',legajo:'801',area:'Hospital',secretariaId:'1.9.',solicitadoPor:'adminSalud',estado:'pendiente',
+    versionRegimen:2,tipoDias:'habiles',diasSolicitados:2,createdAt:web.serverTimestamp(),updatedAt:web.serverTimestamp(),
+  }));
+  await denegado(web.updateDoc(web.doc(salud,'users','adminSalud'),{rol:'rrhh'}));
+  await denegado(web.getDocs(web.collection(salud,'users')));
+});
+
+test('el importador conserva el área, hace una única alta por legajo y respeta traspasos al reintentar', async () => {
+  const {importarPadron} = await import('../scripts/importar-salud.mjs');
+  const {perfilSeguro} = await import('../server/usuarios.mjs');
+  const perfil = perfilSeguro({rol:'admin',email:'padron@example.com',nombre:'Prueba',apellido:'Salud',lugarTrabajo:'Salud',secretariaAdministradaId:'1.9.'});
+  let cuenta;
+  const auth = {
+    getUserByEmail:async()=>{if (!cuenta) throw Object.assign(new Error(),{code:'auth/user-not-found'}); return cuenta;},
+    createUser:async({uid,email,disabled})=>{assert.equal(cuenta,undefined); cuenta={uid,email,disabled};},
+    updateUser:async(uid,data)=>{assert.equal(uid,cuenta.uid); Object.assign(cuenta,data);},
+  };
+  const area = {id:'1.9.77.',nombre:'Área de prueba'};
+  const empleado = {area,areaId:area.id,lugarTrabajo:area.nombre,secretaria:'SALUD',secretariaId:'1.9.',legajo:'990001',
+    documento:'909090',nombre:'Persona',apellido:'Prueba',activo:true,estado:'activo',huellaPadronSalud:'demo-huella',rol:'empleado'};
+  const padron = {areas:new Map([[area.id,area.nombre]]),empleados:[{empleado,filas:[2]}],pendientes:[]};
+  const anterior = process.env.SALUD_ADMIN_PASSWORD;
+  process.env.SALUD_ADMIN_PASSWORD = 'demo-emulador';
+  try {
+    await importarPadron({auth,db},padron,perfil,false);
+    assert.equal((await db.collection('empleados').where('legajo','==',empleado.legajo).get()).size,0);
+    await importarPadron({auth,db},padron,perfil,true);
+    const docs = await db.collection('empleados').where('legajo','==',empleado.legajo).get();
+    assert.equal(docs.size,1);
+    assert.equal(docs.docs[0].get('area.id'),area.id);
+    assert.equal(cuenta.disabled,false);
+    assert.equal((await db.doc('users/'+cuenta.uid).get()).get('rol'),'admin');
+    await docs.docs[0].ref.update({lugarTrabajo:'Otra área',secretariaId:'1.22.'});
+    await importarPadron({auth,db},padron,perfil,true);
+    assert.equal((await docs.docs[0].ref.get()).get('lugarTrabajo'),'Otra área');
+    const cambiado={...empleado,legajo:'990002',documento:'99999',huellaPadronSalud:'otra'};
+    await db.doc('empleados/preexistente').create({...cambiado,huellaPadronSalud:'version-anterior'});
+    await assert.rejects(importarPadron({auth,db},{...padron,empleados:[{empleado:cambiado,filas:[3]}]},perfil,true),/conflicto/);
+  } finally {
+    if (anterior == null) delete process.env.SALUD_ADMIN_PASSWORD;
+    else process.env.SALUD_ADMIN_PASSWORD = anterior;
+  }
+});
