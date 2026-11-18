@@ -10,6 +10,11 @@ import { normalizarDescripcion } from '../src/utils/regimenVacaciones.mjs';
 import { resolverRegimenVacacional } from '../src/utils/vacacionesCalculo.mjs';
 import { leerPadron, cambioEmpleado } from './padron-salud.mjs';
 
+// Nomenclatura ratificada por RRHH al conciliar el Excel con el organigrama.
+const destinosConfirmados = new Map([
+  ['1.9.2.7.', 'DIRECCION DE EPIDEMIOLOGIA'],
+]);
+
 const [archivo, ...args] = process.argv.slice(2);
 const argumento = nombre => args.find(a=>a.startsWith(nombre+'='))?.slice(nombre.length+1);
 const aplicar = args.includes('--aplicar');
@@ -103,7 +108,7 @@ export async function importarPadron(s, padron, perfil, aplicarCambios, fuenteNo
   }
   function nombreDestino(id) {
     const existente = porId.get(id)?.get('nombre');
-    return (fuenteNombres === 'excel' && padron.areas.get(id)) || existente || padron.areas.get(id);
+    return (padron.areas.has(id) && destinosConfirmados.get(id)) || (fuenteNombres === 'excel' && padron.areas.get(id)) || existente || padron.areas.get(id);
   }
   for (const [id,nombreExcel] of padron.areas) {
     const doc = porId.get(id);
@@ -115,9 +120,9 @@ export async function importarPadron(s, padron, perfil, aplicarCambios, fuenteNo
       const anterior = doc.get('nombre');
       area.documentoAreaId = doc.id;
       if (normalizarDescripcion(anterior) !== normalizarDescripcion(nombreExcel)) {
-        diferencias.push({id,excel:nombreExcel,firebase:anterior});
+        diferencias.push({id,excel:nombreExcel,firebase:anterior,confirmado:destinosConfirmados.get(id) || null});
       }
-      if (fuenteNombres === 'excel' && anterior !== nombre) {
+      if (anterior !== nombre) {
         acciones.push({ref:doc.ref, version:doc.updateTime, datos:{nombre}});
       } else area.ruta = doc.get('ruta') || nombre;
     } else {
@@ -125,7 +130,7 @@ export async function importarPadron(s, padron, perfil, aplicarCambios, fuenteNo
     }
     areas.set(id,area);
   }
-  if (fuenteNombres === 'excel') {
+  if (fuenteNombres === 'excel' || diferencias.some(d=>d.confirmado)) {
     // En el organigrama anterior, padre contiene el nombre de la dependencia superior.
     for (const [id,doc] of porId) {
       const padreId = id.replace(/\d+\.$/, '');
@@ -170,7 +175,7 @@ export async function importarPadron(s, padron, perfil, aplicarCambios, fuenteNo
   }
   console.log(JSON.stringify({cambiosPrevistos:acciones.length,diferenciasDeAreas:diferencias,conflictos},null,2));
   if (!aplicarCambios) return;
-  if (diferencias.length && !fuenteNombres) throw new Error('Confirmá la fuente de los nombres de área antes de aplicar la carga.');
+  if (diferencias.some(d=>!d.confirmado) && !fuenteNombres) throw new Error('Confirmá la fuente de los nombres de área antes de aplicar la carga.');
   if (conflictos.length) throw new Error('Revisá las filas en conflicto antes de escribir en Firebase.');
   for (let i=0; i<acciones.length; i+=300) {
     const lote = s.db.batch();

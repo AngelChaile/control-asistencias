@@ -13,7 +13,7 @@ node scripts/importar-salud.mjs $padron
 
 La revisión local informa las filas pendientes, las bajas y las categorías activas sin régimen vacacional. El padrón guarda un empleado por legajo y conserva los cargos de cada persona. La fecha de baja 01/01/2100 identifica a los cargos sin baja registrada. Para las bajas efectivas se conserva la fecha y se marca al empleado inactivo.
 
-Los tres legajos con regímenes simultáneos se importan con sus dos cargos. En **RRHH → Empleados**, marcar **Cargos por revisar**, buscar y abrir **Editar**. Elegir el cargo para vacaciones y guardar la ficha para habilitar la solicitud. División Suministros usa el código corregido `1.9.2.2.7.1.`. Se omiten los cuatro registros municipales de baja correspondientes a Enfermera Profesional A 40 HS, Jefe de Departamento 40 HS y Temp Administrativo A 30 HS.
+Los tres legajos con regímenes simultáneos se importan con sus dos cargos. En **RRHH → Empleados**, marcar **Cargos por revisar**, buscar y abrir **Editar**. Elegir el cargo para vacaciones y guardar la ficha para habilitar la solicitud. RRHH confirmó que el código `1.9.2.7.` corresponde a Dirección de Epidemiología. División Suministros usa el código corregido `1.9.2.2.7.1.`. Se omiten los cuatro registros municipales de baja correspondientes a Enfermera Profesional A 40 HS, Jefe de Departamento 40 HS y Temp Administrativo A 30 HS.
 
 ## Cargar en Firebase
 
