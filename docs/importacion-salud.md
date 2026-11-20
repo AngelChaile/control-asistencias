@@ -17,6 +17,8 @@ Los tres legajos con regímenes simultáneos se importan con sus dos cargos. En 
 
 ## Cargar en Firebase
 
+La importación aplica los seis nombres ratificados por RRHH. Usa los nombres del padrón para Subsecretaría General en Salud, Dirección Ejecutiva del Hospital de Morón, Dirección Asociada del Hospital de Morón, Dirección del SAME y Dirección de Epidemiología. Para el código `1.9.2.2.12.` conserva Coordinación Recupero de Costos. Estos destinos se resuelven automáticamente en la vista previa y en la carga.
+
 Para limitar el acceso en producción deben estar activos los perfiles por UID, la API de vacaciones y las reglas del repositorio. La guía [Seguridad de Firestore](seguridad-firestore.md) indica el orden para conservar el fichaje por QR al activar las reglas.
 
 Configurar una cuenta de servicio del proyecto con acceso a Authentication y Firestore. El Excel y la credencial se leen localmente. El comando valida el ID de proyecto contra la credencial.

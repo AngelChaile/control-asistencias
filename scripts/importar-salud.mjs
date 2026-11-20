@@ -12,6 +12,11 @@ import { leerPadron, cambioEmpleado } from './padron-salud.mjs';
 
 // Nomenclatura ratificada por RRHH al conciliar el Excel con el organigrama.
 const destinosConfirmados = new Map([
+  ['1.9.2.', 'SUBSECRETARIA GENERAL EN SALUD'],
+  ['1.9.2.2.', 'DIRECCION EJECUTIVA DEL HOSPITAL DE MORON'],
+  ['1.9.2.2.12.', 'COORDINACION RECUPERO DE COSTOS'],
+  ['1.9.2.3.', 'DIRECCION ASOCIADA DEL HOSPITAL DE MORON'],
+  ['1.9.2.5.', 'DIRECCION DEL SAME'],
   ['1.9.2.7.', 'DIRECCION DE EPIDEMIOLOGIA'],
 ]);
 

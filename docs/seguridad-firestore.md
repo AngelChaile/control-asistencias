@@ -1,6 +1,6 @@
 # Activación de perfiles UID, fichaje por API y reglas
 
-El código se entrega con `VITE_SEGURIDAD_ACTIVA=false` por defecto para no interrumpir los QR mientras se configuran las credenciales. En ese estado el QR todavía usa el acceso anterior: **no es la configuración definitiva**. El modo seguro se activa explícitamente y nunca vuelve al acceso público si falla una API.
+Vercel compila el cliente de Production con fichaje por API y perfiles por UID. En Preview y en desarrollo se activa el mismo recorrido con `VITE_SEGURIDAD_ACTIVA=true`. En producción, el servidor necesita la credencial de Firebase antes del despliegue.
 
 ## 1. Configurar el servidor en Vercel
 
@@ -11,7 +11,7 @@ En Vercel → proyecto → Settings → Environment Variables:
 | Nombre | Valor | Entorno |
 | --- | --- | --- |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Contenido JSON completo del archivo de la cuenta de servicio | Production y Preview si se van a hacer pruebas allí |
-| `VITE_SEGURIDAD_ACTIVA` | `false` durante la preparación | Production |
+| `VITE_SEGURIDAD_ACTIVA` | `true` para probar el recorrido de producción | Preview y desarrollo |
 
 Conservar las variables `VITE_FIREBASE_*` actuales. La cuenta de servicio debe pertenecer al mismo proyecto que `VITE_FIREBASE_PROJECT_ID`. No llamar a la variable privada `VITE_FIREBASE_SERVICE_ACCOUNT_JSON`: Vite expone las variables con ese prefijo al navegador.
 
@@ -49,7 +49,7 @@ Con perfiles migrados, poner `VITE_SEGURIDAD_ACTIVA=true` en Preview y desplegar
 
 Comprobar el ingreso de RRHH, Subsecretario y un Admin de área, las solicitudes de vacaciones, el traspaso y los avisos de ambos responsables. El QR nuevo conserva las URLs y los tokens anteriores. Los empleados no necesitan una cuenta. Si un legajo no existe se indica consultar al área: no se permite dar de alta empleados desde un QR público.
 
-Luego poner `VITE_SEGURIDAD_ACTIVA=true` en Production, desplegar y comprobar que el QR usa `/api/fichaje` y no consultas públicas a Firestore. Cerrar/reabrir sesiones con perfiles migrados.
+Desplegar en Production y comprobar desde la pantalla de escaneo que la validación y la búsqueda del agente pasan por `/api/fichaje`. Cerrar y volver a abrir las sesiones con perfiles migrados.
 
 **Finalmente**, publicar el contenido completo de `firestore.rules` en Firebase → Firestore Database → Reglas → Publicar. Alternativamente, con Firebase CLI y el proyecto seleccionado explícitamente:
 

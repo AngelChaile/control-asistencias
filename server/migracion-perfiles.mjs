@@ -25,6 +25,7 @@ export function planificarMigracion(perfiles, cuentas) {
         avisosTraspasos:d.avisosTraspasos || AVISOS_ANTERIORES[d.email?.toLowerCase()] || []});
       const perfil=limpiar(canonical.data);
       if (docs.some(d=>JSON.stringify(limpiar(d.data))!==JSON.stringify(perfil))) throw new Error('Hay perfiles duplicados con datos distintos. Revise cuál corresponde antes de migrar.');
+      if (Object.hasOwn(canonical.data, 'Horario')) perfil.Horario = canonical.data.Horario;
       cambios.push({uid,perfil,origenes:docs.map(d=>d.id),createdAt:canonical.data.createdAt || null});
     } catch(error) { errores.push(`Perfil ${canonical.id}: ${error.message}`); }
   }
