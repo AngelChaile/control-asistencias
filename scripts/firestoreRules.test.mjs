@@ -51,6 +51,32 @@ before(async()=>{
 });
 after(async()=>{await Promise.all(clientes.map(borrarApp));await deleteApp(app);});
 
+test('RRHH anula una vez, conserva las demás licencias y restituye el consumo aprobado', async () => {
+  const solicitudes = db.collection('solicitudesVacaciones');
+  const servicios = { db, FieldValue, auth: identidad };
+  const anular = (uid, id, estadoAnterior) => vacacionesContexto({ headers: { authorization: 'Bearer ' + uid } },
+    { accion: 'anular', id, estadoAnterior, motivo: 'Cambio de fechas' }, servicios);
+  const base = { legajo: '820', anioVacacional: 2026, diasCorresponden: 20, estado: 'aprobada', tipoDias: 'habiles', diasSolicitados: 6 };
+  await solicitudes.doc('cancelar').set({ ...base, diasDescontados: 4 });
+  await solicitudes.doc('conservar').set({ ...base, diasSolicitados: 2 });
+  await solicitudes.doc('pend').set({ ...base, estado: 'pendiente' });
+  for (const rol of ['admin', 'sub']) await assert.rejects(anular(rol, 'cancelar', 'aprobada'), { status: 403 });
+  await assert.rejects(anular('rrhh', 'cancelar', 'pendiente'), { status: 409 });
+  const saldo = db.doc('saldosVacaciones/vacaciones_820_2026');
+  await anular('rrhh', 'pend', 'pendiente');
+  assert.equal((await saldo.get()).exists, false);
+  await Promise.all([anular('rrhh', 'cancelar', 'aprobada'), anular('rrhh', 'cancelar', 'aprobada')]);
+  const actual = (await saldo.get()).data();
+  assert.deepEqual(actual.diasUsadosPorTipo, { habiles: 2, corridos: 0 });
+  assert.equal(actual.diasDisponiblesPorTipo.habiles, 18);
+  const anulada = (await solicitudes.doc('cancelar').get()).data();
+  assert.equal(anulada.estado, 'anulada');
+  assert.equal(anulada.diasDescontados, 4);
+  assert.equal(anulada.anuladaPor, 'rrhh');
+  assert.equal(anulada.motivoAnulacion, 'Cambio de fechas');
+  assert.ok(anulada.fechaAnulacion.toMillis());
+});
+
 test('sin sesión no se pueden leer ni escribir empleados, tokens, asistencias, perfiles ni módulos internos',async()=>{
   for(const collection of ['empleados','tokens','asistencias','users','areas','ausencias','solicitudes_traspaso','solicitudesVacaciones','saldosVacaciones','notificaciones','notificaciones_email','_fichajeEstado']) {
     await denegado(web.getDocs(web.collection(publico,collection)));

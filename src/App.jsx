@@ -168,7 +168,7 @@ const getRedirectPath = () => {
             path="/rrhh/vacaciones"
             element={
               <ProtectedRoute user={user} allowedRoles={["rrhh", "subsecretario"]}>
-                <ListaVacaciones />
+                <ListaVacaciones puedeAnular={user?.rol === "rrhh"} />
               </ProtectedRoute>
             }
           />

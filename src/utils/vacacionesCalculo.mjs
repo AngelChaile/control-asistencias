@@ -514,3 +514,29 @@ export function calcularSaldoVacacional(diasPorTipo, solicitudes) {
   }
   return { porTipo, solicitudesAnteriores: aprobadas };
 }
+
+export function planDeSolicitud(solicitud) {
+  if (solicitud.versionRegimen !== 2 || !solicitud.perfilActual) return null;
+  return { perfilActual: solicitud.perfilActual, perfilAnterior: solicitud.perfilAnterior || null,
+    esCambioConvenio: !!solicitud.esCambioConvenio, esReingreso: !!solicitud.esReingreso,
+    fechaReingreso: solicitud.fechaReingreso || null,
+    mesesConvenioAnterior: Number(solicitud.mesesConvenioAnterior) || 0,
+    mesesConvenioNuevo: Number(solicitud.mesesConvenioNuevo) || 0,
+    diasPorTipo: solicitud.diasPorTipo, calculoDetalle: solicitud.calculoDetalle,
+    nroSolicitud: solicitud.nroSolicitud || "" };
+}
+
+export function planAprobado(solicitudes) {
+  const fecha = s => s.fechaAprobacion?.toMillis?.() || (s.fechaAprobacion?.seconds || 0) * 1000;
+  const candidatas = solicitudes.filter(s => s.estado === "aprobada" && s.versionRegimen === 2 && s.perfilActual && (s.esCambioConvenio || s.esReingreso));
+  candidatas.sort((a,b) => fecha(b) - fecha(a) || String(b.nroSolicitud || "").localeCompare(String(a.nroSolicitud || "")));
+  return candidatas.length ? planDeSolicitud(candidatas[0]) : null;
+}
+
+export function diasOtorgados(solicitud) {
+  // Las solicitudes anteriores se descuentan del tipo que tenían al aprobarse.
+  if (solicitud.versionRegimen === 2 && solicitud.diasPorTipo) return solicitud.diasPorTipo;
+  if (!["habiles", "corridos"].includes(solicitud.tipoDias)) throw new Error("La solicitud histórica no tiene un tipo de días definido. RRHH debe revisarla.");
+  return { habiles: solicitud.tipoDias === "habiles" ? Number(solicitud.diasCorresponden) : 0,
+    corridos: solicitud.tipoDias === "corridos" ? Number(solicitud.diasCorresponden) : 0 };
+}

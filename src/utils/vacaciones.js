@@ -4,7 +4,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { mismoPerfilVacacional } from "./regimenVacaciones.mjs";
-import { calcularVacaciones, calcularDiasRango, calcularSaldoVacacional, consumoVacacional, diasParaAprobar, parseFechaLocal } from "./vacacionesCalculo.mjs";
+import { planDeSolicitud, planAprobado, diasOtorgados, calcularVacaciones, calcularDiasRango, calcularSaldoVacacional, consumoVacacional, diasParaAprobar, parseFechaLocal } from "./vacacionesCalculo.mjs";
 export * from "./vacacionesCalculo.mjs";
 import { llamarApi, SEGURIDAD_ACTIVA } from './api';
 
@@ -18,24 +18,6 @@ async function solicitudesDelPeriodo(legajo, anio) {
   if (SEGURIDAD_ACTIVA) return (await llamarApi('vacaciones-contexto', { accion: 'historial', legajo: String(legajo).trim() })).solicitudes.filter(s => Number(s.anioVacacional) === Number(anio));
   const snap = await getDocs(query(collection(db, "solicitudesVacaciones"), where("legajo", "==", String(legajo).trim())));
   return snap.docs.map(d => ({ ...d.data(), id: d.id })).filter(s => Number(s.anioVacacional) === Number(anio));
-}
-
-function planDeSolicitud(solicitud) {
-  if (solicitud.versionRegimen !== 2 || !solicitud.perfilActual) return null;
-  return { perfilActual: solicitud.perfilActual, perfilAnterior: solicitud.perfilAnterior || null,
-    esCambioConvenio: !!solicitud.esCambioConvenio, esReingreso: !!solicitud.esReingreso,
-    fechaReingreso: solicitud.fechaReingreso || null,
-    mesesConvenioAnterior: Number(solicitud.mesesConvenioAnterior) || 0,
-    mesesConvenioNuevo: Number(solicitud.mesesConvenioNuevo) || 0,
-    diasPorTipo: solicitud.diasPorTipo, calculoDetalle: solicitud.calculoDetalle,
-    nroSolicitud: solicitud.nroSolicitud || "" };
-}
-
-function planAprobado(solicitudes) {
-  const fecha = s => s.fechaAprobacion?.toMillis?.() || (s.fechaAprobacion?.seconds || 0) * 1000;
-  const candidatas = solicitudes.filter(s => s.estado === "aprobada" && s.versionRegimen === 2 && s.perfilActual && (s.esCambioConvenio || s.esReingreso));
-  candidatas.sort((a,b) => fecha(b) - fecha(a) || String(b.nroSolicitud || "").localeCompare(String(a.nroSolicitud || "")));
-  return candidatas.length ? planDeSolicitud(candidatas[0]) : null;
 }
 
 export async function fetchPlanVacacional(legajo, anio) {
@@ -112,19 +94,14 @@ export async function fetchSolicitudesVacaciones({ legajo = "", area = "", anio 
   const constraints = [];
   if (anio) constraints.push(where("anioVacacional", "==", Number(anio)));
   if (estado) constraints.push(where("estado", "==", estado));
-  const snap = await getDocs(query(collection(db, "solicitudesVacaciones"), ...constraints, orderBy("createdAt", "desc")));
+  // Firestore combina los índices de igualdad de período y estado.
+  if (!estado) constraints.push(orderBy("createdAt", "desc"));
+  const snap = await getDocs(query(collection(db, "solicitudesVacaciones"), ...constraints));
   let rows = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+  if (estado) rows.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
   if (legajo) rows = rows.filter(r => String(r.legajo || "").toLowerCase().includes(legajo.trim().toLowerCase()));
   if (area) rows = rows.filter(r => String(r.area || "").toLowerCase().includes(area.trim().toLowerCase()));
   return rows;
-}
-
-function diasOtorgados(solicitud) {
-  // Las solicitudes anteriores se descuentan del tipo que tenían al aprobarse.
-  if (solicitud.versionRegimen === 2 && solicitud.diasPorTipo) return solicitud.diasPorTipo;
-  if (!["habiles", "corridos"].includes(solicitud.tipoDias)) throw new Error("La solicitud histórica no tiene un tipo de días definido. RRHH debe revisarla.");
-  return { habiles: solicitud.tipoDias === "habiles" ? Number(solicitud.diasCorresponden) : 0,
-    corridos: solicitud.tipoDias === "corridos" ? Number(solicitud.diasCorresponden) : 0 };
 }
 
 export async function actualizarEstadoSolicitud(id, estado, observaciones = "") {
@@ -154,7 +131,7 @@ export async function actualizarEstadoSolicitud(id, estado, observaciones = "") 
     const usadas = saldoAnterior?.versionRegimen === 2 ? { ...saldoAnterior.diasUsadosPorTipo }
       : { habiles: usadasHistoricas.habiles.diasUsados, corridos: usadasHistoricas.corridos.diasUsados };
     if (![usadas.habiles, usadas.corridos].every(n => Number.isInteger(n) && n >= 0)) throw new Error("El saldo guardado está incompleto. RRHH debe revisarlo.");
-    const planPrevio = saldoAnterior?.planVacacional || planAprobado(historicas);
+    const planPrevio = saldoAnterior?.versionRegimen === 2 ? saldoAnterior.planVacacional : planAprobado(historicas);
     const planPropio = planDeSolicitud(solicitud);
     if (planPrevio && planPropio && !solicitud.esCambioConvenio && !solicitud.esReingreso
       && !mismoPerfilVacacional(planPrevio.perfilActual, planPropio.perfilActual)) {

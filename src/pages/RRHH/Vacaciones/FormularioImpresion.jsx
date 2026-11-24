@@ -59,6 +59,7 @@ export default function FormularioImpresion({ solicitud, onVolver }) {
 
       <div className="print-paper mx-auto max-w-4xl rounded-2xl bg-white p-7 shadow-lg print:rounded-none print:shadow-none">
         <div ref={printRef}>
+          {solicitud.estado === "anulada" && <p style={{ border: "2px solid", textAlign: "center", padding: 8, fontWeight: 700 }}>SOLICITUD ANULADA</p>}
           <header style={{ borderBottom: "3px double #111827", paddingBottom: 8, marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>

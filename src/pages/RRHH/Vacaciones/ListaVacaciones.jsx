@@ -1,21 +1,27 @@
 // src/pages/RRHH/Vacaciones/ListaVacaciones.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
+import Swal from "sweetalert2";
+import { llamarApi } from "../../../utils/api";
 import { fetchSolicitudesVacaciones, actualizarEstadoSolicitud, describirDiasPorTipo, diasParaAprobar } from "../../../utils/vacaciones";
 import FormularioImpresion from "./FormularioImpresion";
 
 const ANIO_ACTUAL = new Date().getFullYear();
 
 const ESTADO_BADGE = {
+  anulada:    { label: "Anulada", cls: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200" },
   pendiente:  { label: "Pendiente",  cls: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300" },
   aprobada:   { label: "Aprobada",   cls: "bg-green-100  text-green-800  dark:bg-green-900/40  dark:text-green-300"  },
   rechazada:  { label: "Rechazada",  cls: "bg-red-100    text-red-800    dark:bg-red-900/40    dark:text-red-300"    },
 };
 
-export default function ListaVacaciones() {
+const fechaLicencia = fecha => fecha?.split("-").reverse().join("/") || "—";
+
+export default function ListaVacaciones({ puedeAnular }) {
   const [solicitudes, setSolicitudes] = useState([]);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState("");
+  const [anulando, setAnulando] = useState(null);
 
   // Filtros
   const [filtroLegajo, setFiltroLegajo] = useState("");
@@ -54,6 +60,30 @@ export default function ListaVacaciones() {
       );
     } catch (e) {
       setError("Error al actualizar estado: " + e.message);
+    }
+  };
+
+  const anular = async solicitud => {
+    const efecto = solicitud.estado === "aprobada"
+      ? `Se devolverán ${solicitud.diasDescontados ?? solicitud.diasSolicitados} días ${solicitud.tipoDias === "habiles" ? "hábiles" : "corridos"} al saldo de ${solicitud.anioVacacional}.`
+      : "La solicitud está pendiente y su anulación no modifica el saldo.";
+    const respuesta = await Swal.fire({
+      title: "¿Anular esta licencia?",
+      text: `${solicitud.nombreCompleto} · Legajo ${solicitud.legajo} · Del ${fechaLicencia(solicitud.fechaDesde)} al ${fechaLicencia(solicitud.fechaHasta)}. ${efecto}`,
+      input: "textarea", inputLabel: "Motivo (opcional)", inputAttributes: { maxlength: "500" },
+      showCancelButton: true, cancelButtonText: "Volver", confirmButtonText: "Anular licencia", focusCancel: true,
+    });
+    if (!respuesta.isConfirmed) return;
+    setAnulando(solicitud.id);
+    setError("");
+    try {
+      await llamarApi("vacaciones-contexto", { accion: "anular", id: solicitud.id, estadoAnterior: solicitud.estado, motivo: respuesta.value || "" });
+      await cargar();
+    } catch (e) {
+      await cargar();
+      setError(e.message);
+    } finally {
+      setAnulando(null);
     }
   };
 
@@ -108,6 +138,7 @@ export default function ListaVacaciones() {
               <option value="pendiente">Pendiente</option>
               <option value="aprobada">Aprobada</option>
               <option value="rechazada">Rechazada</option>
+              <option value="anulada">Anulada</option>
             </select>
           </div>
         </div>
@@ -156,6 +187,8 @@ export default function ListaVacaciones() {
                       )}
                     </div>
                     <p className="font-semibold text-gray-800 dark:text-white truncate">{s.nombreCompleto}</p>
+                    <p className="text-sm">Del {fechaLicencia(s.fechaDesde)} al {fechaLicencia(s.fechaHasta)}</p>
+                    {s.estado === "anulada" && s.motivoAnulacion && <p className="text-sm break-words">Motivo de anulación: {s.motivoAnulacion}</p>}
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       Legajo {s.legajo} · {s.area || "Sin área"} · {s.convenio}
                     </p>
@@ -174,6 +207,12 @@ export default function ListaVacaciones() {
 
                   {/* Acciones */}
                   <div className="flex gap-2 flex-shrink-0 flex-wrap">
+                    {puedeAnular && ["pendiente", "aprobada"].includes(s.estado) && (
+                      <button type="button" onClick={() => anular(s)} disabled={anulando !== null}
+                        className="text-xs font-semibold text-red-700 dark:text-red-300 px-3 py-1.5 rounded-lg border disabled:opacity-50">
+                        {anulando === s.id ? "Anulando…" : "Anular licencia"}
+                      </button>
+                    )}
                     <button
                       onClick={() => setSolicitudImpresion(s)}
                       className="text-xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold px-3 py-1.5 rounded-lg transition"
