@@ -58,6 +58,7 @@ export async function crearSolicitudVacaciones(datos) {
     tipoCargo: datos.perfilActual.tipoCargo || "",
     particion: datos.perfilActual.particion || "",
     area: datos.area || "",
+    ...(datos.direccionId ? { direccionId: datos.direccionId } : {}),
     ...(datos.empleadoId ? { empleadoId: datos.empleadoId, secretariaId: datos.secretariaId || "" } : {}),
     convenio: resultado.regimen.convenio,
     esJerarquico: resultado.regimen.convenio === "Municipal" && resultado.regimen.tipo === "corridos",

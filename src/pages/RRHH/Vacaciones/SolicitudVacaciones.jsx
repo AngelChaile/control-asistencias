@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
-import { administraSalud } from "../../../utils/alcanceAdmin.mjs";
+import { direccionDeConsulta, administraSalud } from "../../../utils/alcanceAdmin.mjs";
 import { buscarEmpleadoPorLegajo } from "../../../utils/asistencia";
 import {
   calcularVacaciones, calcularMesesTrabajados, parseFechaLocal, crearSolicitudVacaciones,
@@ -170,7 +170,7 @@ export default function SolicitudVacaciones() {
       if (!emp) throw new Error(`No se encontró un empleado con legajo ${legajoBuscado}.`);
       if (emp.requiereRevisionCargo) throw new Error("El agente tiene cargos simultáneos. RRHH debe seleccionar el cargo para vacaciones en Empleados.");
       if (emp.activo === false || emp.estado === "inactivo") throw new Error("El legajo figura de baja.");
-      setReferenciaAgente({ empleadoId: emp.id, secretariaId: emp.secretariaId || "" });
+      setReferenciaAgente({ empleadoId: emp.id, direccionId: emp.direccionId, secretariaId: emp.secretariaId || "" });
       setNombreCompleto([emp.apellido, emp.nombre].filter(Boolean).join(", "));
       setArea(emp.area?.nombre || emp.lugarTrabajo || emp.secretaria || "");
       setPerfilActual(perfilVacacionalEmpleado(emp));
@@ -278,7 +278,7 @@ export default function SolicitudVacaciones() {
       </div>}
     </section>
 
-    <button type="button" className="btn-primary w-full" disabled={(administraSalud(user) && !empleadoCargado) || consultando || consultandoPlan || !!errorPlan || (planRecuperado && !planRecuperado.coincide && !esCambioConvenio && !esReingreso) || buscando || !fechaIngreso || !regimen.encontrado || guardando} onClick={calcular}>{consultando ? "Calculando y consultando saldo…" : "Calcular días y consultar saldo"}</button>
+    <button type="button" className="btn-primary w-full" disabled={((administraSalud(user) || direccionDeConsulta(user)) && !empleadoCargado) || consultando || consultandoPlan || !!errorPlan || (planRecuperado && !planRecuperado.coincide && !esCambioConvenio && !esReingreso) || buscando || !fechaIngreso || !regimen.encontrado || guardando} onClick={calcular}>{consultando ? "Calculando y consultando saldo…" : "Calcular días y consultar saldo"}</button>
 
     {calculo && saldo && <>
       <section className="card space-y-4" aria-live="polite"><div><h2 className="text-base font-semibold text-gray-900">Saldo del período {anioVacacional}</h2><p className="mt-1 text-xs text-gray-500">Antigüedad: {calculo.antiguedad} año(s). Se descuentan únicamente las solicitudes aprobadas.</p></div>

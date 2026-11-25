@@ -79,6 +79,7 @@ export async function saveAusenciaJustificacion({ legajo, fecha = new Date(), ju
       // guardar secretaria también para que RRHH/Admin la vean en los reportes
       secretaria: empleado?.secretaria || null,
       secretariaId: empleado.secretariaId || "",
+      ...(empleado.direccionId ? { direccionId: empleado.direccionId } : {}),
       empleadoId: empleado.id,
       lugarTrabajo: empleado?.lugarTrabajo || null,
       updatedAt: serverTimestamp(),

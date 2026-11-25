@@ -1,10 +1,14 @@
 // El código del organigrama identifica la secretaría aun cuando dos áreas tengan el mismo nombre.
 export const ID_SALUD = '1.9.';
 
-// Alcance de lectura del padrón. La administración de cada ficha conserva su área.
+const DIRECCIONES_RRHH = ['1.26.3.1.', '1.22.13.'];
+
+export function direccionDelArea(area) {
+  return DIRECCIONES_RRHH.find(id => String(area?.id || '').startsWith(id)) || '';
+}
 export function direccionDeConsulta(perfil) {
   if (perfil?.rol !== 'admin' || perfil.lugarTrabajo !== 'DIRECCION DE RECURSOS HUMANOS') return '';
-  return ['1.26.3.1.', '1.22.13.'].includes(perfil.direccionConsultaId) ? perfil.direccionConsultaId : '';
+  return DIRECCIONES_RRHH.includes(perfil.direccionConsultaId) ? perfil.direccionConsultaId : '';
 }
 
 export function secretariaDeArea(area) {
@@ -16,6 +20,8 @@ export function administraSalud(perfil) {
 }
 
 export function filtroAdmin(perfil) {
+  const direccion = direccionDeConsulta(perfil);
+  if (direccion) return ['direccionId', '==', direccion];
   if (administraSalud(perfil)) return ['secretariaId', '==', ID_SALUD];
   if (!perfil?.lugarTrabajo) throw new Error('Su usuario no tiene área asignada. Consulte a RRHH.');
   return ['lugarTrabajo', '==', perfil.lugarTrabajo];
@@ -29,11 +35,14 @@ export function empleadoAdministrado(perfil, empleado) {
 export function destinoLaboral(area, empleado) {
   const secretariaId = secretariaDeArea(area);
   const destino = { area, areaId: area.id || '', secretariaId, lugarTrabajo: area.nombre };
+  if (direccionDelArea(area) || empleado.direccionId || direccionDelArea(empleado.area)) destino.direccionId = direccionDelArea(area);
   if (secretariaId === ID_SALUD) destino.secretaria = 'SALUD';
   else if (empleado.secretariaId === ID_SALUD || secretariaDeArea(empleado.area) === ID_SALUD) destino.secretaria = area.secretaria || '';
   return destino;
 }
 
 export function areaAdministrable(perfil, area) {
+  const direccion = direccionDeConsulta(perfil);
+  if (direccion) return direccionDelArea(area) === direccion;
   return administraSalud(perfil) ? secretariaDeArea(area) === ID_SALUD : area?.nombre === perfil?.lugarTrabajo;
 }

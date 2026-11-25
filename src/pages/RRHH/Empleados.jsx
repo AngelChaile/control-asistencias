@@ -1,4 +1,4 @@
-import { secretariaDeArea } from "../../utils/alcanceAdmin.mjs";
+import { direccionDelArea, secretariaDeArea } from "../../utils/alcanceAdmin.mjs";
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from "../../firebase";
@@ -144,6 +144,7 @@ export default function Empleados() {
     try {
       const payload = { 
         ...nuevo,
+        direccionId: direccionDelArea(nuevo.area),
         lugarTrabajo: nuevo.area?.nombre || nuevo.lugarTrabajo,
         ...(nuevo.area?.id ? {secretariaId: secretariaDeArea(nuevo.area), areaId: nuevo.area.id} : {}),
         area: nuevo.area || null

@@ -177,6 +177,7 @@ export async function registrarAsistenciaPorLegajo(legajo, token = null, operaci
     apellido: empleado.apellido,
     secretaria: empleado.secretaria || "",
     lugarTrabajo: empleado.lugarTrabajo || "",
+    ...(empleado.direccionId ? { direccionId: empleado.direccionId } : {}),
     secretariaId: empleado.secretariaId || secretariaDeArea(empleado.area),
     tipo,
     fecha: fechaStr,

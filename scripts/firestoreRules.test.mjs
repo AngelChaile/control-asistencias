@@ -51,19 +51,40 @@ before(async()=>{
 });
 after(async()=>{await Promise.all(clientes.map(borrarApp));await deleteApp(app);});
 
-test('el admin de Dirección consulta la rama de RRHH sin adquirir permisos de escritura en las hijas', async () => {
+test('el admin de Dirección administra una hija y envía solicitudes pendientes dentro de su rama', async () => {
   const raiz = '1.26.3.1.';
   await db.doc('users/dir').set({rol:'admin', lugarTrabajo:'DIRECCION DE RECURSOS HUMANOS', direccionConsultaId:raiz});
   const fichas = db.collection('empleados');
   const hija = fichas.doc('prueba-direccion');
-  await hija.set({area:{id:raiz+'1.6.'}, lugarTrabajo:'División de ejemplo'});
+  const area = {id:raiz+'1.6.',nombre:'División de ejemplo'};
+  await db.collection('areas').doc(area.id).set(area);
   const clienteDir = cliente('dir');
   const listado = bd => web.getDocs(web.query(web.collection(bd,'empleados'),web.where('area.id','>=',raiz),web.where('area.id','<','1.26.3.1/')));
   try {
+    const ref = web.doc(clienteDir,'empleados',hija.id);
+    const empleado = {rol:'empleado', legajo:'9100', activo:true, direccionId:raiz, area, lugarTrabajo:area.nombre};
+    await web.setDoc(ref,empleado);
+    await web.updateDoc(ref,{telefono:'interno'});
     assert.equal((await listado(clienteDir)).size,1);
     await denegado(listado(admin));
     await denegado(web.getDoc(web.doc(clienteDir,'empleados','empB')));
-    await denegado(web.deleteDoc(web.doc(clienteDir,'empleados',hija.id)));
+    await denegado(web.deleteDoc(web.doc(clienteDir,'empleados','empB')));
+    const busqueda = web.query(web.collection(clienteDir,'empleados'),web.where('legajo','==','9100'),web.where('direccionId','==',raiz));
+    assert.equal((await web.getDocs(busqueda)).size,1);
+    await vacacionesContexto({headers:{authorization:'Bearer dir'}},{accion:'historial',legajo:'9100'},{db,auth:identidad});
+    const base = {legajo:'9100',empleadoId:hija.id,direccionId:raiz};
+    const licencia = {...base, area:area.nombre, solicitadoPor:'dir', estado:'pendiente',versionRegimen:2,
+      tipoDias:'habiles',diasSolicitados:2,createdAt:web.serverTimestamp(),updatedAt:web.serverTimestamp()};
+    const vacaciones = web.collection(clienteDir,'solicitudesVacaciones');
+    const sol = await web.addDoc(vacaciones,licencia);
+    await denegado(web.updateDoc(sol,{estado:'aprobada'}));
+    await denegado(web.addDoc(vacaciones,{...licencia,empleadoId:'empB'}));
+    const traspaso = await web.addDoc(web.collection(clienteDir,'solicitudes_traspaso'),{tipoSolicitud:'enviar_disposicion',
+      empleadoId:hija.id,empleado:{legajo:'9100'},aprobaciones,estado:'pendiente',creadoPor:'dir@example.com',
+      createdAt:web.serverTimestamp(),updatedAt:web.serverTimestamp()});
+    await denegado(web.updateDoc(traspaso,{estado:'finalizado'}));
+    await web.addDoc(web.collection(clienteDir,'ausencias'),{...base,lugarTrabajo:area.nombre,fecha:'25/11/2026'});
+    await web.deleteDoc(ref);
   } finally { await hija.delete(); }
 });
 

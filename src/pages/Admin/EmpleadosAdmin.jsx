@@ -12,7 +12,7 @@ import {
 } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
 import EmployeeDetailModal from "../../components/EmployeeDetailModal";
-import { administraSalud, areaAdministrable, direccionDeConsulta, filtroAdmin, secretariaDeArea } from "../../utils/alcanceAdmin.mjs";
+import { administraSalud, areaAdministrable, direccionDelArea, direccionDeConsulta, filtroAdmin, secretariaDeArea } from "../../utils/alcanceAdmin.mjs";
 import SelectorCategoria from "../../components/SelectorCategoria";
 import { fetchAllAreas } from "../../utils/areas";
 
@@ -75,12 +75,9 @@ export default function EmpleadosAdmin() {
     setErrorCarga(""); setLoading(true);
     try {
       const personal = collection(db, "empleados");
-      const consultas = [query(personal, where(...filtroAdmin(user)))];
-      if (direccion) consultas.push(query(personal, where("area.id", ">=", direccion),
-        where("area.id", "<", direccion.slice(0, -1) + "/")));
-      const resultados = await Promise.all(consultas.map(q => getDocs(q)));
-      const porFicha = new Map(resultados.flatMap(s => s.docs.map(d => [d.id, { ...d.data(), id: d.id }])));
-      setEmpleados([...porFicha.values()]);
+      const consulta = query(personal, where(...filtroAdmin(user)));
+      const snap = await getDocs(consulta);
+      setEmpleados(snap.docs.map(d => ({ ...d.data(), id: d.id })));
     } catch (err) {
       console.error("fetchEmpleados admin:", err);
       setEmpleados([]); setErrorCarga("No se pudo consultar el personal. Revisá los permisos de tu cuenta con RRHH.");
@@ -92,11 +89,12 @@ export default function EmpleadosAdmin() {
   async function handleGuardar(e) {
     e.preventDefault();
     try {
-      const destino = administraSalud(user) ? nuevo.area : areas.find(item => item.nombre === area);
-      if (administraSalud(user) && !editingId && !areaAdministrable(user, destino)) throw new Error("Elegí un área de Salud.");
+      const destino = variasAreas ? nuevo.area : areas.find(item => item.nombre === area);
+      if (variasAreas && !editingId && !areaAdministrable(user, destino)) throw new Error("Elegí una dependencia que administres.");
       const payload = {
         ...nuevo,
         lugarTrabajo: destino?.nombre || area,
+        ...(direccionDelArea(destino) ? { direccionId: direccionDelArea(destino) } : {}),
         secretariaId: secretariaDeArea(destino),
         area: destino || null
       };
@@ -352,10 +350,10 @@ export default function EmpleadosAdmin() {
             {/* Área */}
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">Área *</label>
-              {administraSalud(user) && !editingId ? (
+              {variasAreas && !editingId ? (
                 <select required className="input-modern" value={nuevo.area?.id || ""}
                   onChange={e => setNuevo({...nuevo, area: areas.find(a => a.id === e.target.value) || null})}>
-                  <option value="">Elegir área de Salud…</option>
+                  <option value="">Elegir dependencia…</option>
                   {areas.filter(a => areaAdministrable(user, a)).map(a => <option key={a.id} value={a.id}>{a.nombre} ({a.id})</option>)}
                 </select>
               ) : <input className="input-modern" value={editingId ? nuevo.lugarTrabajo : area} readOnly />}
@@ -522,7 +520,7 @@ export default function EmpleadosAdmin() {
                           >
                             👁️ Ver Detalle
                           </button>
-                          {(!direccion || emp.lugarTrabajo === area) && <><button
+                          <button
                             onClick={() => handleEditar(emp)} 
                             className="text-municipio-600 hover:text-municipio-700 bg-municipio-50 hover:bg-municipio-100 px-3 py-1 rounded-lg transition-colors"
                           >
@@ -533,7 +531,7 @@ export default function EmpleadosAdmin() {
                             className="text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg transition-colors"
                           >
                             🗑️ Eliminar
-                          </button></>}
+                          </button>
                         </div>
                       </td>
                     </tr>

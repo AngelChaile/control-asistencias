@@ -15,7 +15,37 @@ service cloud.firestore {
       let registro = get(/databases/$(database)/documents/areas/$(area.get('documentoAreaId', area.id))).data;
       return idSalud(area.id) && registro.get('id', area.get('documentoAreaId', area.id)) == area.id && registro.nombre == area.nombre;
     }
-    function puedeVerPersonal(data) { return enSalud(data) || areaPropia(data.lugarTrabajo); }
+    function adminDireccion() {
+      return rol(['admin']) && perfil().get('direccionConsultaId', '') in ['1.26.3.1.', '1.22.13.']
+        && perfil().lugarTrabajo == 'DIRECCION DE RECURSOS HUMANOS';
+    }
+    function enDireccion(data) {
+      return adminDireccion() && data.get('direccionId', '') == perfil().direccionConsultaId;
+    }
+    function raizDireccion(codigo) {
+      return codigo.matches('1[.]26[.]3[.]1[.]([0-9]+[.])*') ? '1.26.3.1.'
+        : codigo.matches('1[.]22[.]13[.]([0-9]+[.])*') ? '1.22.13.' : '';
+    }
+    function areaRegistrada(area) {
+      let registro = get(/databases/$(database)/documents/areas/$(area.get('documentoAreaId', area.id))).data;
+      return registro.get('id', area.get('documentoAreaId', area.id)) == area.id && registro.nombre == area.nombre;
+    }
+    function areaDeDireccion(area) {
+      return adminDireccion() && raizDireccion(area.id) == perfil().direccionConsultaId && areaRegistrada(area);
+    }
+    function etiquetaEmpleadoValida(data) {
+      return data.get('direccionId', '') == '' || (data.area.nombre == data.lugarTrabajo
+        && data.direccionId == raizDireccion(data.area.id) && areaRegistrada(data.area));
+    }
+    function etiquetaRegistroValida(data, lugar) {
+      return data.get('direccionId', '') == '' || registroDeAgente(data, lugar);
+    }
+    function registroDeAgente(data, lugar) {
+      let agente = get(/databases/$(database)/documents/empleados/$(data.empleadoId)).data;
+      return agente.legajo == data.legajo && agente.lugarTrabajo == lugar && agente.get('activo', true)
+        && agente.get('direccionId','') == data.get('direccionId','');
+    }
+    function puedeVerPersonal(data) { return enSalud(data) || enDireccion(data) || areaPropia(data.lugarTrabajo); }
     function agenteDeSalud(data, lugar) {
       let agente = get(/databases/$(database)/documents/empleados/$(data.empleadoId)).data;
       return enSalud(agente) && agente.legajo == data.legajo && agente.lugarTrabajo == lugar && agente.get('activo', true);
@@ -52,13 +82,14 @@ service cloud.firestore {
             || (raiz == '1.22.13.' && codigo >= '1.22.13.' && codigo < '1.22.13/'));
       }
       allow read: if central() || puedeVerPersonal(resource.data) || enDireccionRRHH();
-      allow create: if rol(['rrhh']) || (((areaPropia(request.resource.data.lugarTrabajo) && request.resource.data.get('secretariaId', '') != '1.9.') ||
+      allow create: if rol(['rrhh']) || (etiquetaEmpleadoValida(request.resource.data) && ((enDireccion(request.resource.data) && areaDeDireccion(request.resource.data.area)) || (areaPropia(request.resource.data.lugarTrabajo) && request.resource.data.get('secretariaId', '') != '1.9.') ||
           ((areaPropia(request.resource.data.lugarTrabajo) || adminSalud()) && request.resource.data.get('secretariaId', '') == '1.9.'
             && areaSaludVerificada(request.resource.data.area) && request.resource.data.lugarTrabajo == request.resource.data.area.nombre))
         && request.resource.data.rol == 'empleado'
-        && request.resource.data.keys().hasOnly(['legajo','nombre','apellido','documento','domicilio','email','telefono','lugarTrabajo','secretaria','secretariaId','horario','categoria','funcion','particion','tipoCargo','area','fechaIngreso','estado','activo','rol']));
+        && request.resource.data.keys().hasOnly(['legajo','nombre','apellido','documento','domicilio','email','telefono','lugarTrabajo','secretaria','secretariaId','direccionId','horario','categoria','funcion','particion','tipoCargo','area','fechaIngreso','estado','activo','rol']));
       allow update: if rol(['rrhh'])
-        || (rol(['subsecretario']) && cambioSolo(['area','areaId','secretariaId','secretaria','lugarTrabajo','historialTraspasos','historialAreas','updatedAt']))
+        || (rol(['subsecretario']) && cambioSolo(['area','areaId','direccionId','secretariaId','secretaria','lugarTrabajo','historialTraspasos','historialAreas','updatedAt'])
+          && request.resource.data.get('direccionId','') == raizDireccion(request.resource.data.area.id))
         || (puedeVerPersonal(resource.data) && puedeVerPersonal(request.resource.data)
           && cambioSolo(['nombre','apellido','documento','domicilio','email','telefono','secretaria','horario','funcion','particion','tipoCargo','fechaIngreso','estado','activo']));
       allow delete: if rol(['rrhh']) || puedeVerPersonal(resource.data);
@@ -69,10 +100,14 @@ service cloud.firestore {
       allow write: if false;
     }
     match /ausencias/{id} {
+      function puedeGuardar(data) {
+        return etiquetaRegistroValida(data, data.lugarTrabajo)
+          && (areaPropia(data.lugarTrabajo) || enDireccion(data) || (enSalud(data) && agenteDeSalud(data, data.lugarTrabajo)));
+      }
       allow read: if central() || puedeVerPersonal(resource.data);
-      allow create: if central() || areaPropia(request.resource.data.lugarTrabajo) || (enSalud(request.resource.data) && agenteDeSalud(request.resource.data, request.resource.data.lugarTrabajo));
-      allow update: if central() || (puedeVerPersonal(resource.data)
-        && (areaPropia(request.resource.data.lugarTrabajo) || (enSalud(request.resource.data) && agenteDeSalud(request.resource.data, request.resource.data.lugarTrabajo))) && request.resource.data.legajo == resource.data.legajo
+      allow create: if central() || puedeGuardar(request.resource.data);
+      allow update: if central() || (puedeVerPersonal(resource.data) && puedeGuardar(request.resource.data)
+        && request.resource.data.legajo == resource.data.legajo
         && request.resource.data.fecha == resource.data.fecha);
       allow delete: if central() || puedeVerPersonal(resource.data);
     }
@@ -83,7 +118,7 @@ service cloud.firestore {
           && data.aprobaciones.rrhh.fecha == null && data.aprobaciones.subsecretaria.fecha == null;
       }
       function deSuArea(data) {
-        return data.tipoSolicitud == 'solicitud_personal' ? (areaPropia(data.areaDestino.nombre) || (adminSalud() && areaSaludVerificada(data.areaDestino)))
+        return data.tipoSolicitud == 'solicitud_personal' ? (areaPropia(data.areaDestino.nombre) || areaDeDireccion(data.areaDestino) || (adminSalud() && areaSaludVerificada(data.areaDestino)))
           : data.empleadoId is string
             && puedeVerPersonal(get(/databases/$(database)/documents/empleados/$(data.empleadoId)).data)
             && data.empleado.legajo == get(/databases/$(database)/documents/empleados/$(data.empleadoId)).data.legajo;
@@ -128,14 +163,16 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /solicitudesVacaciones/{id} {
-      allow read: if central() || areaPropia(resource.data.area) || enSalud(resource.data);
+      allow read: if central() || areaPropia(resource.data.area) || enDireccion(resource.data) || enSalud(resource.data);
       allow create: if rol(['rrhh','subsecretario','admin']) && request.resource.data.solicitadoPor == request.auth.uid
-        && (central() || areaPropia(request.resource.data.area) || (enSalud(request.resource.data) && agenteDeSalud(request.resource.data, request.resource.data.area)
+        && etiquetaRegistroValida(request.resource.data, request.resource.data.area)
+        && (central() || (areaPropia(request.resource.data.area) && !adminDireccion()) ||
+          ((enDireccion(request.resource.data) || (enSalud(request.resource.data) && agenteDeSalud(request.resource.data, request.resource.data.area)))
           && !get(/databases/$(database)/documents/empleados/$(request.resource.data.empleadoId)).data.get('requiereRevisionCargo', false))) && request.resource.data.estado == 'pendiente'
         && request.resource.data.versionRegimen == 2 && request.resource.data.tipoDias in ['habiles','corridos']
         && request.resource.data.diasSolicitados is int && request.resource.data.diasSolicitados > 0
         && request.resource.data.diasSolicitados <= 366 && creadoAhora()
-        && request.resource.data.keys().hasOnly(['nroSolicitud','empleadoId','secretariaId','legajo','nombreCompleto','cargo','categoria','tipoCargo','particion','area','convenio','esJerarquico','fechaIngreso','anioVacacional','versionRegimen','diasCorresponden','diasPorTipo','tipoDias','diasSolicitados','consumoPorTipo','fechaDesde','fechaHasta','estado','observaciones','solicitadoPor','esReingreso','fechaReingreso','esCambioConvenio','perfilActual','perfilAnterior','convenioAnterior','mesesConvenioAnterior','mesesConvenioNuevo','calculoDetalle','createdAt','updatedAt']);
+        && request.resource.data.keys().hasOnly(['nroSolicitud','empleadoId','secretariaId','direccionId','legajo','nombreCompleto','cargo','categoria','tipoCargo','particion','area','convenio','esJerarquico','fechaIngreso','anioVacacional','versionRegimen','diasCorresponden','diasPorTipo','tipoDias','diasSolicitados','consumoPorTipo','fechaDesde','fechaHasta','estado','observaciones','solicitadoPor','esReingreso','fechaReingreso','esCambioConvenio','perfilActual','perfilAnterior','convenioAnterior','mesesConvenioAnterior','mesesConvenioNuevo','calculoDetalle','createdAt','updatedAt']);
       allow update: if central() && resource.data.estado == 'pendiente' && request.resource.data.estado in ['aprobada','rechazada']
         && cambioSolo(['estado','observaciones','updatedAt','fechaRechazo','fechaAprobacion','diasPorTipo','diasCorresponden','diasDescontados','consumoPorTipo','saldoRestante','saldoRestantePorTipo','perfilAnterior','esCambioConvenio','esReingreso','fechaReingreso','mesesConvenioAnterior','mesesConvenioNuevo','calculoDetalle']);
       allow delete: if false;

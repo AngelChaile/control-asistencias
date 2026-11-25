@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { administraSalud } from "../../utils/alcanceAdmin.mjs";
+import { direccionDeConsulta, administraSalud } from "../../utils/alcanceAdmin.mjs";
 import ExportExcel from "../../components/ExportExcel";
 import { fetchAsistenciasByRange } from "../../utils/asistencia";
 import { formatAsistenciasMensuales } from "../../utils/excelFormats";
@@ -74,7 +74,7 @@ async function handleSearch() {
     
     // Para admin: usar su área automáticamente (sin filtro en el input)
     // Para RRHH: enviar el área del filtro (puede estar vacío para todas)
-    const areaFilter = user?.rol === "admin" && !administraSalud(user) ? user?.lugarTrabajo : normalizedFilters.area;
+    const areaFilter = user?.rol === "admin" && !administraSalud(user) && !direccionDeConsulta(user) ? user?.lugarTrabajo : normalizedFilters.area;
     
     const data = await fetchAsistenciasByRange({
       desde,
@@ -165,11 +165,10 @@ async function handleSearch() {
             />
           </div>
           
-          {/* Solo mostrar filtro de área para RRHH */}
-          {user?.rol === "rrhh" && (
+          {(user?.rol === "rrhh" || direccionDeConsulta(user) || administraSalud(user)) && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Área <span className="text-gray-400 text-xs">(RRHH)</span>
+                Área
               </label>
               <input
                 className="input-modern"
