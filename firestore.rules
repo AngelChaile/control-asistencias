@@ -44,7 +44,14 @@ service cloud.firestore {
       allow write: if rol(['rrhh']);
     }
     match /empleados/{id} {
-      allow read: if central() || puedeVerPersonal(resource.data);
+      function enDireccionRRHH() {
+        let raiz = perfil().get('direccionConsultaId', '');
+        let codigo = resource.data.area.id;
+        return rol(['admin']) && perfil().lugarTrabajo == 'DIRECCION DE RECURSOS HUMANOS'
+          && ((raiz == '1.26.3.1.' && codigo >= '1.26.3.1.' && codigo < '1.26.3.1/')
+            || (raiz == '1.22.13.' && codigo >= '1.22.13.' && codigo < '1.22.13/'));
+      }
+      allow read: if central() || puedeVerPersonal(resource.data) || enDireccionRRHH();
       allow create: if rol(['rrhh']) || (((areaPropia(request.resource.data.lugarTrabajo) && request.resource.data.get('secretariaId', '') != '1.9.') ||
           ((areaPropia(request.resource.data.lugarTrabajo) || adminSalud()) && request.resource.data.get('secretariaId', '') == '1.9.'
             && areaSaludVerificada(request.resource.data.area) && request.resource.data.lugarTrabajo == request.resource.data.area.nombre))

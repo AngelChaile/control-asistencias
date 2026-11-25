@@ -51,6 +51,22 @@ before(async()=>{
 });
 after(async()=>{await Promise.all(clientes.map(borrarApp));await deleteApp(app);});
 
+test('el admin de Dirección consulta la rama de RRHH sin adquirir permisos de escritura en las hijas', async () => {
+  const raiz = '1.26.3.1.';
+  await db.doc('users/dir').set({rol:'admin', lugarTrabajo:'DIRECCION DE RECURSOS HUMANOS', direccionConsultaId:raiz});
+  const fichas = db.collection('empleados');
+  const hija = fichas.doc('prueba-direccion');
+  await hija.set({area:{id:raiz+'1.6.'}, lugarTrabajo:'División de ejemplo'});
+  const clienteDir = cliente('dir');
+  const listado = bd => web.getDocs(web.query(web.collection(bd,'empleados'),web.where('area.id','>=',raiz),web.where('area.id','<','1.26.3.1/')));
+  try {
+    assert.equal((await listado(clienteDir)).size,1);
+    await denegado(listado(admin));
+    await denegado(web.getDoc(web.doc(clienteDir,'empleados','empB')));
+    await denegado(web.deleteDoc(web.doc(clienteDir,'empleados',hija.id)));
+  } finally { await hija.delete(); }
+});
+
 test('RRHH anula una vez, conserva las demás licencias y restituye el consumo aprobado', async () => {
   const solicitudes = db.collection('solicitudesVacaciones');
   const servicios = { db, FieldValue, auth: identidad };

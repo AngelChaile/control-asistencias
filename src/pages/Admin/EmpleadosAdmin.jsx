@@ -12,13 +12,15 @@ import {
 } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
 import EmployeeDetailModal from "../../components/EmployeeDetailModal";
-import { administraSalud, areaAdministrable, filtroAdmin, secretariaDeArea } from "../../utils/alcanceAdmin.mjs";
+import { administraSalud, areaAdministrable, direccionDeConsulta, filtroAdmin, secretariaDeArea } from "../../utils/alcanceAdmin.mjs";
 import SelectorCategoria from "../../components/SelectorCategoria";
 import { fetchAllAreas } from "../../utils/areas";
 
 export default function EmpleadosAdmin() {
   const { user } = useAuth();
   const area = user?.lugarTrabajo || "";
+  const direccion = direccionDeConsulta(user);
+  const variasAreas = Boolean(direccion) || administraSalud(user);
   const [errorCarga, setErrorCarga] = useState("");
   const [empleados, setEmpleados] = useState([]);
   const [areas, setAreas] = useState([]);
@@ -72,9 +74,13 @@ export default function EmpleadosAdmin() {
   async function fetchEmpleados() {
     setErrorCarga(""); setLoading(true);
     try {
-      const q = query(collection(db, "empleados"), where(...filtroAdmin(user)));
-      const snap = await getDocs(q);
-      setEmpleados(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      const personal = collection(db, "empleados");
+      const consultas = [query(personal, where(...filtroAdmin(user)))];
+      if (direccion) consultas.push(query(personal, where("area.id", ">=", direccion),
+        where("area.id", "<", direccion.slice(0, -1) + "/")));
+      const resultados = await Promise.all(consultas.map(q => getDocs(q)));
+      const porFicha = new Map(resultados.flatMap(s => s.docs.map(d => [d.id, { ...d.data(), id: d.id }])));
+      setEmpleados([...porFicha.values()]);
     } catch (err) {
       console.error("fetchEmpleados admin:", err);
       setEmpleados([]); setErrorCarga("No se pudo consultar el personal. Revisá los permisos de tu cuenta con RRHH.");
@@ -444,10 +450,10 @@ export default function EmpleadosAdmin() {
                 />
               </div>
             </div>
-            {administraSalud(user) && <label className="text-sm font-medium">Área de Salud
+            {variasAreas && <label className="text-sm font-medium">Dependencia
               <select className="input-modern block" value={filtroArea} onChange={e=>{setFiltroArea(e.target.value);setLimiteVisible(60);}}>
                 <option value="">Todas las áreas</option>
-                {areas.filter(a=>areaAdministrable(user,a)).map(a=><option key={a.id} value={a.id}>{a.nombre} ({a.id})</option>)}
+                {areas.filter(a=>direccion ? a.id.startsWith(direccion) : areaAdministrable(user,a)).map(a=><option key={a.id} value={a.id}>{a.nombre} ({a.id})</option>)}
               </select>
             </label>}
             <div className="text-sm text-gray-600">
@@ -486,7 +492,7 @@ export default function EmpleadosAdmin() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {(administraSalud(user) ? filtered.slice(0, limiteVisible) : filtered).map((emp) => (
+                  {(variasAreas ? filtered.slice(0, limiteVisible) : filtered).map((emp) => (
                     <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-4">
                         <div className="flex items-center">
@@ -499,7 +505,7 @@ export default function EmpleadosAdmin() {
                             <div className="truncate text-sm font-semibold text-slate-900">
                               {emp.nombre} {emp.apellido}
                             </div>
-                            <div className="text-xs text-slate-500">Legajo {emp.legajo}{administraSalud(user) && ` · ${emp.lugarTrabajo}`}{emp.activo === false && " · Baja"}{emp.requiereRevisionCargo && " · Cargo a revisar por RRHH"}</div>
+                            <div className="text-xs text-slate-500">Legajo {emp.legajo}{variasAreas && ` · ${emp.lugarTrabajo}`}{emp.activo === false && " · Baja"}{emp.requiereRevisionCargo && " · Cargo a revisar por RRHH"}</div>
                           </div>
                         </div>
                       </td>
@@ -516,7 +522,7 @@ export default function EmpleadosAdmin() {
                           >
                             👁️ Ver Detalle
                           </button>
-                          <button 
+                          {(!direccion || emp.lugarTrabajo === area) && <><button
                             onClick={() => handleEditar(emp)} 
                             className="text-municipio-600 hover:text-municipio-700 bg-municipio-50 hover:bg-municipio-100 px-3 py-1 rounded-lg transition-colors"
                           >
@@ -527,14 +533,14 @@ export default function EmpleadosAdmin() {
                             className="text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg transition-colors"
                           >
                             🗑️ Eliminar
-                          </button>
+                          </button></>}
                         </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {administraSalud(user) && filtered.length > limiteVisible && <button type="button" className="btn-secondary m-3" onClick={()=>setLimiteVisible(n=>n+60)}>Mostrar más empleados</button>}
+              {variasAreas && filtered.length > limiteVisible && <button type="button" className="btn-secondary m-3" onClick={()=>setLimiteVisible(n=>n+60)}>Mostrar más empleados</button>}
             </div>
           )}
         </div>

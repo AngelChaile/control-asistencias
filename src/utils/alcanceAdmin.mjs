@@ -1,6 +1,12 @@
 // El código del organigrama identifica la secretaría aun cuando dos áreas tengan el mismo nombre.
 export const ID_SALUD = '1.9.';
 
+// Alcance de lectura del padrón. La administración de cada ficha conserva su área.
+export function direccionDeConsulta(perfil) {
+  if (perfil?.rol !== 'admin' || perfil.lugarTrabajo !== 'DIRECCION DE RECURSOS HUMANOS') return '';
+  return ['1.26.3.1.', '1.22.13.'].includes(perfil.direccionConsultaId) ? perfil.direccionConsultaId : '';
+}
+
 export function secretariaDeArea(area) {
   return String(area?.id || '').match(/^\d+\.\d+\./)?.[0] || '';
 }
